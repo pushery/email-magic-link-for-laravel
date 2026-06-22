@@ -51,7 +51,7 @@ trait CompletesMagicLinkLogin
     {
         event(new MagicLinkConsumptionFailed($reason, $request));
 
-        $message = 'This sign-in request is invalid or has expired. Please request a new one.';
+        $message = __('email-magic-link::messages.consume_failed');
 
         if ($this->wantsJson($request)) {
             return $this->apiError($message, 'invalid_or_expired', 422);

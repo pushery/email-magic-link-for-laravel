@@ -159,11 +159,12 @@ Schedule::command('email-magic-link:purge')->daily();
 
 ## Translations
 
-Every user-facing string — in the views and the notification — runs through
-Laravel's translator under the `email-magic-link` namespace, so the screens follow
-the application's active locale. English, German, Spanish, French, Italian, Dutch,
-and Portuguese ship in the box. Publish the language files to translate, reword, or
-add more:
+Every user-facing string — the views, the notification, and the status and error
+responses (the "we sent a link", "invalid or expired", and challenge-failed
+messages) — runs through Laravel's translator under the `email-magic-link`
+namespace, so everything follows the application's active locale. English, German,
+Spanish, French, Italian, Dutch, and Portuguese ship in the box. Publish the
+language files to translate, reword, or add more:
 
 ```bash
 php artisan vendor:publish --tag=email-magic-link-lang

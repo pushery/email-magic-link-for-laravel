@@ -4,6 +4,17 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.0] - 2026-06-22
+
+### Fixed
+
+- The status, invalid-or-expired, and challenge-failed response messages were
+  hardcoded in English and ignored the active locale. They now run through the
+  translator like the rest of the package, with translations in all seven bundled
+  locales (en/de/es/fr/it/nl/pt). A new guard test fails the build if any controller
+  response reintroduces a hardcoded user-facing string instead of using the
+  translator, so this gap cannot recur.
+
 ## [0.12.0] - 2026-06-22
 
 ### Added

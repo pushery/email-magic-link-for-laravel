@@ -28,6 +28,12 @@ return [
     'code_intro' => 'We emailed you a one-time code. Enter it below to finish signing in.',
     'code_label' => 'Sign-in code',
 
+    // Status and error messages.
+    'status_link_sent' => 'If an account matches that email, we have sent a sign-in link.',
+    'status_code_sent' => 'If an account matches that email, we have sent a sign-in code.',
+    'consume_failed' => 'This sign-in request is invalid or has expired. Please request a new one.',
+    'captcha_failed' => 'The verification challenge failed. Please try again.',
+
     // Notification — magic link.
     'mail_link_subject' => 'Sign in to :app',
     'mail_link_intro' => 'Use the button below to sign in to :app.',

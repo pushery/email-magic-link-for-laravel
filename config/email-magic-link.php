@@ -141,6 +141,11 @@ return [
         'prefix' => '',
         'middleware' => ['web'],
         'redirect_to' => '/',
+
+        // After login, return the user to the URL they originally requested (the
+        // protected route that triggered the flow), falling back to "redirect_to"
+        // when there is none. Set false to always land on "redirect_to".
+        'intended' => true,
     ],
 
     /*

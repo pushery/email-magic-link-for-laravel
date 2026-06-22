@@ -51,20 +51,20 @@ class MagicLinkNotification extends Notification implements ShouldQueue
     private function linkMessage(string $application): MailMessage
     {
         return (new MailMessage)
-            ->subject("Sign in to {$application}")
-            ->line("Use the button below to sign in to {$application}.")
-            ->action('Sign in', (string) $this->actionUrl)
-            ->line("This link expires in {$this->expiresInMinutes} minutes and can be used once.")
-            ->line('If you did not request this, you can safely ignore this email.');
+            ->subject(__('email-magic-link::messages.mail_link_subject', ['app' => $application]))
+            ->line(__('email-magic-link::messages.mail_link_intro', ['app' => $application]))
+            ->action(__('email-magic-link::messages.mail_link_action'), (string) $this->actionUrl)
+            ->line(__('email-magic-link::messages.mail_link_expiry', ['minutes' => $this->expiresInMinutes]))
+            ->line(__('email-magic-link::messages.mail_ignore'));
     }
 
     private function codeMessage(string $application): MailMessage
     {
         return (new MailMessage)
-            ->subject("Your {$application} sign-in code")
-            ->line("Your sign-in code for {$application} is:")
+            ->subject(__('email-magic-link::messages.mail_code_subject', ['app' => $application]))
+            ->line(__('email-magic-link::messages.mail_code_intro', ['app' => $application]))
             ->line((string) $this->code)
-            ->line("This code expires in {$this->expiresInMinutes} minutes.")
-            ->line('If you did not request this, you can safely ignore this email.');
+            ->line(__('email-magic-link::messages.mail_code_expiry', ['minutes' => $this->expiresInMinutes]))
+            ->line(__('email-magic-link::messages.mail_ignore'));
     }
 }

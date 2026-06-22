@@ -116,7 +116,9 @@ All values live in `config/email-magic-link.php`.
 |---|---|---|
 | `enabled` | `true` | Master switch for the channel (routes, notifications, limiters). |
 | `mode` | `'link'` | `'link'`, `'code'`, or `'both'`. |
-| `ttl` | `900` | Token lifetime in seconds. |
+| `ttl` | `900` | Default token lifetime in seconds. |
+| `link_ttl` | `null` | Link lifetime in seconds; inherits `ttl` when unset. |
+| `code_ttl` | `null` | Code lifetime in seconds; inherits `ttl` when unset (handy for a shorter, hand-typed code). |
 | `code_length` | `8` | One-time code length. |
 | `code_alphabet` | unambiguous A–Z/2–9 | Alphabet for codes (governs keyspace). |
 | `max_attempts_per_token` | `5` | Hard per-token lockout for code mode. |

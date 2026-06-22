@@ -94,7 +94,7 @@ final class SendMagicLinkController
      */
     private function buildNotification(IssuedToken $issued, string $channel, MagicLinkConfig $config): MagicLinkNotification
     {
-        $minutes = (int) ceil($config->ttl() / 60);
+        $minutes = (int) ceil($config->ttlFor($channel) / 60);
 
         $actionUrl = $channel === 'link'
             ? URL::temporarySignedRoute(

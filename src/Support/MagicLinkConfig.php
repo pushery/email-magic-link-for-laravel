@@ -40,6 +40,26 @@ final readonly class MagicLinkConfig
         return $this->int($this->config->get('email-magic-link.ttl'), 900);
     }
 
+    /**
+     * The lifetime, in seconds, for a given channel's tokens.
+     *
+     * A positive `{channel}_ttl` override wins; anything else inherits `ttl`,
+     * which the entropy guard keeps positive — so this never returns a
+     * non-positive lifetime.
+     *
+     * @param  'link'|'code'  $channel
+     */
+    public function ttlFor(string $channel): int
+    {
+        $override = $this->config->get("email-magic-link.{$channel}_ttl");
+
+        if (is_numeric($override) && (int) $override > 0) {
+            return (int) $override;
+        }
+
+        return $this->ttl();
+    }
+
     public function codeLength(): int
     {
         return $this->int($this->config->get('email-magic-link.code_length'), 8);

@@ -110,7 +110,8 @@ All values live in `config/email-magic-link.php`.
 | `code_alphabet` | unambiguous A–Z/2–9 | Alphabet for codes (governs keyspace). |
 | `max_attempts_per_token` | `5` | Hard per-token lockout for code mode. |
 | `entropy_safety_factor` | `1_000_000` | Guardrail bar; cannot be lowered below this floor. |
-| `guard` | app default | Stateful guard to log into. |
+| `guard` | app default | Default stateful guard to log into. |
+| `guards` | `[]` | Extra guards a request may select via a `guard` field. |
 | `user_lookup` | bundled | `UserLookup` implementation. |
 | `token_store` | bundled | `TokenStore` implementation. |
 | `notification` | `MagicLinkNotification` | Notification class (extend it to customize). |
@@ -158,6 +159,30 @@ php artisan vendor:publish --tag=email-magic-link-lang
 That copies the strings to `lang/vendor/email-magic-link/{locale}`. Add a locale
 by copying the `en` directory (for example to `de`) and translating the values;
 the `:app` and `:minutes` placeholders are filled in at render time.
+
+## Multiple guards
+
+By default everything runs through the configured `guard`. To let a request sign
+in to another guard — say an `admin` guard alongside `web` — list it in `guards`
+and submit a `guard` field from your sign-in form:
+
+```php
+'guard' => 'web',
+'guards' => ['admin'],
+```
+
+```blade
+<input type="hidden" name="guard" value="admin">
+```
+
+The request issues the token for the selected guard, the user is resolved through
+**that guard's** user provider, and login completes on it. A guard not on the
+allowlist falls back silently to the default, so guards stay un-enumerable.
+
+> Security: only list guards whose user provider you are happy to expose to
+> self-service magic-link login. A user found in a guard's provider can sign in to
+> that guard, so guards that share a provider also share access. When the Fortify
+> two-factor handoff is active, the selected guard should match `fortify.guard`.
 
 ## WireKit
 

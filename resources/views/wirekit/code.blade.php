@@ -13,6 +13,9 @@
 
         <form method="POST" action="{{ route('email-magic-link.code.consume') }}">
             @csrf
+            @if ($guard ?: old('guard'))
+                <input type="hidden" name="guard" value="{{ $guard ?: old('guard') }}">
+            @endif
 
             <x-wirekit::input
                 name="email"

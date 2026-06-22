@@ -29,6 +29,7 @@ final class ConsumeCodeRequest extends FormRequest
         return [
             'email' => ['required', 'string', 'email', 'max:255'],
             'code' => ['required', 'string', 'max:255'],
+            'guard' => ['sometimes', 'nullable', 'string', 'max:255'],
         ];
     }
 
@@ -56,5 +57,12 @@ final class ConsumeCodeRequest extends FormRequest
         $code = $this->validated('code');
 
         return is_string($code) ? $code : '';
+    }
+
+    public function requestedGuard(): ?string
+    {
+        $guard = $this->validated('guard');
+
+        return is_string($guard) && $guard !== '' ? $guard : null;
     }
 }

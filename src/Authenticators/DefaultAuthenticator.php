@@ -31,17 +31,17 @@ final readonly class DefaultAuthenticator implements MagicLinkAuthenticator
         private MagicLinkConfig $config,
     ) {}
 
-    public function authenticate(Request $request, Authenticatable $user, bool $remember): Response
+    public function authenticate(Request $request, Authenticatable $user, string $guard, bool $remember): Response
     {
-        $guard = $this->auth->guard($this->config->guard());
+        $stateful = $this->auth->guard($guard);
 
-        if (! $guard instanceof StatefulGuard) {
+        if (! $stateful instanceof StatefulGuard) {
             throw new RuntimeException(
-                "The [{$this->config->guard()}] guard is not stateful and cannot be used for magic-link login.",
+                "The [{$guard}] guard is not stateful and cannot be used for magic-link login.",
             );
         }
 
-        $guard->login($user, $remember);
+        $stateful->login($user, $remember);
 
         if ($request->hasSession()) {
             $request->session()->regenerate();

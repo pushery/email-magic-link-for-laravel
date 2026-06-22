@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace EmailMagicLink\Http\Controllers;
 
+use EmailMagicLink\Contracts\CaptchaGuard;
 use EmailMagicLink\Contracts\TokenStore;
 use EmailMagicLink\Contracts\UserLookup;
 use EmailMagicLink\Events\MagicLinkRequested;
@@ -33,7 +34,14 @@ final class SendMagicLinkController
         UserLookup $lookup,
         TokenStore $store,
         MagicLinkConfig $config,
+        CaptchaGuard $captcha,
     ): Response {
+        // Pre-issue challenge, before any user lookup, so it gates the request
+        // without ever depending on whether the account exists.
+        if (! $captcha->passes($request)) {
+            return $this->captchaFailed($request);
+        }
+
         $email = $request->email();
         $channel = $this->resolveChannel($request->requestedChannel(), $config->mode());
         $guard = $config->resolveGuard($request->requestedGuard());
@@ -53,6 +61,19 @@ final class SendMagicLinkController
         // shape is identical for allowed and unknown guards — guards stay
         // un-enumerable. resolveGuard() re-validates it on consume.
         return $this->sentResponse($request, $channel, $email, $request->requestedGuard());
+    }
+
+    private function captchaFailed(SendMagicLinkRequest $request): Response
+    {
+        $message = 'The verification challenge failed. Please try again.';
+
+        if ($this->wantsJson($request)) {
+            return $this->apiError($message, 'captcha_failed', 422);
+        }
+
+        return redirect()->route('email-magic-link.request.form')
+            ->withErrors(['email' => $message])
+            ->withInput($request->only('email'));
     }
 
     /**

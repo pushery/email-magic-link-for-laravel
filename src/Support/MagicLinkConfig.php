@@ -133,6 +133,13 @@ final readonly class MagicLinkConfig
         return is_string($store) && $store !== '' ? $store : null;
     }
 
+    public function captcha(): ?string
+    {
+        $captcha = $this->config->get('email-magic-link.captcha');
+
+        return is_string($captcha) && $captcha !== '' ? $captcha : null;
+    }
+
     /**
      * @return class-string<MagicLinkNotification>
      */

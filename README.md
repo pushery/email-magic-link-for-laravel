@@ -231,13 +231,31 @@ The contract returns a response, so it — not an event — is where login-versu
 
 Each carries the `Request`, so a listener can record the IP and user agent. The response stays generic and enumeration-resistant regardless of which failure reason fired. Successful logins also fire Laravel's own `Illuminate\Auth\Events\Login`.
 
-**Swap collaborators** via config: the `notification` class (extend `MagicLinkNotification`), a `UserLookup` (resolve users your way), and a `TokenStore` (custom persistence).
+**Swap collaborators** via config: the `notification` class (extend `MagicLinkNotification`), a `UserLookup` (resolve users your way), a `TokenStore` (custom persistence), and a `CaptchaGuard` (a pre-issue challenge).
+
+**Gate requests with a CAPTCHA.** Point the `captcha` config at a class implementing `EmailMagicLink\Contracts\CaptchaGuard`:
+
+```php
+final class TurnstileGuard implements CaptchaGuard
+{
+    public function passes(Request $request): bool
+    {
+        // Verify the challenge token (e.g. cf-turnstile-response) with the provider.
+        return Http::asForm()->post('https://challenges.cloudflare.com/turnstile/v0/siteverify', [
+            'secret' => config('services.turnstile.secret'),
+            'response' => $request->input('cf-turnstile-response'),
+        ])->json('success') === true;
+    }
+}
+```
+
+It runs before any user lookup, so a failed challenge rejects the request identically whether or not the email exists — it can never become an enumeration oracle. A failure returns the `captcha_failed` JSON error (or a form error) and issues nothing.
 
 ## Security at rest
 
 Tokens are never stored in the clear — only a keyed HMAC-SHA256 hash, looked up via an index. Consumption is a single race-free conditional claim (PostgreSQL `RETURNING`, with a portable affected-rows fallback) so two concurrent requests can never both succeed. Links are additionally protected by Laravel signed routes. Raw tokens and full link URLs are never logged.
 
-The request endpoint is rate-limited per email and per IP out of the box. For high-risk deployments, layer a CAPTCHA or challenge widget on the request form as an additional bot-protection measure — that is a host-application concern this package deliberately leaves to you. Throttled responses carry the standard `Retry-After` and `X-RateLimit-*` headers, so API and SPA clients can back off correctly.
+The request endpoint is rate-limited per email and per IP out of the box. For high-risk deployments, layer a CAPTCHA or challenge widget on top via the `captcha` guard (see [Extension points](#extension-points)) as an additional bot-protection measure. Throttled responses carry the standard `Retry-After` and `X-RateLimit-*` headers, so API and SPA clients can back off correctly.
 
 See [SECURITY.md](SECURITY.md) for the supported versions and how to report a vulnerability.
 

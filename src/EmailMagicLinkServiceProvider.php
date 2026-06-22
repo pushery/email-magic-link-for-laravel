@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace EmailMagicLink;
 
 use EmailMagicLink\Authenticators\DefaultAuthenticator;
+use EmailMagicLink\Console\Commands\InstallCommand;
 use EmailMagicLink\Console\Commands\PurgeExpiredTokensCommand;
 use EmailMagicLink\Contracts\MagicLinkAuthenticator;
 use EmailMagicLink\Contracts\TokenStore;
@@ -163,7 +164,10 @@ final class EmailMagicLinkServiceProvider extends ServiceProvider
     private function registerPublishing(): void
     {
         if ($this->app->runningInConsole()) {
-            $this->commands([PurgeExpiredTokensCommand::class]);
+            $this->commands([
+                InstallCommand::class,
+                PurgeExpiredTokensCommand::class,
+            ]);
 
             $this->publishes([
                 __DIR__.'/../config/email-magic-link.php' => config_path('email-magic-link.php'),

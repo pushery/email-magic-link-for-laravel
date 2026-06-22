@@ -4,6 +4,18 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] - 2026-06-22
+
+### Added
+
+- `MagicLinkAuthenticated($user, $guard, $request)` event, fired the moment a user
+  is actually logged in (never for a two-factor hand-off) — the precise signal for
+  an audit log, carrying the guard.
+- `MagicLinkConsumptionFailed($reason, $request)` event, fired on every failed
+  consume. The `ClaimFailure` reason distinguishes a stale or unknown token from a
+  wrong code or a brute-force `LockedOut`, so a host can log all failures and alert
+  on lockouts without the user-facing response ever leaking the reason.
+
 ## [0.8.0] - 2026-06-22
 
 ### Added

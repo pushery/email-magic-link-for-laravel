@@ -54,7 +54,7 @@ trait CompletesMagicLinkLogin
         $message = 'This sign-in request is invalid or has expired. Please request a new one.';
 
         if ($this->wantsJson($request)) {
-            return response()->json(['message' => $message], 422);
+            return $this->apiError($message, 'invalid_or_expired', 422);
         }
 
         // Flash the email and guard (never the secret code) so the code form can

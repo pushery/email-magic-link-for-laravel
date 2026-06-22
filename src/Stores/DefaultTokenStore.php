@@ -36,10 +36,12 @@ final readonly class DefaultTokenStore implements TokenStore
         $userId = $this->identifierOf($user);
 
         if ($channel === 'code') {
-            // Keep at most one active code per user so a claim is unambiguous.
+            // Keep at most one active code per user PER GUARD so a claim is
+            // unambiguous and issuing for one guard never clobbers another's code.
             MagicLinkToken::query()
                 ->where('user_id', $userId)
                 ->where('channel', 'code')
+                ->where('guard', $guard)
                 ->whereNull('consumed_at')
                 ->update(['consumed_at' => $now]);
         }
@@ -78,45 +80,53 @@ final readonly class DefaultTokenStore implements TokenStore
         return ClaimResult::failed($this->classifyLinkFailure($hash, $now));
     }
 
-    public function claimCode(Authenticatable $user, string $code): ClaimResult
+    public function claimCode(Authenticatable $user, string $code, string $guard): ClaimResult
     {
-        $now = Carbon::now();
-        $max = $this->config->maxAttemptsPerToken();
+        // The whole read-check-claim runs under a row lock so the attempt gate is
+        // evaluated against fresh state: concurrent guesses cannot each pass a
+        // stale attempts < max snapshot. The guard filter binds the token to the
+        // guard the request is authenticating against, so a code issued for one
+        // guard can never be claimed through another even if their providers
+        // share a user identifier.
+        return $this->connection()->transaction(function () use ($user, $code, $guard): ClaimResult {
+            $now = Carbon::now();
+            $max = $this->config->maxAttemptsPerToken();
 
-        $token = MagicLinkToken::query()
-            ->where('user_id', $this->identifierOf($user))
-            ->where('channel', 'code')
-            ->whereNull('consumed_at')
-            ->orderByDesc('id')
-            ->first();
+            $token = MagicLinkToken::query()
+                ->where('user_id', $this->identifierOf($user))
+                ->where('channel', 'code')
+                ->where('guard', $guard)
+                ->whereNull('consumed_at')
+                ->orderByDesc('id')
+                ->lockForUpdate()
+                ->first();
 
-        if ($token === null) {
-            return ClaimResult::failed(ClaimFailure::NotFound);
-        }
+            if ($token === null) {
+                return ClaimResult::failed(ClaimFailure::NotFound);
+            }
 
-        if ($token->isExpired($now)) {
-            return ClaimResult::failed(ClaimFailure::Expired);
-        }
+            if ($token->isExpired($now)) {
+                return ClaimResult::failed(ClaimFailure::Expired);
+            }
 
-        if ($token->attempts >= $max) {
-            return ClaimResult::failed(ClaimFailure::LockedOut);
-        }
+            if ($token->attempts >= $max) {
+                return ClaimResult::failed(ClaimFailure::LockedOut);
+            }
 
-        if (! $this->hasher->matches($code, $token->token_hash)) {
-            return $this->recordFailedCodeAttempt($token, $max, $now);
-        }
+            if (! $this->hasher->matches($code, $token->token_hash)) {
+                return $this->recordFailedCodeAttempt($token, $max, $now);
+            }
 
-        if (! $this->atomicClaim('id', (string) $token->id, 'code', $now)) {
-            // Only reachable when a concurrent request consumes this same token
-            // between the lookup above and this claim. The single conditional
-            // UPDATE in atomicClaim() is what makes that race safe; this branch
-            // just maps the losing request's outcome.
-            return ClaimResult::failed(ClaimFailure::AlreadyConsumed); // @codeCoverageIgnore
-        }
+            if (! $this->atomicClaim('id', (string) $token->id, 'code', $now)) {
+                // Unreachable once the row lock above serialises claims; kept as a
+                // defensive backstop that maps a losing race to a clean outcome.
+                return ClaimResult::failed(ClaimFailure::AlreadyConsumed); // @codeCoverageIgnore
+            }
 
-        $token->consumed_at = $now;
+            $token->consumed_at = $now;
 
-        return ClaimResult::success($token);
+            return ClaimResult::success($token);
+        });
     }
 
     public function purge(): int

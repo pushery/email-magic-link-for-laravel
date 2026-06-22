@@ -36,7 +36,7 @@ final class SendMagicLinkController
     ): Response {
         $email = $request->email();
         $channel = $this->resolveChannel($request->requestedChannel(), $config->mode());
-        $guard = $config->guard();
+        $guard = $config->resolveGuard($request->requestedGuard());
 
         $user = $lookup->findByEmail($email, $guard);
 
@@ -49,7 +49,10 @@ final class SendMagicLinkController
             event(new MagicLinkRequested($user, $channel, $request));
         }
 
-        return $this->sentResponse($request, $channel, $email);
+        // Echo back the raw requested guard (not the resolved one) so the redirect
+        // shape is identical for allowed and unknown guards — guards stay
+        // un-enumerable. resolveGuard() re-validates it on consume.
+        return $this->sentResponse($request, $channel, $email, $request->requestedGuard());
     }
 
     /**
@@ -93,7 +96,7 @@ final class SendMagicLinkController
     /**
      * @param  'link'|'code'  $channel
      */
-    private function sentResponse(SendMagicLinkRequest $request, string $channel, string $email): Response
+    private function sentResponse(SendMagicLinkRequest $request, string $channel, string $email, ?string $guard): Response
     {
         $message = $channel === 'code'
             ? 'If an account matches that email, we have sent a sign-in code.'
@@ -104,8 +107,13 @@ final class SendMagicLinkController
         }
 
         if ($channel === 'code') {
-            return redirect()->route('email-magic-link.code.form', ['email' => $email])
-                ->with('status', $message);
+            $params = ['email' => $email];
+
+            if ($guard !== null) {
+                $params['guard'] = $guard;
+            }
+
+            return redirect()->route('email-magic-link.code.form', $params)->with('status', $message);
         }
 
         return redirect()->route('email-magic-link.request.form')->with('status', $message);

@@ -31,13 +31,14 @@ final class ConsumeCodeController
         TokenStore $store,
         MagicLinkConfig $config,
     ): Response {
-        $user = $lookup->findByEmail($request->email(), $config->guard());
+        $guard = $config->resolveGuard($request->requestedGuard());
+        $user = $lookup->findByEmail($request->email(), $guard);
 
         if (! $user instanceof Authenticatable) {
             return $this->failedConsumption($request, 'email-magic-link.code.form');
         }
 
-        $result = $store->claimCode($user, $request->code());
+        $result = $store->claimCode($user, $request->code(), $guard);
         $claimed = $result->token;
 
         if (! $result->successful || ! $claimed instanceof MagicLinkToken) {

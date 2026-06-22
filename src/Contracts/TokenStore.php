@@ -30,10 +30,10 @@ interface TokenStore
     public function claimLink(string $token): ClaimResult;
 
     /**
-     * Atomically claim a one-time code for a known user, accounting for failed
-     * attempts and enforcing the per-token lockout.
+     * Atomically claim a one-time code for a known user on a specific guard,
+     * accounting for failed attempts and enforcing the per-token lockout.
      */
-    public function claimCode(Authenticatable $user, string $code): ClaimResult;
+    public function claimCode(Authenticatable $user, string $code, string $guard): ClaimResult;
 
     /**
      * Delete expired and consumed tokens. Returns the number removed.

@@ -22,9 +22,11 @@ final readonly class ShowCodeFormController
     public function __invoke(Request $request): View
     {
         $email = $request->query('email');
+        $guard = $request->query('guard');
 
         return $this->views->make($this->config->view('code'), [
             'email' => is_string($email) ? $email : '',
+            'guard' => is_string($guard) ? $guard : '',
         ]);
     }
 }

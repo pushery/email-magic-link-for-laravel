@@ -38,10 +38,24 @@ final class FortifyBridgeServiceProvider extends ServiceProvider
     {
         $config = $this->app->make(MagicLinkConfig::class);
 
-        if ($config->enabled() && ! $config->respectTwoFactor()) {
+        if (! $config->enabled()) {
+            return;
+        }
+
+        if (! $config->respectTwoFactor()) {
             Log::warning(
                 '[email-magic-link] fortify.respect_two_factor is disabled: magic-link logins skip the two-factor challenge for users who have it enabled.',
             );
+
+            return;
+        }
+
+        foreach ($config->allowedGuards() as $guard) {
+            if (! $config->guardSharesFortifyProvider($guard)) {
+                Log::warning(
+                    "[email-magic-link] the [{$guard}] guard's user provider differs from fortify.guard; two-factor sign-in on that guard fails closed. Align the providers or keep two-factor users on the Fortify guard.",
+                );
+            }
         }
     }
 }

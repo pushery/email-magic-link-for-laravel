@@ -33,7 +33,7 @@ trait CompletesMagicLinkLogin
 
         event(new MagicLinkVerified($user, $request));
 
-        return app(MagicLinkAuthenticator::class)->authenticate($request, $user, false);
+        return app(MagicLinkAuthenticator::class)->authenticate($request, $user, $token->guard, false);
     }
 
     protected function resolveUser(MagicLinkToken $token): ?Authenticatable
@@ -53,6 +53,11 @@ trait CompletesMagicLinkLogin
             return response()->json(['message' => $message], 422);
         }
 
-        return redirect()->route($failureRoute)->withErrors(['email' => $message]);
+        // Flash the email and guard (never the secret code) so the code form can
+        // re-prefill them on retry without putting them in the redirect URL, which
+        // keeps the failure response shape identical and enumeration-resistant.
+        return redirect()->route($failureRoute)
+            ->withErrors(['email' => $message])
+            ->withInput($request->except('code'));
     }
 }

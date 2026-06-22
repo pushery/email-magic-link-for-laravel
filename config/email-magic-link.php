@@ -99,6 +99,13 @@ return [
 
     'guard' => env('EMAIL_MAGIC_LINK_GUARD'),
 
+    // Additional guards a request may sign in to (in addition to "guard"). A
+    // request selects one by submitting a "guard" field; anything not listed here
+    // falls back to the default guard. Only add guards whose user provider you are
+    // happy to expose to self-service magic-link login — a user found in a guard's
+    // provider can sign in to that guard.
+    'guards' => [],
+
     'user_lookup' => null,
 
     /*

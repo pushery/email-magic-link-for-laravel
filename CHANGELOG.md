@@ -4,6 +4,20 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-06-22
+
+### Added
+
+- Multi-guard sign-in. A request may select a guard (from the new `guards`
+  allowlist) via a `guard` field; the token is issued for that guard, the user is
+  resolved through its provider, and login completes on it. Unknown guards fall
+  back to the default. The link and code flows are both guard-aware.
+
+### Changed
+
+- The `MagicLinkAuthenticator::authenticate()` contract gains a `string $guard`
+  argument (before `$remember`). Custom authenticators must add the parameter.
+
 ## [0.7.0] - 2026-06-22
 
 ### Added

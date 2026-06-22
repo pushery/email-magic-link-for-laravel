@@ -25,5 +25,5 @@ interface MagicLinkAuthenticator
      * response, or hand off to a second factor. They must return a response;
      * they must not rely on events to redirect.
      */
-    public function authenticate(Request $request, Authenticatable $user, bool $remember): Response;
+    public function authenticate(Request $request, Authenticatable $user, string $guard, bool $remember): Response;
 }

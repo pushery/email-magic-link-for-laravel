@@ -24,7 +24,7 @@ final readonly class RateLimits
     {
         $limit = $this->config->requestLimit();
         $email = $request->input('email');
-        $email = is_string($email) ? mb_strtolower($email) : '';
+        $email = is_string($email) ? mb_strtolower(trim($email)) : '';
 
         return [
             Limit::perMinutes($limit['per_minutes'], $limit['max'])->by('eml:req:email:'.$email),
@@ -43,7 +43,7 @@ final readonly class RateLimits
 
         $discriminator = is_string($token) && $token !== ''
             ? hash('sha256', $token)
-            : (is_string($email) ? mb_strtolower($email) : '');
+            : (is_string($email) ? mb_strtolower(trim($email)) : '');
 
         return [
             Limit::perMinutes($limit['per_minutes'], $limit['max'])->by('eml:con:ip:'.($request->ip())),

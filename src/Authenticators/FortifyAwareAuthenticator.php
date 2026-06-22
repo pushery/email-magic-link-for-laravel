@@ -9,6 +9,7 @@ use EmailMagicLink\Events\TwoFactorChallengeRequired;
 use EmailMagicLink\Support\MagicLinkConfig;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Http\Request;
+use RuntimeException;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -32,10 +33,27 @@ final readonly class FortifyAwareAuthenticator implements MagicLinkAuthenticator
         private MagicLinkConfig $config,
     ) {}
 
-    public function authenticate(Request $request, Authenticatable $user, bool $remember): Response
+    public function authenticate(Request $request, Authenticatable $user, string $guard, bool $remember): Response
     {
         if (! $this->config->respectTwoFactor() || ! $this->hasConfirmedTwoFactor($user)) {
-            return $this->default->authenticate($request, $user, $remember);
+            return $this->default->authenticate($request, $user, $guard, $remember);
+        }
+
+        // Fortify challenges and logs in on its own guard's provider, not the
+        // token's guard. If they differ, the handoff would resolve the wrong user
+        // (or none), so fail closed rather than bypass the second factor.
+        if (! $this->config->guardSharesFortifyProvider($guard)) {
+            throw new RuntimeException(
+                "Two-factor sign-in for the [{$guard}] guard cannot complete: its user provider must match fortify.guard. Align the providers, or do not expose this guard to two-factor users.",
+            );
+        }
+
+        // The handoff stores Fortify's login.id in the session; without one it
+        // cannot complete, so fail closed rather than crash or bypass the factor.
+        if (! $request->hasSession()) {
+            throw new RuntimeException(
+                'The two-factor handoff requires a session and cannot complete for a sessionless request.',
+            );
         }
 
         // Hand off as a guest. Do not log in here: Fortify completes the login

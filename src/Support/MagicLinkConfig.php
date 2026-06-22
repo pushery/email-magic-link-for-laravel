@@ -85,6 +85,40 @@ final readonly class MagicLinkConfig
         return $this->string($this->config->get('auth.defaults.guard'), 'web');
     }
 
+    /**
+     * The guards a request may sign in to: the default plus any in "guards".
+     *
+     * @return list<string>
+     */
+    public function allowedGuards(): array
+    {
+        $list = [$this->guard()];
+
+        $guards = $this->config->get('email-magic-link.guards');
+
+        if (is_array($guards)) {
+            foreach ($guards as $guard) {
+                if (is_string($guard) && $guard !== '' && ! in_array($guard, $list, true)) {
+                    $list[] = $guard;
+                }
+            }
+        }
+
+        return $list;
+    }
+
+    /**
+     * Resolve the guard for a request: the requested one when it is on the
+     * allowlist, otherwise the default. An unknown guard falls back silently so
+     * the request endpoint stays enumeration-resistant.
+     */
+    public function resolveGuard(?string $requested): string
+    {
+        return $requested !== null && in_array($requested, $this->allowedGuards(), true)
+            ? $requested
+            : $this->guard();
+    }
+
     public function userLookup(): ?string
     {
         $lookup = $this->config->get('email-magic-link.user_lookup');
@@ -212,6 +246,27 @@ final readonly class MagicLinkConfig
         return $this->string($this->config->get('email-magic-link.fortify.challenge_route'), 'two-factor.login');
     }
 
+    /**
+     * Whether a guard's user provider matches Fortify's guard provider.
+     *
+     * The two-factor handoff completes inside Fortify, which always challenges
+     * and logs in on its own guard's provider. A guard whose provider differs
+     * therefore cannot carry a two-factor user through the challenge.
+     */
+    public function guardSharesFortifyProvider(string $guard): bool
+    {
+        $fortifyGuard = $this->string($this->config->get('fortify.guard'), '');
+
+        if ($fortifyGuard === '') {
+            $fortifyGuard = $this->string($this->config->get('auth.defaults.guard'), 'web');
+        }
+
+        $guardProvider = $this->config->get("auth.guards.{$guard}.provider");
+        $fortifyProvider = $this->config->get("auth.guards.{$fortifyGuard}.provider");
+
+        return is_string($guardProvider) && is_string($fortifyProvider) && $guardProvider === $fortifyProvider;
+    }
+
     public function requestLimiter(): string
     {
         return $this->string($this->config->get('email-magic-link.limiters.request'), 'email-magic-link:request');
@@ -247,7 +302,7 @@ final readonly class MagicLinkConfig
         $limit = is_array($limit) ? $limit : [];
 
         return [
-            'max' => $this->int($limit['max'] ?? null, $defaultMax),
+            'max' => max(1, $this->int($limit['max'] ?? null, $defaultMax)),
             'per_minutes' => max(1, $this->int($limit['per_minutes'] ?? null, 1)),
         ];
     }

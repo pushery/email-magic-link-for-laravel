@@ -29,6 +29,9 @@ final class SendMagicLinkRequest extends FormRequest
         return [
             'email' => ['required', 'string', 'email', 'max:255'],
             'channel' => ['sometimes', 'nullable', 'string', Rule::in(['link', 'code'])],
+            // Not validated against the allowlist here: an unknown guard falls back
+            // to the default in the controller, which keeps guards un-enumerable.
+            'guard' => ['sometimes', 'nullable', 'string', 'max:255'],
         ];
     }
 
@@ -54,5 +57,12 @@ final class SendMagicLinkRequest extends FormRequest
         $channel = $this->validated('channel');
 
         return is_string($channel) && $channel !== '' ? $channel : null;
+    }
+
+    public function requestedGuard(): ?string
+    {
+        $guard = $this->validated('guard');
+
+        return is_string($guard) && $guard !== '' ? $guard : null;
     }
 }

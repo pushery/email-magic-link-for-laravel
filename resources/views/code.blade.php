@@ -12,6 +12,9 @@
 
     <form method="POST" action="{{ route('email-magic-link.code.consume') }}">
         @csrf
+        @if ($guard ?: old('guard'))
+            <input type="hidden" name="guard" value="{{ $guard ?: old('guard') }}">
+        @endif
 
         <label for="email">{{ __('email-magic-link::messages.email_label') }}</label>
         <input id="email" name="email" type="email" autocomplete="email" required value="{{ $email ?: old('email') }}">

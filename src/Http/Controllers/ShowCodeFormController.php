@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace EmailMagicLink\Http\Controllers;
 
+use EmailMagicLink\Support\MagicLinkConfig;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
@@ -13,13 +14,16 @@ use Illuminate\Http\Request;
  */
 final readonly class ShowCodeFormController
 {
-    public function __construct(private Factory $views) {}
+    public function __construct(
+        private MagicLinkConfig $config,
+        private Factory $views,
+    ) {}
 
     public function __invoke(Request $request): View
     {
         $email = $request->query('email');
 
-        return $this->views->make('email-magic-link::code', [
+        return $this->views->make($this->config->view('code'), [
             'email' => is_string($email) ? $email : '',
         ]);
     }

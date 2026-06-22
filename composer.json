@@ -34,7 +34,8 @@
         "rector/rector": "^2.0"
     },
     "suggest": {
-        "laravel/fortify": "Enables the no-bypass two-factor (TOTP) handoff: a magic-link user with confirmed 2FA completes Fortify's challenge before being logged in (^1.0)."
+        "laravel/fortify": "Enables the no-bypass two-factor (TOTP) handoff: a magic-link user with confirmed 2FA completes Fortify's challenge before being logged in (^1.0).",
+        "pushery/wirekit": "Renders the sign-in screens with WireKit components when installed; the package auto-detects it and falls back to plain Blade otherwise."
     },
     "autoload": {
         "psr-4": {

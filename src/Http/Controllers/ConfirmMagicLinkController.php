@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace EmailMagicLink\Http\Controllers;
 
+use EmailMagicLink\Support\MagicLinkConfig;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
 
@@ -17,11 +18,14 @@ use Illuminate\Contracts\View\View;
  */
 final readonly class ConfirmMagicLinkController
 {
-    public function __construct(private Factory $views) {}
+    public function __construct(
+        private MagicLinkConfig $config,
+        private Factory $views,
+    ) {}
 
     public function __invoke(string $token): View
     {
-        return $this->views->make('email-magic-link::confirm', [
+        return $this->views->make($this->config->view('confirm'), [
             'token' => $token,
             'action' => route('email-magic-link.consume', ['token' => $token]),
         ]);

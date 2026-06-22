@@ -1,8 +1,9 @@
 # Email Magic Link for Laravel
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/pushery/email-magic-link-for-laravel.svg)](https://packagist.org/packages/pushery/email-magic-link-for-laravel)
-[![Total Downloads](https://img.shields.io/packagist/dt/pushery/email-magic-link-for-laravel.svg)](https://packagist.org/packages/pushery/email-magic-link-for-laravel)
 [![PHP Version](https://img.shields.io/packagist/php-v/pushery/email-magic-link-for-laravel.svg)](https://packagist.org/packages/pushery/email-magic-link-for-laravel)
+[![PHPStan](https://img.shields.io/badge/PHPStan-max-brightgreen.svg)](https://phpstan.org/)
+[![Code Style](https://img.shields.io/badge/code%20style-pint-orange.svg)](https://laravel.com/docs/pint)
 [![License](https://img.shields.io/packagist/l/pushery/email-magic-link-for-laravel.svg)](https://packagist.org/packages/pushery/email-magic-link-for-laravel)
 
 Passwordless email authentication for Laravel — magic links and one-time codes — that works **standalone** or alongside **Laravel Fortify**.
@@ -117,6 +118,8 @@ All values live in `config/email-magic-link.php`.
 | `routes.middleware` | `['web']` | Route middleware (sessions + CSRF). |
 | `routes.redirect_to` | `'/'` | Fallback redirect after login. |
 | `api.enabled` | `false` | Direct JSON token exchange for SPA/mobile. |
+| `ui.mode` | `'auto'` | `'auto'` (WireKit views if installed) or `'blade'`. |
+| `ui.vite` | `['resources/css/app.css']` | Vite entry the WireKit layout loads. |
 | `fortify.mode` | `'auto'` | `'auto'` (on if Fortify present), `true`, or `false`. |
 | `fortify.respect_two_factor` | `true` | Route confirmed-2FA users through the challenge. |
 | `fortify.challenge_route` | `'two-factor.login'` | Fortify challenge route name. |
@@ -153,6 +156,20 @@ php artisan vendor:publish --tag=email-magic-link-lang
 That copies the strings to `lang/vendor/email-magic-link/{locale}`. Add a locale
 by copying the `en` directory (for example to `de`) and translating the values;
 the `:app` and `:minutes` placeholders are filled in at render time.
+
+## WireKit
+
+If [WireKit](https://wirekit.app) (`pushery/wirekit`) is installed, the sign-in
+screens render with WireKit components automatically — no configuration needed.
+Without it, the package serves its own dependency-free Blade views, so it works
+either way. Set `ui.mode` to `blade` to keep the plain views even when WireKit is
+present.
+
+WireKit emits Tailwind classes and Alpine directives, so its views render inside a
+layout that loads your compiled CSS via `@vite` (configurable with `ui.vite`,
+default `resources/css/app.css`) together with `@livewireScripts` and
+`@wirekitScripts`. The flow itself is unchanged — the same signed routes,
+CSRF-protected POSTs, and single-use token consumption — only the look differs.
 
 ## Extension points
 

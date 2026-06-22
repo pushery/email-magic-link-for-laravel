@@ -40,11 +40,18 @@ return [
     |--------------------------------------------------------------------------
     |
     | How long an issued link or code stays valid. Expired tokens are rejected
-    | regardless of whether they were ever consumed.
+    | regardless of whether they were ever consumed. "ttl" is the default for
+    | both channels; set "link_ttl" or "code_ttl" to a positive number of seconds
+    | to give a channel its own lifetime (for example a shorter code that is typed
+    | by hand). A null or non-positive override inherits "ttl".
     |
     */
 
     'ttl' => (int) env('EMAIL_MAGIC_LINK_TTL', 900),
+
+    'link_ttl' => env('EMAIL_MAGIC_LINK_LINK_TTL'),
+
+    'code_ttl' => env('EMAIL_MAGIC_LINK_CODE_TTL'),
 
     /*
     |--------------------------------------------------------------------------

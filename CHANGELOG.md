@@ -4,6 +4,16 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.0] - 2026-06-22
+
+### Added
+
+- Per-channel token lifetimes. The new `link_ttl` and `code_ttl` config keys give
+  links and codes their own expiry — for example a shorter, hand-typed code — while
+  `ttl` remains the default both inherit when an override is unset or non-positive.
+  The notification's "expires in N minutes" line and the link's signed-route expiry
+  follow the channel's lifetime.
+
 ## [0.11.0] - 2026-06-22
 
 ### Added

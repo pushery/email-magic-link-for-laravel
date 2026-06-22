@@ -54,7 +54,7 @@ final readonly class DefaultTokenStore implements TokenStore
         $record->token_hash = $this->hasher->hash($plaintext);
         $record->channel = $channel;
         $record->attempts = 0;
-        $record->expires_at = $now->copy()->addSeconds($this->config->ttl());
+        $record->expires_at = $now->copy()->addSeconds($this->config->ttlFor($channel));
         $record->consumed_at = null;
         $record->save();
 

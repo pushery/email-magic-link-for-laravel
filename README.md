@@ -1,5 +1,10 @@
 # Email Magic Link for Laravel
 
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/pushery/email-magic-link-for-laravel.svg)](https://packagist.org/packages/pushery/email-magic-link-for-laravel)
+[![Total Downloads](https://img.shields.io/packagist/dt/pushery/email-magic-link-for-laravel.svg)](https://packagist.org/packages/pushery/email-magic-link-for-laravel)
+[![PHP Version](https://img.shields.io/packagist/php-v/pushery/email-magic-link-for-laravel.svg)](https://packagist.org/packages/pushery/email-magic-link-for-laravel)
+[![License](https://img.shields.io/packagist/l/pushery/email-magic-link-for-laravel.svg)](https://packagist.org/packages/pushery/email-magic-link-for-laravel)
+
 Passwordless email authentication for Laravel — magic links and one-time codes — that works **standalone** or alongside **Laravel Fortify**.
 
 Plenty of packages send a magic link. This one is built around two properties most of them get wrong:
@@ -175,7 +180,7 @@ Successful logins also fire Laravel's own `Illuminate\Auth\Events\Login`.
 
 Tokens are never stored in the clear — only a keyed HMAC-SHA256 hash, looked up via an index. Consumption is a single race-free conditional claim (PostgreSQL `RETURNING`, with a portable affected-rows fallback) so two concurrent requests can never both succeed. Links are additionally protected by Laravel signed routes. Raw tokens and full link URLs are never logged.
 
-The request endpoint is rate-limited per email and per IP out of the box. For high-risk deployments, layer a CAPTCHA or challenge widget on the request form as an additional bot-protection measure — that is a host-application concern this package deliberately leaves to you.
+The request endpoint is rate-limited per email and per IP out of the box. For high-risk deployments, layer a CAPTCHA or challenge widget on the request form as an additional bot-protection measure — that is a host-application concern this package deliberately leaves to you. Throttled responses carry the standard `Retry-After` and `X-RateLimit-*` headers, so API and SPA clients can back off correctly.
 
 See [SECURITY.md](SECURITY.md) for the supported versions and how to report a vulnerability.
 

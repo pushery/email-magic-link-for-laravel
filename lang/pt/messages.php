@@ -28,6 +28,12 @@ return [
     'code_intro' => 'Enviámos-lhe um código de uso único por e-mail. Introduza-o abaixo para concluir o início de sessão.',
     'code_label' => 'Código de acesso',
 
+    // Status and error messages.
+    'status_link_sent' => 'Se existir uma conta com esse e-mail, enviámos um link de acesso.',
+    'status_code_sent' => 'Se existir uma conta com esse e-mail, enviámos um código de acesso.',
+    'consume_failed' => 'Este pedido de acesso é inválido ou expirou. Solicite um novo.',
+    'captcha_failed' => 'A verificação falhou. Tente novamente.',
+
     // Notification — magic link.
     'mail_link_subject' => 'Iniciar sessão em :app',
     'mail_link_intro' => 'Utilize o botão abaixo para iniciar sessão em :app.',

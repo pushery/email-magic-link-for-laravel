@@ -28,6 +28,12 @@ return [
     'code_intro' => 'Nous vous avons envoyé un code à usage unique par e-mail. Saisissez-le ci-dessous pour terminer la connexion.',
     'code_label' => 'Code de connexion',
 
+    // Status and error messages.
+    'status_link_sent' => 'Si un compte correspond à cette adresse e-mail, nous vous avons envoyé un lien de connexion.',
+    'status_code_sent' => 'Si un compte correspond à cette adresse e-mail, nous vous avons envoyé un code de connexion.',
+    'consume_failed' => 'Cette demande de connexion est invalide ou a expiré. Veuillez en demander une nouvelle.',
+    'captcha_failed' => 'La vérification a échoué. Veuillez réessayer.',
+
     // Notification — magic link.
     'mail_link_subject' => 'Connexion à :app',
     'mail_link_intro' => 'Utilisez le bouton ci-dessous pour vous connecter à :app.',

@@ -28,6 +28,12 @@ return [
     'code_intro' => 'Ti abbiamo inviato un codice monouso via email. Inseriscilo qui sotto per completare l’accesso.',
     'code_label' => 'Codice di accesso',
 
+    // Status and error messages.
+    'status_link_sent' => 'Se un account corrisponde a quell’email, ti abbiamo inviato un link di accesso.',
+    'status_code_sent' => 'Se un account corrisponde a quell’email, ti abbiamo inviato un codice di accesso.',
+    'consume_failed' => 'Questa richiesta di accesso non è valida o è scaduta. Richiedine una nuova.',
+    'captcha_failed' => 'La verifica non è riuscita. Riprova.',
+
     // Notification — magic link.
     'mail_link_subject' => 'Accedi a :app',
     'mail_link_intro' => 'Usa il pulsante qui sotto per accedere a :app.',

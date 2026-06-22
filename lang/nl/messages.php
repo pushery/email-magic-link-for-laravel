@@ -28,6 +28,12 @@ return [
     'code_intro' => 'We hebben je een eenmalige code gemaild. Voer deze hieronder in om het inloggen te voltooien.',
     'code_label' => 'Inlogcode',
 
+    // Status and error messages.
+    'status_link_sent' => 'Als een account overeenkomt met dat e-mailadres, hebben we een inloglink gestuurd.',
+    'status_code_sent' => 'Als een account overeenkomt met dat e-mailadres, hebben we een inlogcode gestuurd.',
+    'consume_failed' => 'Deze inlogaanvraag is ongeldig of verlopen. Vraag een nieuwe aan.',
+    'captcha_failed' => 'De verificatie is mislukt. Probeer het opnieuw.',
+
     // Notification — magic link.
     'mail_link_subject' => 'Inloggen bij :app',
     'mail_link_intro' => 'Gebruik de knop hieronder om in te loggen bij :app.',

@@ -28,6 +28,12 @@ return [
     'code_intro' => 'Wir haben dir einen Einmalcode per E-Mail geschickt. Gib ihn unten ein, um die Anmeldung abzuschließen.',
     'code_label' => 'Anmeldecode',
 
+    // Status and error messages.
+    'status_link_sent' => 'Wenn ein Konto zu dieser E-Mail-Adresse passt, haben wir einen Anmeldelink gesendet.',
+    'status_code_sent' => 'Wenn ein Konto zu dieser E-Mail-Adresse passt, haben wir einen Anmeldecode gesendet.',
+    'consume_failed' => 'Diese Anmeldeanfrage ist ungültig oder abgelaufen. Bitte fordere eine neue an.',
+    'captcha_failed' => 'Die Sicherheitsprüfung ist fehlgeschlagen. Bitte versuche es erneut.',
+
     // Notification — magic link.
     'mail_link_subject' => 'Bei :app anmelden',
     'mail_link_intro' => 'Nutze die Schaltfläche unten, um dich bei :app anzumelden.',

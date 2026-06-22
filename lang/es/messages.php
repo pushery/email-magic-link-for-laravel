@@ -28,6 +28,12 @@ return [
     'code_intro' => 'Te hemos enviado un código de un solo uso por correo. Introdúcelo abajo para completar el inicio de sesión.',
     'code_label' => 'Código de acceso',
 
+    // Status and error messages.
+    'status_link_sent' => 'Si una cuenta coincide con ese correo, te hemos enviado un enlace de acceso.',
+    'status_code_sent' => 'Si una cuenta coincide con ese correo, te hemos enviado un código de acceso.',
+    'consume_failed' => 'Esta solicitud de acceso no es válida o ha caducado. Solicita una nueva.',
+    'captcha_failed' => 'La verificación ha fallado. Inténtalo de nuevo.',
+
     // Notification — magic link.
     'mail_link_subject' => 'Inicia sesión en :app',
     'mail_link_intro' => 'Usa el botón de abajo para iniciar sesión en :app.',

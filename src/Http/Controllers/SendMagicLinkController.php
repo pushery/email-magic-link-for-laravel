@@ -65,7 +65,7 @@ final class SendMagicLinkController
 
     private function captchaFailed(SendMagicLinkRequest $request): Response
     {
-        $message = 'The verification challenge failed. Please try again.';
+        $message = __('email-magic-link::messages.captcha_failed');
 
         if ($this->wantsJson($request)) {
             return $this->apiError($message, 'captcha_failed', 422);
@@ -120,8 +120,8 @@ final class SendMagicLinkController
     private function sentResponse(SendMagicLinkRequest $request, string $channel, string $email, ?string $guard): Response
     {
         $message = $channel === 'code'
-            ? 'If an account matches that email, we have sent a sign-in code.'
-            : 'If an account matches that email, we have sent a sign-in link.';
+            ? __('email-magic-link::messages.status_code_sent')
+            : __('email-magic-link::messages.status_link_sent');
 
         if ($this->wantsJson($request)) {
             return response()->json(['message' => $message, 'channel' => $channel]);

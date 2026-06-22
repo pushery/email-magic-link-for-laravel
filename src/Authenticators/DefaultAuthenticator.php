@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace EmailMagicLink\Authenticators;
 
 use EmailMagicLink\Contracts\MagicLinkAuthenticator;
+use EmailMagicLink\Events\MagicLinkAuthenticated;
 use EmailMagicLink\Support\MagicLinkConfig;
 use Illuminate\Auth\AuthManager;
 use Illuminate\Contracts\Auth\Authenticatable;
@@ -46,6 +47,8 @@ final readonly class DefaultAuthenticator implements MagicLinkAuthenticator
         if ($request->hasSession()) {
             $request->session()->regenerate();
         }
+
+        event(new MagicLinkAuthenticated($user, $guard, $request));
 
         $redirect = $this->config->redirectToIntended()
             ? $this->redirector->intended($this->config->redirectTo())

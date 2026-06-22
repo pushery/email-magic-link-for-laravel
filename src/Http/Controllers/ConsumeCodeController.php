@@ -9,6 +9,7 @@ use EmailMagicLink\Contracts\UserLookup;
 use EmailMagicLink\Http\Controllers\Concerns\CompletesMagicLinkLogin;
 use EmailMagicLink\Http\Requests\ConsumeCodeRequest;
 use EmailMagicLink\Models\MagicLinkToken;
+use EmailMagicLink\Support\ClaimFailure;
 use EmailMagicLink\Support\MagicLinkConfig;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Symfony\Component\HttpFoundation\Response;
@@ -35,14 +36,14 @@ final class ConsumeCodeController
         $user = $lookup->findByEmail($request->email(), $guard);
 
         if (! $user instanceof Authenticatable) {
-            return $this->failedConsumption($request, 'email-magic-link.code.form');
+            return $this->failedConsumption($request, 'email-magic-link.code.form', ClaimFailure::NotFound);
         }
 
         $result = $store->claimCode($user, $request->code(), $guard);
         $claimed = $result->token;
 
         if (! $result->successful || ! $claimed instanceof MagicLinkToken) {
-            return $this->failedConsumption($request, 'email-magic-link.code.form');
+            return $this->failedConsumption($request, 'email-magic-link.code.form', $result->failure ?? ClaimFailure::NotFound);
         }
 
         return $this->completeLogin($request, $claimed, 'email-magic-link.code.form');

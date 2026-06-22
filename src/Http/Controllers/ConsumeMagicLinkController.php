@@ -7,6 +7,7 @@ namespace EmailMagicLink\Http\Controllers;
 use EmailMagicLink\Contracts\TokenStore;
 use EmailMagicLink\Http\Controllers\Concerns\CompletesMagicLinkLogin;
 use EmailMagicLink\Models\MagicLinkToken;
+use EmailMagicLink\Support\ClaimFailure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -26,7 +27,7 @@ final class ConsumeMagicLinkController
         $claimed = $result->token;
 
         if (! $result->successful || ! $claimed instanceof MagicLinkToken) {
-            return $this->failedConsumption($request, 'email-magic-link.request.form');
+            return $this->failedConsumption($request, 'email-magic-link.request.form', $result->failure ?? ClaimFailure::NotFound);
         }
 
         return $this->completeLogin($request, $claimed, 'email-magic-link.request.form');

@@ -212,11 +212,13 @@ The contract returns a response, so it — not an event — is where login-versu
 
 **React to events** (observability only — they must not drive flow control):
 
-- `MagicLinkRequested($user, $channel, $request)`
-- `MagicLinkVerified($user, $request)`
-- `TwoFactorChallengeRequired($user, $request)` (fired by the bridge)
+- `MagicLinkRequested($user, $channel, $request)` — a link or code was issued for a known user.
+- `MagicLinkVerified($user, $request)` — a token was verified and consumed, before the authenticator runs.
+- `MagicLinkAuthenticated($user, $guard, $request)` — the user was actually logged in (fires only on a completed login, never for a two-factor hand-off), the precise signal for an audit log.
+- `MagicLinkConsumptionFailed($reason, $request)` — a consume attempt failed; `$reason` is a `ClaimFailure` (`NotFound`, `Expired`, `InvalidCode`, `LockedOut`, `AlreadyConsumed`), so you can log every failure and alert specifically on `LockedOut` (a brute-force lockout) or repeated `InvalidCode`.
+- `TwoFactorChallengeRequired($user, $request)` (fired by the bridge) — a confirmed-2FA user is being handed to the challenge.
 
-Successful logins also fire Laravel's own `Illuminate\Auth\Events\Login`.
+Each carries the `Request`, so a listener can record the IP and user agent. The response stays generic and enumeration-resistant regardless of which failure reason fired. Successful logins also fire Laravel's own `Illuminate\Auth\Events\Login`.
 
 **Swap collaborators** via config: the `notification` class (extend `MagicLinkNotification`), a `UserLookup` (resolve users your way), and a `TokenStore` (custom persistence).
 

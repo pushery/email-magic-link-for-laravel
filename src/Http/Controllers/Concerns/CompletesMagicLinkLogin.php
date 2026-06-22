@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace EmailMagicLink\Http\Controllers\Concerns;
 
 use EmailMagicLink\Contracts\MagicLinkAuthenticator;
+use EmailMagicLink\Events\MagicLinkConsumptionFailed;
 use EmailMagicLink\Events\MagicLinkVerified;
 use EmailMagicLink\Models\MagicLinkToken;
+use EmailMagicLink\Support\ClaimFailure;
 use Illuminate\Auth\AuthManager;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Http\Request;
@@ -28,7 +30,7 @@ trait CompletesMagicLinkLogin
         $user = $this->resolveUser($token);
 
         if ($user === null) {
-            return $this->failedConsumption($request, $failureRoute);
+            return $this->failedConsumption($request, $failureRoute, ClaimFailure::NotFound);
         }
 
         event(new MagicLinkVerified($user, $request));
@@ -45,8 +47,10 @@ trait CompletesMagicLinkLogin
             ?->retrieveById($token->user_id);
     }
 
-    protected function failedConsumption(Request $request, string $failureRoute): Response
+    protected function failedConsumption(Request $request, string $failureRoute, ClaimFailure $reason): Response
     {
+        event(new MagicLinkConsumptionFailed($reason, $request));
+
         $message = 'This sign-in request is invalid or has expired. Please request a new one.';
 
         if ($this->wantsJson($request)) {

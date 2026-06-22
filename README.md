@@ -30,17 +30,19 @@ The package requires `laravel/framework` (for the `FormRequest` base it validate
 composer require pushery/email-magic-link-for-laravel
 ```
 
-Publish and run the migration:
+Then run the installer to publish the configuration and print the next steps:
 
 ```bash
-php artisan vendor:publish --tag=email-magic-link-migrations
-php artisan migrate
+php artisan email-magic-link:install
 ```
 
-The migration is also auto-loaded, so a fresh app works without publishing. Optionally publish the config and views:
+Add `--views` to also publish the Blade views. The migration is loaded automatically, so a fresh app works without publishing anything.
+
+Prefer to do it by hand? The individual publish tags are still available:
 
 ```bash
 php artisan vendor:publish --tag=email-magic-link-config
+php artisan vendor:publish --tag=email-magic-link-migrations
 php artisan vendor:publish --tag=email-magic-link-views
 ```
 

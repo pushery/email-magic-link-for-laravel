@@ -117,6 +117,7 @@ All values live in `config/email-magic-link.php`.
 | `routes.prefix` | `''` | Route prefix. |
 | `routes.middleware` | `['web']` | Route middleware (sessions + CSRF). |
 | `routes.redirect_to` | `'/'` | Fallback redirect after login. |
+| `routes.intended` | `true` | Return to the originally requested URL after login. |
 | `api.enabled` | `false` | Direct JSON token exchange for SPA/mobile. |
 | `ui.mode` | `'auto'` | `'auto'` (WireKit views if installed) or `'blade'`. |
 | `ui.vite` | `['resources/css/app.css']` | Vite entry the WireKit layout loads. |

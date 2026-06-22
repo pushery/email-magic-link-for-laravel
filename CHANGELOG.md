@@ -4,6 +4,20 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-06-22
+
+### Added
+
+- The post-login redirect now returns the user to the URL they originally requested
+  (the protected route that triggered the flow), falling back to `redirect_to`. It
+  applies to both the browser redirect and the API response, and can be turned off
+  with the new `routes.intended` config.
+
+### Changed
+
+- The API response `redirect` field is now the resolved absolute destination URL
+  (the intended URL when present, otherwise `redirect_to`).
+
 ## [0.6.0] - 2026-06-22
 
 ### Added

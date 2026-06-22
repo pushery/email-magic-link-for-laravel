@@ -145,6 +145,11 @@ final readonly class MagicLinkConfig
         return $this->string($this->config->get('email-magic-link.routes.redirect_to'), '/');
     }
 
+    public function redirectToIntended(): bool
+    {
+        return $this->bool($this->config->get('email-magic-link.routes.intended'), true);
+    }
+
     public function apiEnabled(): bool
     {
         return $this->bool($this->config->get('email-magic-link.api.enabled'), false);

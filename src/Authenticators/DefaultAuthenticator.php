@@ -47,14 +47,18 @@ final readonly class DefaultAuthenticator implements MagicLinkAuthenticator
             $request->session()->regenerate();
         }
 
+        $redirect = $this->config->redirectToIntended()
+            ? $this->redirector->intended($this->config->redirectTo())
+            : $this->redirector->to($this->config->redirectTo());
+
         if ($request->expectsJson() && $this->config->apiEnabled()) {
             return new JsonResponse([
                 'authenticated' => true,
                 'two_factor' => false,
-                'redirect' => $this->config->redirectTo(),
+                'redirect' => $redirect->getTargetUrl(),
             ]);
         }
 
-        return $this->redirector->intended($this->config->redirectTo());
+        return $redirect;
     }
 }

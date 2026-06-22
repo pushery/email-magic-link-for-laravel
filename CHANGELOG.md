@@ -4,6 +4,17 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.0] - 2026-06-22
+
+### Added
+
+- A `CaptchaGuard` extension point. Point the new `captcha` config at a class
+  implementing `EmailMagicLink\Contracts\CaptchaGuard` to verify a CAPTCHA
+  (hCaptcha, Turnstile, reCAPTCHA) or any pre-issue challenge before a link or code
+  is issued. It runs before the user lookup, so a failed challenge rejects the
+  request identically whether or not the account exists, and returns a
+  `captcha_failed` error (JSON) or a form error. The default applies no challenge.
+
 ## [0.10.0] - 2026-06-22
 
 ### Added

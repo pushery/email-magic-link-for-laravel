@@ -123,6 +123,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Captcha guard
+    |--------------------------------------------------------------------------
+    |
+    | A class implementing the CaptchaGuard contract, run before a link or code
+    | is issued. Use it to verify a CAPTCHA (hCaptcha, Turnstile, reCAPTCHA) or
+    | any pre-issue challenge. It sees only the request, never the account, so it
+    | cannot leak whether an email exists. Leave null to apply no challenge.
+    |
+    */
+
+    'captcha' => null,
+
+    /*
+    |--------------------------------------------------------------------------
     | Notification
     |--------------------------------------------------------------------------
     |

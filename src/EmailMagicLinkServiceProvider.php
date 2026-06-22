@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace EmailMagicLink;
 
 use EmailMagicLink\Authenticators\DefaultAuthenticator;
+use EmailMagicLink\Captcha\NullCaptchaGuard;
 use EmailMagicLink\Console\Commands\InstallCommand;
 use EmailMagicLink\Console\Commands\PurgeExpiredTokensCommand;
+use EmailMagicLink\Contracts\CaptchaGuard;
 use EmailMagicLink\Contracts\MagicLinkAuthenticator;
 use EmailMagicLink\Contracts\TokenStore;
 use EmailMagicLink\Contracts\UserLookup;
@@ -71,6 +73,12 @@ final class EmailMagicLinkServiceProvider extends ServiceProvider
             $custom = $app->make(MagicLinkConfig::class)->userLookup();
 
             return $this->resolveContract($app, UserLookup::class, $custom, DefaultUserLookup::class);
+        });
+
+        $this->app->singleton(CaptchaGuard::class, function (Application $app): CaptchaGuard {
+            $custom = $app->make(MagicLinkConfig::class)->captcha();
+
+            return $this->resolveContract($app, CaptchaGuard::class, $custom, NullCaptchaGuard::class);
         });
 
         $this->app->singleton(MagicLinkAuthenticator::class, DefaultAuthenticator::class);

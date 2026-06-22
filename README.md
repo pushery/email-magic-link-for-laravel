@@ -81,7 +81,18 @@ The channel itself can be turned off completely with `enabled = false`, independ
 
 Because consumption is `POST`-only, the user clicks the emailed link (a `GET`) and then clicks "Sign in" on the confirmation page. That second click is the price of being safe against link-following security scanners and prefetch — tools that would otherwise spend a single-use token before the person ever sees it. We consider that trade-off worth it; it is the whole point of the package.
 
-For first-party SPA or mobile clients that exchange the token over JSON without an interstitial, set `api.enabled = true` and `POST` the token with an `Accept: application/json` header.
+For first-party SPA or mobile clients that exchange the token over JSON without an interstitial, set `api.enabled = true` and send `Accept: application/json`. The endpoints then speak a stable JSON contract:
+
+| Outcome | Status | Body |
+| --- | --- | --- |
+| Link / code requested | `200` | `{ "message": "…", "channel": "link"\|"code" }` |
+| Signed in | `200` | `{ "authenticated": true, "two_factor": false, "redirect": "<url>" }` |
+| Two-factor required | `200` | `{ "authenticated": false, "two_factor": true, "redirect": "<challenge url>" }` |
+| Invalid or expired | `422` | `{ "message": "…", "error": "invalid_or_expired" }` |
+| Validation failed | `422` | `{ "message": "…", "errors": { … } }` |
+| Rate limited | `429` | `{ "message": "…" }` + `Retry-After` / `X-RateLimit-*` headers |
+
+The `error` code is stable and safe to branch on, while the human `message` stays generic so it never reveals whether an account exists. A `two_factor` response means the client must send the user to `redirect` to finish the TOTP challenge — the second factor is never skipped.
 
 ## The two-factor handoff (and its trade-off)
 

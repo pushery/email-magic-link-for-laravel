@@ -4,6 +4,22 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.0] - 2026-06-22
+
+### Added
+
+- A stable JSON error envelope for the API variant: failed consumptions now return
+  `{ "message": …, "error": "invalid_or_expired" }`, a machine-readable code a SPA
+  or mobile client can branch on without parsing the human message.
+- The two-factor hand-off now answers an API client with
+  `{ "authenticated": false, "two_factor": true, "redirect": … }` instead of a bare
+  redirect, so the client knows it must complete the challenge and where to go.
+
+### Changed
+
+- Documented the full JSON token-exchange contract (success, two-factor, error,
+  validation, and rate-limit shapes) in the README.
+
 ## [0.9.0] - 2026-06-22
 
 ### Added

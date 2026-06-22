@@ -8,6 +8,7 @@ use EmailMagicLink\Contracts\MagicLinkAuthenticator;
 use EmailMagicLink\Events\TwoFactorChallengeRequired;
 use EmailMagicLink\Support\MagicLinkConfig;
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\Response;
@@ -65,7 +66,19 @@ final readonly class FortifyAwareAuthenticator implements MagicLinkAuthenticator
 
         event(new TwoFactorChallengeRequired($user, $request));
 
-        return redirect()->route($this->config->challengeRoute());
+        $redirect = redirect()->route($this->config->challengeRoute());
+
+        // Tell an API client it must complete the second factor and where to go,
+        // rather than handing it a bare redirect it cannot follow.
+        if ($request->expectsJson() && $this->config->apiEnabled()) {
+            return new JsonResponse([
+                'authenticated' => false,
+                'two_factor' => true,
+                'redirect' => $redirect->getTargetUrl(),
+            ]);
+        }
+
+        return $redirect;
     }
 
     private function hasConfirmedTwoFactor(Authenticatable $user): bool

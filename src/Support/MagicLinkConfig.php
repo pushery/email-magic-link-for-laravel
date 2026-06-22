@@ -6,6 +6,7 @@ namespace EmailMagicLink\Support;
 
 use EmailMagicLink\Notifications\MagicLinkNotification;
 use Illuminate\Contracts\Config\Repository;
+use Illuminate\Support\Facades\View;
 
 /**
  * Typed gateway to the package configuration.
@@ -147,6 +148,35 @@ final readonly class MagicLinkConfig
     public function apiEnabled(): bool
     {
         return $this->bool($this->config->get('email-magic-link.api.enabled'), false);
+    }
+
+    /**
+     * @return 'auto'|'blade'
+     */
+    public function uiMode(): string
+    {
+        return $this->string($this->config->get('email-magic-link.ui.mode'), 'auto') === 'blade'
+            ? 'blade'
+            : 'auto';
+    }
+
+    public function usesWireKit(): bool
+    {
+        return $this->uiMode() === 'auto' && WireKit::installed();
+    }
+
+    /**
+     * Resolve a view to its WireKit variant when WireKit is active and that
+     * variant exists, else the plain Blade view. The existence check keeps the
+     * sign-in UI from breaking if a WireKit view was never published or removed.
+     */
+    public function view(string $name): string
+    {
+        $wirekit = "email-magic-link::wirekit.{$name}";
+
+        return $this->usesWireKit() && View::exists($wirekit)
+            ? $wirekit
+            : "email-magic-link::{$name}";
     }
 
     /**

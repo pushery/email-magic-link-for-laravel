@@ -20,6 +20,6 @@ final readonly class ShowRequestFormController
 
     public function __invoke(): View
     {
-        return $this->views->make('email-magic-link::request', ['mode' => $this->config->mode()]);
+        return $this->views->make($this->config->view('request'), ['mode' => $this->config->mode()]);
     }
 }

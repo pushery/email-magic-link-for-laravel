@@ -4,6 +4,16 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-06-22
+
+### Added
+
+- Optional WireKit (`pushery/wirekit`) sign-in screens. When WireKit is installed
+  the views render with its components automatically; otherwise the plain Blade
+  views are used. Controlled by the new `ui.mode` (`auto` / `blade`) and `ui.vite`
+  configuration. The routes, CSRF-protected POSTs, and single-use consumption are
+  unchanged — only the presentation differs.
+
 ## [0.3.1] - 2026-06-22
 
 ### Added

@@ -160,6 +160,26 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | User interface
+    |--------------------------------------------------------------------------
+    |
+    | "mode" selects the look of the bundled sign-in screens:
+    |   "auto"   render WireKit (pushery/wirekit) views when it is installed,
+    |            otherwise the plain Blade views
+    |   "blade"  always the plain Blade views, even when WireKit is installed
+    |
+    | "vite" lists the Vite entry points the WireKit layout loads, so the host's
+    | compiled Tailwind (including WireKit's styles) is present on the page.
+    |
+    */
+
+    'ui' => [
+        'mode' => env('EMAIL_MAGIC_LINK_UI', 'auto'),
+        'vite' => ['resources/css/app.css'],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Fortify bridge
     |--------------------------------------------------------------------------
     |

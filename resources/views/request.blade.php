@@ -1,10 +1,10 @@
 @extends('email-magic-link::layout')
 
-@section('title', 'Sign in')
+@section('title', __('email-magic-link::messages.request_title'))
 
 @section('content')
-    <h1>Sign in to {{ config('app.name') }}</h1>
-    <p>Enter your email address and we will send you a secure sign-in {{ $mode === 'code' ? 'code' : 'link' }}.</p>
+    <h1>{{ __('email-magic-link::messages.heading', ['app' => config('app.name')]) }}</h1>
+    <p>{{ $mode === 'code' ? __('email-magic-link::messages.request_intro_code') : __('email-magic-link::messages.request_intro_link') }}</p>
 
     @if (session('status'))
         <div class="status" role="status">{{ session('status') }}</div>
@@ -13,7 +13,7 @@
     <form method="POST" action="{{ route('email-magic-link.request') }}">
         @csrf
 
-        <label for="email">Email address</label>
+        <label for="email">{{ __('email-magic-link::messages.email_label') }}</label>
         <input id="email" name="email" type="email" autocomplete="email" required autofocus value="{{ old('email') }}">
 
         @error('email')
@@ -22,12 +22,12 @@
 
         @if ($mode === 'both')
             <fieldset>
-                <legend>Delivery</legend>
-                <label><input type="radio" name="channel" value="link" checked> Magic link</label>
-                <label><input type="radio" name="channel" value="code"> One-time code</label>
+                <legend>{{ __('email-magic-link::messages.delivery_legend') }}</legend>
+                <label><input type="radio" name="channel" value="link" checked> {{ __('email-magic-link::messages.delivery_link') }}</label>
+                <label><input type="radio" name="channel" value="code"> {{ __('email-magic-link::messages.delivery_code') }}</label>
             </fieldset>
         @endif
 
-        <button type="submit">Send sign-in {{ $mode === 'code' ? 'code' : 'link' }}</button>
+        <button type="submit">{{ $mode === 'code' ? __('email-magic-link::messages.request_send_code') : __('email-magic-link::messages.request_send_link') }}</button>
     </form>
 @endsection

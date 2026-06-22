@@ -82,6 +82,7 @@ final class EmailMagicLinkServiceProvider extends ServiceProvider
 
         $this->registerPublishing();
         $this->loadViewsFrom(__DIR__.'/../resources/views', 'email-magic-link');
+        $this->loadTranslationsFrom(__DIR__.'/../lang', 'email-magic-link');
 
         if (self::$runsMigrations) {
             $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
@@ -180,6 +181,10 @@ final class EmailMagicLinkServiceProvider extends ServiceProvider
             $this->publishes([
                 __DIR__.'/../resources/views' => resource_path('views/vendor/email-magic-link'),
             ], 'email-magic-link-views');
+
+            $this->publishes([
+                __DIR__.'/../lang' => lang_path('vendor/email-magic-link'),
+            ], 'email-magic-link-lang');
         }
     }
 }

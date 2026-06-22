@@ -134,6 +134,21 @@ use Illuminate\Support\Facades\Schedule;
 Schedule::command('email-magic-link:purge')->daily();
 ```
 
+## Translations
+
+Every user-facing string — in the views and the notification — runs through
+Laravel's translator under the `email-magic-link` namespace, so the package ships
+in English and adapts to the application's active locale. Publish the language
+files to translate or reword them:
+
+```bash
+php artisan vendor:publish --tag=email-magic-link-lang
+```
+
+That copies the strings to `lang/vendor/email-magic-link/{locale}`. Add a locale
+by copying the `en` directory (for example to `de`) and translating the values;
+the `:app` and `:minutes` placeholders are filled in at render time.
+
 ## Extension points
 
 **Take over the post-verification flow** by rebinding the authenticator contract:

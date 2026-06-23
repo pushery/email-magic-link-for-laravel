@@ -1,0 +1,7 @@
+* text=auto eol=lf
+
+/.github export-ignore
+/art export-ignore
+/.gitattributes export-ignore
+/CHANGELOG.md export-ignore
+/CONTRIBUTING.md export-ignore

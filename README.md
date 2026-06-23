@@ -1,3 +1,9 @@
+<p align="center">
+  <a href="https://github.com/pushery/email-magic-link-for-laravel">
+    <img src="art/header.png" alt="Email Magic Link for Laravel" width="100%">
+  </a>
+</p>
+
 # Email Magic Link for Laravel
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/pushery/email-magic-link-for-laravel.svg)](https://packagist.org/packages/pushery/email-magic-link-for-laravel)
@@ -261,6 +267,12 @@ Tokens are never stored in the clear — only a keyed HMAC-SHA256 hash, looked u
 The request endpoint is rate-limited per email and per IP out of the box. For high-risk deployments, layer a CAPTCHA or challenge widget on top via the `captcha` guard (see [Extension points](#extension-points)) as an additional bot-protection measure. Throttled responses carry the standard `Retry-After` and `X-RateLimit-*` headers, so API and SPA clients can back off correctly.
 
 See [SECURITY.md](SECURITY.md) for the supported versions and how to report a vulnerability.
+
+## Built by Pushery
+
+This package is built and maintained by [Pushery](https://www.pushery.com) — a Berlin-based studio building Laravel applications, SaaS products, and open-source tools.
+
+Want these sign-in screens to match a polished component library out of the box? They render automatically with [WireKit](https://wirekit.app), Pushery's open-source Livewire UI kit. Browse the rest of our work at [pushery.com](https://www.pushery.com).
 
 ## Versioning
 

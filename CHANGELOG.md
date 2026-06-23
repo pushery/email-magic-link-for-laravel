@@ -4,6 +4,13 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.1] - 2026-06-23
+
+### Added
+
+- A header banner and a short "Built by Pushery" section in the README. The
+  banner ships in a new `art/` directory; the package API is unchanged.
+
 ## [0.13.0] - 2026-06-22
 
 ### Fixed

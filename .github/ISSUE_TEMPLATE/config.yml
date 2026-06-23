@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/pushery/email-magic-link-for-laravel/security/advisories/new
+    about: Please report security issues privately, never as a public issue. See SECURITY.md.
+  - name: Pushery
+    url: https://www.pushery.com
+    about: Learn more about the team behind this package.

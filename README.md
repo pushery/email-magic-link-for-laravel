@@ -73,6 +73,42 @@ Out of the box the package registers a complete browser flow under the `web` mid
 
 Point your "log in" link at `route('email-magic-link.request.form')` and you have passwordless login. A user enters their email, receives a link, clicks it, confirms, and is signed in.
 
+## Issuing links and codes yourself
+
+Sometimes you want to deliver the link or code over a channel the bundled email flow does not cover — an SMS, a chat message, an existing transactional email, or a queued job. The **Mint-API** issues a credential and hands it back **without sending anything**:
+
+```php
+use EmailMagicLink\Facades\EmailMagicLink;
+
+// A single-use magic link for the default guard.
+$link = EmailMagicLink::issueLink($user);
+$link->url;              // signed, single-use confirmation URL — deliver this verbatim
+$link->expiresAt;        // Illuminate\Support\Carbon
+$link->expiresInMinutes; // e.g. 15 — handy for your own copy
+
+// A one-time code instead.
+$code = EmailMagicLink::issueCode($user);
+$code->code;             // the code to deliver
+$code->expiresAt;
+$code->expiresInMinutes;
+```
+
+Prefer dependency injection? Depend on the `EmailMagicLink\Contracts\MagicLinkIssuer` contract; the facade is a thin wrapper over it.
+
+```php
+use EmailMagicLink\Contracts\MagicLinkIssuer;
+
+public function __construct(private MagicLinkIssuer $issuer) {}
+```
+
+The minted credential is hashed at rest, single-use, and consumed through the exact same flow as an emailed one — only nothing is sent. A few rules the API enforces or expects:
+
+- **Deliver `url` verbatim.** It points at the inert, signed confirmation page (a `GET` that changes nothing); the token is spent only when the user submits it. Never send or prefetch the consume endpoint.
+- **Pass a user that belongs to the guard.** Issuing re-resolves the user through the guard's own provider — the same provider the consume step uses — and throws `UserNotInGuardException` if it does not match. With no `$guard` the default guard is used; pass an allowed guard (the default plus any under `guards`) or get an `UnknownGuardException`.
+- **`issueCode` supersedes the previous code** for the same user and guard, so only the most recently issued code can be claimed. (`issueLink` does not invalidate earlier links.)
+- **The channel must be enabled.** With `enabled = false` the API throws `MagicLinkDisabledException` rather than minting a credential that could never be consumed.
+- Need to look a user up by email first? Inject `EmailMagicLink\Contracts\UserLookup` — that is the supported email-to-user path; the Mint-API deliberately takes an already-resolved user.
+
 ## The three configurations
 
 **Standalone — no Fortify.** A verified user is logged in directly with `Auth::login`. There is no second factor in standalone mode, by design.
@@ -169,8 +205,11 @@ Every user-facing string — the views, the notification, and the status and err
 responses (the "we sent a link", "invalid or expired", and challenge-failed
 messages) — runs through Laravel's translator under the `email-magic-link`
 namespace, so everything follows the application's active locale. English, German,
-Spanish, French, Italian, Dutch, and Portuguese ship in the box. Publish the
-language files to translate, reword, or add more:
+Spanish, French, Italian, Dutch, and Portuguese ship in the box, along with the
+regional variants `en-GB`, `en-US`, `pt-PT`, and `pt-BR` — copies of the `en` and
+`pt` messages, ready for regional refinement — so an app that distinguishes them
+renders fully localized screens and emails with no fallback. Publish the language
+files to translate, reword, or add more:
 
 ```bash
 php artisan vendor:publish --tag=email-magic-link-lang
@@ -260,11 +299,22 @@ final class TurnstileGuard implements CaptchaGuard
 
 It runs before any user lookup, so a failed challenge rejects the request identically whether or not the email exists — it can never become an enumeration oracle. A failure returns the `captcha_failed` JSON error (or a form error) and issues nothing.
 
-## Security at rest
+## Security model
 
-Tokens are never stored in the clear — only a keyed HMAC-SHA256 hash, looked up via an index. Consumption is a single race-free conditional claim (PostgreSQL `RETURNING`, with a portable affected-rows fallback) so two concurrent requests can never both succeed. Links are additionally protected by Laravel signed routes. Raw tokens and full link URLs are never logged.
+The package is designed to fail closed. Each row below is a concrete threat and the design decision that addresses it — every one is exercised by the test suite.
 
-The request endpoint is rate-limited per email and per IP out of the box. For high-risk deployments, layer a CAPTCHA or challenge widget on top via the `captcha` guard (see [Extension points](#extension-points)) as an additional bot-protection measure. Throttled responses carry the standard `Retry-After` and `X-RateLimit-*` headers, so API and SPA clients can back off correctly.
+| Threat | How the package addresses it |
+|---|---|
+| **Database leak** — a stolen backup, an exposed read replica, or SQL injection elsewhere in the app | Tokens and codes are **never stored in the clear**: only a keyed HMAC-SHA256 hash is persisted and indexed. A leaked database alone cannot recognise or forge a working link or code. |
+| **Email security scanners and prefetch** — SafeLinks, Mimecast, Proofpoint, browser preconnect | The emailed `GET` is signed and **inert** — it only renders a confirmation page, with no authentication or state change. The single-use token is spent solely by an explicit `POST`, so a link-follower cannot burn it before the human clicks "Sign in". |
+| **Token replay, double-spend, and races** | Consumption is a **single race-free conditional claim** (PostgreSQL `RETURNING`, with a portable affected-rows fallback), so two concurrent requests for the same token can never both succeed. Links and codes are single-use. |
+| **Object injection / deserialization gadgets** | The package **never serializes objects** into a token. A row holds only scalar columns (user id, guard, channel, a hash, timestamps), so there is no `unserialize()` on any code path and therefore no object-injection surface. |
+| **Account enumeration** | The request endpoint returns a response **identical** whether or not the email belongs to a user, runs the optional CAPTCHA *before* any lookup, and queues the mail so response timing does not leak existence. Consume failures collapse to a single generic message. |
+| **Two-factor bypass** | A user with confirmed TOTP is handed to Fortify's challenge **without being logged in** — there is no path that authenticates a two-factor user without the second factor (see [the two-factor handoff](#the-two-factor-handoff-and-its-trade-off)). |
+| **Brute force of one-time codes** | A boot-time **entropy guardrail** refuses to start when a code's keyspace divided by the per-token attempt cap is too low; a per-token lockout burns the token after too many wrong guesses; and the endpoints are rate-limited per email, per IP, and per token hash. |
+| **Session fixation** | The session id is regenerated on a successful login. |
+
+Raw tokens and full link URLs are never logged. Throttled responses carry the standard `Retry-After` and `X-RateLimit-*` headers, so API and SPA clients can back off correctly. For high-risk deployments, layer a CAPTCHA or challenge widget on top via the `captcha` guard (see [Extension points](#extension-points)).
 
 See [SECURITY.md](SECURITY.md) for the supported versions and how to report a vulnerability.
 

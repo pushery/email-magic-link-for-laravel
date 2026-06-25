@@ -11,11 +11,11 @@ use EmailMagicLink\Events\MagicLinkRequested;
 use EmailMagicLink\Http\Controllers\Concerns\RespondsToApiClients;
 use EmailMagicLink\Http\Requests\SendMagicLinkRequest;
 use EmailMagicLink\Notifications\MagicLinkNotification;
+use EmailMagicLink\Support\ConfirmationUrl;
 use EmailMagicLink\Support\IssuedToken;
 use EmailMagicLink\Support\MagicLinkConfig;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Notification as NotificationSender;
-use Illuminate\Support\Facades\URL;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -24,6 +24,11 @@ use Symfony\Component\HttpFoundation\Response;
  * Enumeration-resistant: the response is identical whether or not the
  * email belongs to a user. A token is issued and a queued notification
  * dispatched only when a user is found, but the caller can never observe that.
+ *
+ * The user is resolved through the guard's own lookup, so this flow trusts the
+ * resolved user as belonging to the guard. The public Mint-API
+ * (MagicLinkIssuer), which accepts an arbitrary user, performs the stricter
+ * provider re-resolution instead.
  */
 final class SendMagicLinkController
 {
@@ -97,11 +102,7 @@ final class SendMagicLinkController
         $minutes = (int) ceil($config->ttlFor($channel) / 60);
 
         $actionUrl = $channel === 'link'
-            ? URL::temporarySignedRoute(
-                'email-magic-link.confirm',
-                $issued->record->expires_at,
-                ['token' => $issued->plaintext],
-            )
+            ? ConfirmationUrl::for($issued->record, $issued->plaintext)
             : null;
 
         $notification = $config->notification();

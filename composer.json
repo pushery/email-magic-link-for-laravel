@@ -29,6 +29,7 @@
         "laravel/pint": "^1.0",
         "orchestra/testbench": "^11.0",
         "pestphp/pest": "^4.0",
+        "pestphp/pest-plugin-browser": "^4.3",
         "pestphp/pest-plugin-laravel": "^4.0",
         "pestphp/pest-plugin-type-coverage": "^4.0",
         "rector/rector": "^2.0"
@@ -44,13 +45,17 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "EmailMagicLink\\Tests\\": "tests/"
+            "EmailMagicLink\\Tests\\": "tests/",
+            "Workbench\\App\\": "workbench/app/",
+            "Workbench\\Database\\Factories\\": "workbench/database/factories/",
+            "Workbench\\Database\\Seeders\\": "workbench/database/seeders/"
         }
     },
     "scripts": {
         "test": "pest",
         "test:coverage": "pest --coverage --min=100",
         "test:type-coverage": "pest --type-coverage --min=100",
+        "test:browser": "pest tests/Browser tests/BrowserFortify",
         "analyse": "phpstan analyse",
         "format": "pint",
         "format:test": "pint --test",

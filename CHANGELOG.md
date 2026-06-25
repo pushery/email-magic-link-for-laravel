@@ -4,6 +4,24 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.0] - 2026-06-25
+
+### Added
+
+- Bundle the regional locale variants `en-GB`, `en-US`, `pt-PT`, and `pt-BR` (copies of the
+  `en`/`pt` messages, ready for regional refinement), so apps that distinguish them get fully
+  localized magic-link screens and emails with no fallback. `nl` and the existing locales are
+  unchanged.
+- A public Mint-API for issuing magic links and one-time codes **without sending
+  mail**, so you can deliver them over any channel (SMS, chat, an existing email,
+  a queued job). Use the `EmailMagicLink` facade or inject the new
+  `MagicLinkIssuer` contract: `issueLink($user)` returns a signed single-use
+  `IssuedLink` (URL plus expiry) and `issueCode($user)` returns an `IssuedCode`.
+  Minted credentials are hashed at rest and single-use exactly like the emailed
+  flow. Issuance re-resolves the user through the target guard's provider and
+  fails closed (`UserNotInGuardException`, `UnknownGuardException`,
+  `MagicLinkDisabledException`) rather than minting a dead or misdirected token.
+
 ## [0.13.3] - 2026-06-23
 
 ### Changed

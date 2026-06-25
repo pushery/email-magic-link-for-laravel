@@ -10,14 +10,17 @@ use EmailMagicLink\Console\Commands\InstallCommand;
 use EmailMagicLink\Console\Commands\PurgeExpiredTokensCommand;
 use EmailMagicLink\Contracts\CaptchaGuard;
 use EmailMagicLink\Contracts\MagicLinkAuthenticator;
+use EmailMagicLink\Contracts\MagicLinkIssuer;
 use EmailMagicLink\Contracts\TokenStore;
 use EmailMagicLink\Contracts\UserLookup;
 use EmailMagicLink\Lookups\DefaultUserLookup;
 use EmailMagicLink\Stores\DefaultTokenStore;
+use EmailMagicLink\Support\DefaultMagicLinkIssuer;
 use EmailMagicLink\Support\EntropyGuard;
 use EmailMagicLink\Support\MagicLinkConfig;
 use EmailMagicLink\Support\RateLimits;
 use EmailMagicLink\Support\TokenHasher;
+use Illuminate\Auth\AuthManager;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Http\Request;
@@ -82,6 +85,12 @@ final class EmailMagicLinkServiceProvider extends ServiceProvider
         });
 
         $this->app->singleton(MagicLinkAuthenticator::class, DefaultAuthenticator::class);
+
+        $this->app->singleton(MagicLinkIssuer::class, fn (Application $app): MagicLinkIssuer => new DefaultMagicLinkIssuer(
+            $app->make(TokenStore::class),
+            $app->make(MagicLinkConfig::class),
+            $app->make(AuthManager::class),
+        ));
     }
 
     public function boot(): void

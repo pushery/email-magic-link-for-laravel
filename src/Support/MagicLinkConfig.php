@@ -139,6 +139,18 @@ final readonly class MagicLinkConfig
             : $this->guard();
     }
 
+    /**
+     * The user provider configured for a guard, or null to fall back to the
+     * application's default provider. Mirrors how the consume flow resolves the
+     * user, so issuance and consumption always agree on the provider.
+     */
+    public function providerForGuard(string $guard): ?string
+    {
+        $provider = $this->config->get("auth.guards.{$guard}.provider");
+
+        return is_string($provider) ? $provider : null;
+    }
+
     public function userLookup(): ?string
     {
         $lookup = $this->config->get('email-magic-link.user_lookup');

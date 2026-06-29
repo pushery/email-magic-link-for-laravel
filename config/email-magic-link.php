@@ -202,13 +202,20 @@ return [
     |   "blade"  always the plain Blade views, even when WireKit is installed
     |
     | "vite" lists the Vite entry points the WireKit layout loads, so the host's
-    | compiled Tailwind (including WireKit's styles) is present on the page.
+    | compiled Tailwind (including WireKit's styles) is present on the page. Set
+    | it to false (or an empty array) if the host does not use Vite — WireKit's
+    | own design tokens are always injected by @wirekitStyles regardless.
+    |
+    | "styles" lists plain stylesheet URLs to <link> into the WireKit layout.
+    | Use it when the host ships a pre-compiled stylesheet instead of (or
+    | alongside) a Vite build — e.g. a CDN bundle or an asset() path.
     |
     */
 
     'ui' => [
         'mode' => env('EMAIL_MAGIC_LINK_UI', 'auto'),
         'vite' => ['resources/css/app.css'],
+        'styles' => [],
     ],
 
     /*

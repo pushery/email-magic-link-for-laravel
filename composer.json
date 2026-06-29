@@ -32,6 +32,7 @@
         "pestphp/pest-plugin-browser": "^4.3",
         "pestphp/pest-plugin-laravel": "^4.0",
         "pestphp/pest-plugin-type-coverage": "^4.0",
+        "pushery/wirekit": "^2.8",
         "rector/rector": "^2.0"
     },
     "suggest": {
@@ -56,6 +57,7 @@
         "test:coverage": "pest --coverage --min=100",
         "test:type-coverage": "pest --type-coverage --min=100",
         "test:browser": "pest tests/Browser tests/BrowserFortify",
+        "test:browser:wirekit": "pest tests/BrowserWireKit",
         "analyse": "phpstan analyse",
         "format": "pint",
         "format:test": "pint --test",

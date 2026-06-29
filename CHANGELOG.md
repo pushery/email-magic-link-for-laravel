@@ -4,6 +4,27 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.0] - 2026-06-29
+
+### Fixed
+
+- The WireKit sign-in screens rendered unstyled. The layout never injected
+  WireKit's `@wirekitStyles`, so none of its design tokens (`--color-wk-*`,
+  `--padding-wk-*`, …) were defined and every component fell back to a
+  transparent, padding-less default. The layout now injects `@wirekitStyles`,
+  wraps each card in `<x-wirekit::card.body>` so its content is padded, spaces
+  the fields with `<x-wirekit::stack>`, and lets a long one-time code wrap
+  rather than forcing a horizontal scroll on narrow phones. The page shell is
+  now self-contained, so the screens center correctly even when the host's
+  Tailwind build does not scan the package's own views.
+
+### Added
+
+- `ui.styles`: a list of plain stylesheet URLs to `<link>` into the WireKit
+  layout, for hosts that ship a pre-compiled stylesheet instead of (or alongside)
+  a Vite build. `ui.vite` now also accepts `false` to skip `@vite` entirely on a
+  non-Vite host.
+
 ## [0.14.0] - 2026-06-25
 
 ### Added

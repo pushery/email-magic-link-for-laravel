@@ -4,6 +4,15 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.1] - 2026-07-04
+
+### Changed
+
+- Documentation and the `email-magic-link:install` command now spell out the two
+  setup steps that are easy to miss: running `php artisan migrate` to create the
+  token table, and keeping a queue worker running (or using the `sync` queue
+  connection locally) because the magic-link email is dispatched to the queue.
+
 ## [0.15.0] - 2026-06-29
 
 ### Fixed

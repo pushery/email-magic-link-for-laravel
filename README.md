@@ -48,15 +48,29 @@ Then run the installer to publish the configuration and print the next steps:
 php artisan email-magic-link:install
 ```
 
-Add `--views` to also publish the Blade views. The migration is loaded automatically, so a fresh app works without publishing anything.
+Now run your migrations to create the token table. The migration ships with the package and is loaded automatically — you do **not** need to publish it first:
 
-Prefer to do it by hand? The individual publish tags are still available:
+```bash
+php artisan migrate
+```
+
+Add `--views` to the installer to also publish the Blade views. Prefer to do it by hand? The individual publish tags are still available:
 
 ```bash
 php artisan vendor:publish --tag=email-magic-link-config
 php artisan vendor:publish --tag=email-magic-link-migrations
 php artisan vendor:publish --tag=email-magic-link-views
 ```
+
+### Sending the email
+
+The magic-link email is dispatched to the **queue**. This is deliberate: the request that issues a link returns in constant time and never blocks on the mailer, so it cannot reveal whether an account exists. The trade-off is that the mail is only actually sent once a queue worker processes the job, so **a worker has to be running**:
+
+```bash
+php artisan queue:work
+```
+
+If nothing is consuming the queue, the email never leaves — the request still succeeds, but the job just sits there. In production, keep a worker (or Horizon/Supervisor) running. For local development you can send mail synchronously instead by setting `QUEUE_CONNECTION=sync` in your `.env`.
 
 ## Quick start
 

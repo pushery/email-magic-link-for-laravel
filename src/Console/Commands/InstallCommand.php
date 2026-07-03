@@ -39,11 +39,22 @@ final class InstallCommand extends Command
         }
 
         $this->newLine();
-        $this->info('Email Magic Link is ready.');
-        $this->line("Point your sign-in link at route('email-magic-link.request.form').");
+        $this->info('Email Magic Link is ready. Next steps:');
+        $this->newLine();
+        $this->line('  1. Create the token table by running your migrations:');
+        $this->line('       php artisan migrate');
+        $this->newLine();
+        $this->line('  2. Run a queue worker. The magic-link email is queued, so it is');
+        $this->line('     only delivered once a worker processes the job:');
+        $this->line('       php artisan queue:work');
+        $this->line('     (or set QUEUE_CONNECTION=sync in .env to send mail synchronously');
+        $this->line('     during local development).');
+        $this->newLine();
+        $this->line("  3. Point your sign-in link at route('email-magic-link.request.form').");
+        $this->newLine();
         $this->line('The migration is loaded automatically; publish it with');
         $this->line('  php artisan vendor:publish --tag=email-magic-link-migrations');
-        $this->line('if you need to customize it.');
+        $this->line('only if you need to customize it.');
 
         return self::SUCCESS;
     }

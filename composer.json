@@ -58,6 +58,7 @@
         "test:type-coverage": "pest --type-coverage --min=100",
         "test:browser": "pest tests/Browser tests/BrowserFortify",
         "test:browser:wirekit": "pest tests/BrowserWireKit",
+        "test:mysql": "pest --testsuite=MySql",
         "analyse": "phpstan analyse",
         "format": "pint",
         "format:test": "pint --test",

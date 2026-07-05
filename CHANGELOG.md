@@ -4,6 +4,16 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.2] - 2026-07-05
+
+### Added
+
+- The token-claim path is now tested against **MySQL 8.4** — the database engine
+  Laravel Cloud runs (alongside PostgreSQL) — so the package is proven to work on
+  Laravel Cloud out of the box. The atomic single-use link claim and the
+  one-time-code lockout are now exercised under real InnoDB row locking, closing
+  the gap that in-memory SQLite (whose row locking is a no-op) could not cover.
+
 ## [0.15.1] - 2026-07-04
 
 ### Changed

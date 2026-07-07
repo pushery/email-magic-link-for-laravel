@@ -38,6 +38,8 @@
                         {{ $mode === 'code' ? __('email-magic-link::messages.request_send_code') : __('email-magic-link::messages.request_send_link') }}
                     </x-wirekit::button>
                 </x-wirekit::stack>
+
+                @include('email-magic-link::partials.resend-countdown')
             </x-wirekit::stack>
         </x-wirekit::card.body>
     </x-wirekit::card>

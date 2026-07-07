@@ -262,4 +262,41 @@ return [
         'consume' => ['max' => 10, 'per_minutes' => 1],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Resend guard
+    |--------------------------------------------------------------------------
+    |
+    | An escalating cooldown plus a rolling cap layered on top of the fixed-
+    | window limiters above, so a repeatedly clicked "send again" cannot flood
+    | an inbox. After each send the next one for that email is held back a
+    | little longer (base, then base × factor, up to "max" seconds), and no more
+    | than "max_sends" go out per rolling "window". A held-back request is told
+    | how many seconds remain so the screen can count down instead of erroring.
+    |
+    | The same guard is available to your own mail-sending endpoints: inject the
+    | EmailMagicLink\Contracts\ResendGuard contract and call attempt()/peek()/
+    | reset() with a key of your choosing. It needs a cache store that supports
+    | atomic locks (the array, file, database, redis, and memcached stores all
+    | do); leave "store" null to use the default cache store.
+    |
+    */
+
+    'resend' => [
+        'enabled' => env('EMAIL_MAGIC_LINK_RESEND', true),
+
+        'cooldown' => [
+            'base' => 30,
+            'factor' => 2,
+            'max' => 900,
+        ],
+
+        'window' => [
+            'minutes' => 60,
+            'max_sends' => 5,
+        ],
+
+        'store' => null,
+    ],
+
 ];

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace EmailMagicLink\Http\Controllers;
 
 use EmailMagicLink\Contracts\CaptchaGuard;
+use EmailMagicLink\Contracts\ResendGuard;
 use EmailMagicLink\Contracts\TokenStore;
 use EmailMagicLink\Contracts\UserLookup;
 use EmailMagicLink\Events\MagicLinkRequested;
@@ -14,6 +15,8 @@ use EmailMagicLink\Notifications\MagicLinkNotification;
 use EmailMagicLink\Support\ConfirmationUrl;
 use EmailMagicLink\Support\IssuedToken;
 use EmailMagicLink\Support\MagicLinkConfig;
+use EmailMagicLink\Support\ResendDecision;
+use EmailMagicLink\Support\ResendKey;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Notification as NotificationSender;
 use Symfony\Component\HttpFoundation\Response;
@@ -40,6 +43,7 @@ final class SendMagicLinkController
         TokenStore $store,
         MagicLinkConfig $config,
         CaptchaGuard $captcha,
+        ResendGuard $resendGuard,
     ): Response {
         // Pre-issue challenge, before any user lookup, so it gates the request
         // without ever depending on whether the account exists.
@@ -48,6 +52,15 @@ final class SendMagicLinkController
         }
 
         $email = $request->email();
+
+        // Escalating cooldown + rolling cap, keyed on the submitted email alone
+        // (never on whether it resolves to a user), so it stays enumeration-safe.
+        $decision = $resendGuard->attempt(ResendKey::forRequest($email));
+
+        if (! $decision->allowed) {
+            return $this->resendThrottled($request, $decision);
+        }
+
         $channel = $this->resolveChannel($request->requestedChannel(), $config->mode());
         $guard = $config->resolveGuard($request->requestedGuard());
 
@@ -79,6 +92,26 @@ final class SendMagicLinkController
         return redirect()->route('email-magic-link.request.form')
             ->withErrors(['email' => $message])
             ->withInput($request->only('email'));
+    }
+
+    private function resendThrottled(SendMagicLinkRequest $request, ResendDecision $decision): Response
+    {
+        $seconds = $decision->retryAfterSeconds;
+        $message = __('email-magic-link::messages.resend_throttled', ['seconds' => $seconds]);
+
+        if ($this->wantsJson($request)) {
+            return $this->apiError($message, 'resend_throttled', 429)
+                ->header('Retry-After', (string) $seconds);
+        }
+
+        // Flash the remaining seconds so the request form can disable the button
+        // and count down, and carry the same Retry-After header the fixed-window
+        // throttle already sets, for parity with the rest of the flow.
+        return redirect()->route('email-magic-link.request.form')
+            ->withErrors(['email' => $message])
+            ->with('resend_retry_after', $seconds)
+            ->withInput($request->only('email'))
+            ->header('Retry-After', (string) $seconds);
     }
 
     /**

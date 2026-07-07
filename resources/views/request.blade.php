@@ -30,4 +30,6 @@
 
         <button type="submit">{{ $mode === 'code' ? __('email-magic-link::messages.request_send_code') : __('email-magic-link::messages.request_send_link') }}</button>
     </form>
+
+    @include('email-magic-link::partials.resend-countdown')
 @endsection

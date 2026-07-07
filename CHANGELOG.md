@@ -4,6 +4,31 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.0] - 2026-07-07
+
+### Added
+
+- A **resend guard** that layers an escalating cooldown plus a rolling cap on top
+  of the existing per-minute limiters, so a repeatedly clicked "send again" can no
+  longer flood an inbox. After each send the next one for that email is held back a
+  little longer (30s → 60s → 120s …, up to a ceiling) and no more than five go out
+  per rolling hour. All values are configurable under the new `resend` config block,
+  and the whole guard can be switched off with `resend.enabled = false`. It is keyed
+  on the submitted email alone — never on whether an account exists — so it stays
+  enumeration-safe, and it clears itself once a link or code for the address is
+  verified, so a real sign-in is never punished.
+- A held-back request now tells the caller how many seconds remain instead of a bare
+  error: the bundled request screen disables its button and counts down, and JSON
+  clients receive a `429` with a `Retry-After` header and a stable
+  `"error": "resend_throttled"` code. The new `resend_throttled` message ships
+  translated in every bundled locale.
+- The guard is a **public, host-consumable service**: inject the
+  `EmailMagicLink\Contracts\ResendGuard` contract and call `attempt()`, `peek()`, and
+  `reset()` with a key of your own to protect your app's own mail-sending endpoints
+  (a "resend code" button on a custom challenge, a re-invite, a reset resend). It
+  needs a cache store that supports atomic locks and fails closed on one that does
+  not.
+
 ## [0.15.2] - 2026-07-05
 
 ### Added

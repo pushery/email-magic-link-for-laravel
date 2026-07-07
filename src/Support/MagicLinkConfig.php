@@ -332,6 +332,56 @@ final readonly class MagicLinkConfig
         return $this->readLimit('consume', 10);
     }
 
+    public function resendEnabled(): bool
+    {
+        return $this->bool($this->config->get('email-magic-link.resend.enabled'), true);
+    }
+
+    /**
+     * Base cooldown, growth factor, and ceiling for the escalating resend delay.
+     * Clamped so the ladder always climbs (base and factor at least 1) and never
+     * caps below the base.
+     *
+     * @return array{base: int, factor: int, max: int}
+     */
+    public function resendCooldown(): array
+    {
+        $cooldown = $this->config->get('email-magic-link.resend.cooldown');
+        $cooldown = is_array($cooldown) ? $cooldown : [];
+
+        $base = max(1, $this->int($cooldown['base'] ?? null, 30));
+        $factor = max(1, $this->int($cooldown['factor'] ?? null, 2));
+
+        return [
+            'base' => $base,
+            'factor' => $factor,
+            'max' => max($base, $this->int($cooldown['max'] ?? null, 900)),
+        ];
+    }
+
+    /**
+     * The rolling window as seconds plus the maximum sends allowed within it.
+     *
+     * @return array{seconds: int, max_sends: int}
+     */
+    public function resendWindow(): array
+    {
+        $window = $this->config->get('email-magic-link.resend.window');
+        $window = is_array($window) ? $window : [];
+
+        return [
+            'seconds' => max(1, $this->int($window['minutes'] ?? null, 60)) * 60,
+            'max_sends' => max(1, $this->int($window['max_sends'] ?? null, 5)),
+        ];
+    }
+
+    public function resendStore(): ?string
+    {
+        $store = $this->config->get('email-magic-link.resend.store');
+
+        return is_string($store) && $store !== '' ? $store : null;
+    }
+
     /**
      * @return array{max: int, per_minutes: int}
      */

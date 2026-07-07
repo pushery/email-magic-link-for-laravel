@@ -33,6 +33,7 @@ return [
     'status_code_sent' => 'Wenn ein Konto zu dieser E-Mail-Adresse passt, haben wir einen Anmeldecode gesendet.',
     'consume_failed' => 'Diese Anmeldeanfrage ist ungültig oder abgelaufen. Bitte fordere eine neue an.',
     'captcha_failed' => 'Die Sicherheitsprüfung ist fehlgeschlagen. Bitte versuche es erneut.',
+    'resend_throttled' => 'Bitte warte :seconds Sekunden, bevor du eine weitere Anmelde-E-Mail anforderst.',
 
     // Notification — magic link.
     'mail_link_subject' => 'Bei :app anmelden',

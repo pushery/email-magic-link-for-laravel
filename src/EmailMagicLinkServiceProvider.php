@@ -11,16 +11,19 @@ use EmailMagicLink\Console\Commands\PurgeExpiredTokensCommand;
 use EmailMagicLink\Contracts\CaptchaGuard;
 use EmailMagicLink\Contracts\MagicLinkAuthenticator;
 use EmailMagicLink\Contracts\MagicLinkIssuer;
+use EmailMagicLink\Contracts\ResendGuard;
 use EmailMagicLink\Contracts\TokenStore;
 use EmailMagicLink\Contracts\UserLookup;
 use EmailMagicLink\Lookups\DefaultUserLookup;
 use EmailMagicLink\Stores\DefaultTokenStore;
 use EmailMagicLink\Support\DefaultMagicLinkIssuer;
+use EmailMagicLink\Support\DefaultResendGuard;
 use EmailMagicLink\Support\EntropyGuard;
 use EmailMagicLink\Support\MagicLinkConfig;
 use EmailMagicLink\Support\RateLimits;
 use EmailMagicLink\Support\TokenHasher;
 use Illuminate\Auth\AuthManager;
+use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Http\Request;
@@ -90,6 +93,11 @@ final class EmailMagicLinkServiceProvider extends ServiceProvider
             $app->make(TokenStore::class),
             $app->make(MagicLinkConfig::class),
             $app->make(AuthManager::class),
+        ));
+
+        $this->app->singleton(ResendGuard::class, fn (Application $app): ResendGuard => new DefaultResendGuard(
+            $app->make(CacheFactory::class),
+            $app->make(MagicLinkConfig::class),
         ));
     }
 

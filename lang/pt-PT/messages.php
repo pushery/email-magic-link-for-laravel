@@ -33,6 +33,7 @@ return [
     'status_code_sent' => 'Se existir uma conta com esse e-mail, enviámos um código de acesso.',
     'consume_failed' => 'Este pedido de acesso é inválido ou expirou. Solicite um novo.',
     'captcha_failed' => 'A verificação falhou. Tente novamente.',
+    'resend_throttled' => 'Aguarde :seconds segundos antes de solicitar outro e-mail de acesso.',
 
     // Notification — magic link.
     'mail_link_subject' => 'Iniciar sessão em :app',

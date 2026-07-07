@@ -33,6 +33,7 @@ return [
     'status_code_sent' => 'Als een account overeenkomt met dat e-mailadres, hebben we een inlogcode gestuurd.',
     'consume_failed' => 'Deze inlogaanvraag is ongeldig of verlopen. Vraag een nieuwe aan.',
     'captcha_failed' => 'De verificatie is mislukt. Probeer het opnieuw.',
+    'resend_throttled' => 'Wacht :seconds seconden voordat je een nieuwe inlogmail aanvraagt.',
 
     // Notification — magic link.
     'mail_link_subject' => 'Inloggen bij :app',

@@ -33,6 +33,7 @@ return [
     'status_code_sent' => 'If an account matches that email, we have sent a sign-in code.',
     'consume_failed' => 'This sign-in request is invalid or has expired. Please request a new one.',
     'captcha_failed' => 'The verification challenge failed. Please try again.',
+    'resend_throttled' => 'Please wait :seconds seconds before requesting another sign-in email.',
 
     // Notification — magic link.
     'mail_link_subject' => 'Sign in to :app',

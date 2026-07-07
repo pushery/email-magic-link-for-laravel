@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace EmailMagicLink\Http\Controllers\Concerns;
 
 use EmailMagicLink\Contracts\MagicLinkAuthenticator;
+use EmailMagicLink\Contracts\ResendGuard;
 use EmailMagicLink\Events\MagicLinkConsumptionFailed;
 use EmailMagicLink\Events\MagicLinkVerified;
 use EmailMagicLink\Models\MagicLinkToken;
 use EmailMagicLink\Support\ClaimFailure;
+use EmailMagicLink\Support\ResendKey;
 use Illuminate\Auth\AuthManager;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Http\Request;
@@ -33,6 +35,11 @@ trait CompletesMagicLinkLogin
             return $this->failedConsumption($request, $failureRoute, ClaimFailure::NotFound);
         }
 
+        // A verified token proves the address reached its owner, so clear the
+        // resend cooldown for it — covers both the direct and the two-factor
+        // handoff path, which both flow through here after the atomic claim.
+        $this->resetResendCooldown($user);
+
         event(new MagicLinkVerified($user, $request));
 
         return app(MagicLinkAuthenticator::class)->authenticate($request, $user, $token->guard, false);
@@ -45,6 +52,24 @@ trait CompletesMagicLinkLogin
         return app(AuthManager::class)
             ->createUserProvider(is_string($providerName) ? $providerName : null)
             ?->retrieveById($token->user_id);
+    }
+
+    /**
+     * Clear the resend cooldown keyed on the verified user's current email.
+     *
+     * The token stores only a user id (never the address it was issued to, by
+     * design), so this resets by the user's present email. In the ordinary case
+     * that is the address the cooldown was armed on; if the user changed it
+     * between requesting and verifying, the old key simply ages out on its own —
+     * a harmless miss, never an error, and it clears no one else's state.
+     */
+    protected function resetResendCooldown(Authenticatable $user): void
+    {
+        $email = data_get($user, 'email');
+
+        if (is_string($email) && $email !== '') {
+            app(ResendGuard::class)->reset(ResendKey::forRequest($email));
+        }
     }
 
     protected function failedConsumption(Request $request, string $failureRoute, ClaimFailure $reason): Response

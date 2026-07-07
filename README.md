@@ -123,6 +123,45 @@ The minted credential is hashed at rest, single-use, and consumed through the ex
 - **The channel must be enabled.** With `enabled = false` the API throws `MagicLinkDisabledException` rather than minting a credential that could never be consumed.
 - Need to look a user up by email first? Inject `EmailMagicLink\Contracts\UserLookup` — that is the supported email-to-user path; the Mint-API deliberately takes an already-resolved user.
 
+## Holding back repeated sends
+
+Fixed-window limits cap volume but still let a "send again" button fire on every click until the cap is hit. The **resend guard** layers an escalating cooldown and a rolling cap on top: after each send the next one for that email is held back a little longer — 30 seconds, then 60, then 120, up to a ceiling — and no more than five go out per hour. It is on by default and keyed per email, so it never depends on whether an account exists. Turn it off with `resend.enabled = false`; tune it with the `resend.*` keys above.
+
+A held-back request is not a dead end: the caller is told how many seconds remain. Browsers get the count flashed to the session (the bundled request screen disables the button and counts down), and JSON clients get a `429` with a `Retry-After` header:
+
+```json
+{ "message": "Please wait 30 seconds before requesting another sign-in email.", "error": "resend_throttled" }
+```
+
+The same guard is a public service you can wrap around **your own** mail-sending endpoints — a "resend code" button on a custom challenge, a re-invite, a password-reset resend. Inject the `EmailMagicLink\Contracts\ResendGuard` contract and gate the send with a key of your choosing:
+
+```php
+use EmailMagicLink\Contracts\ResendGuard;
+
+public function __construct(private ResendGuard $guard) {}
+
+public function resend(Request $request): Response
+{
+    $decision = $this->guard->attempt('challenge:'.$request->user()->id);
+
+    if (! $decision->allowed) {
+        // Seconds until the next send is allowed — render a countdown.
+        return back()->with('retry_after', $decision->retryAfterSeconds);
+    }
+
+    // …send your mail…
+}
+```
+
+A few rules the guard follows:
+
+- **`attempt($key)` records a send only when it allows one.** A denied attempt changes no state, so a client polling the endpoint cannot push its own cooldown out. Use `peek($key)` to read the current decision without recording anything — handy for rendering a countdown before the user acts.
+- **`reset($key)` starts the key over.** Both the cooldown ladder and the rolling window clear. The package calls this for its own key once a link or code issued for the address is verified, so a real sign-in is never punished; call it yourself after your own flow completes.
+- **Pick your own key namespace.** Keys share the cache store, so prefix them (`challenge:{id}`, `invite:{email}`) to avoid colliding with the package's own `request:{email}` keys or each other. Normalize an email key yourself if you mix casings.
+- **The store must support atomic locks.** The guard takes a short lock per attempt so concurrent requests cannot each slip past the cap; the array, file, database, Redis, and Memcached stores all qualify. Point `resend.store` at one, or leave it `null` for the default cache store.
+
+**A note on the hourly cap and availability.** The cap is keyed on the submitted email, so an unauthenticated caller who knows an address can spend that address's hourly budget and keep the account from receiving a link for up to an hour. That is the nature of any per-account send cap — the same shape as the per-minute limiter, just over a longer window — and it is the price of guaranteeing a hard ceiling on mail to one inbox. The guard runs **after** the CAPTCHA (see [Extension points](#extension-points)), so in a hostile setting, enabling the `captcha` guard stops an attacker from reaching the cap at all. Raise `resend.window.max_sends`, shorten the window, or set `resend.enabled = false` if the cooldown alone is enough for your threat model.
+
 ## The three configurations
 
 **Standalone — no Fortify.** A verified user is logged in directly with `Auth::login`. There is no second factor in standalone mode, by design.
@@ -196,6 +235,10 @@ All values live in `config/email-magic-link.php`.
 | `fortify.challenge_route` | `'two-factor.login'` | Fortify challenge route name. |
 | `limiters.request` / `limiters.consume` | named limiters | Override with `RateLimiter::for()`. |
 | `limits.request` / `limits.consume` | `5` / `10` per minute | Defaults for the bundled limiters. |
+| `resend.enabled` | `true` | Escalating cooldown + rolling cap on repeated sends. |
+| `resend.cooldown` | `30` / `2` / `900` | Cooldown `base`, growth `factor`, and `max` seconds. |
+| `resend.window` | `60` / `5` | Rolling window `minutes` and `max_sends` within it. |
+| `resend.store` | `null` | Cache store for the guard; `null` uses the default. |
 
 ## One-time codes
 
@@ -216,8 +259,8 @@ Schedule::command('email-magic-link:purge')->daily();
 ## Translations
 
 Every user-facing string — the views, the notification, and the status and error
-responses (the "we sent a link", "invalid or expired", and challenge-failed
-messages) — runs through Laravel's translator under the `email-magic-link`
+responses (the "we sent a link", "invalid or expired", challenge-failed, and
+"please wait N seconds" messages) — runs through Laravel's translator under the `email-magic-link`
 namespace, so everything follows the application's active locale. English, German,
 Spanish, French, Italian, Dutch, and Portuguese ship in the box, along with the
 regional variants `en-GB`, `en-US`, `pt-PT`, and `pt-BR` — copies of the `en` and
@@ -341,9 +384,10 @@ The package is designed to fail closed. Each row below is a concrete threat and 
 | **Account enumeration** | The request endpoint returns a response **identical** whether or not the email belongs to a user, runs the optional CAPTCHA *before* any lookup, and queues the mail so response timing does not leak existence. Consume failures collapse to a single generic message. |
 | **Two-factor bypass** | A user with confirmed TOTP is handed to Fortify's challenge **without being logged in** — there is no path that authenticates a two-factor user without the second factor (see [the two-factor handoff](#the-two-factor-handoff-and-its-trade-off)). |
 | **Brute force of one-time codes** | A boot-time **entropy guardrail** refuses to start when a code's keyspace divided by the per-token attempt cap is too low; a per-token lockout burns the token after too many wrong guesses; and the endpoints are rate-limited per email, per IP, and per token hash. |
+| **Mail flooding an inbox** — a repeatedly clicked "send again" | Beyond the per-minute limiters, a **resend guard** applies an escalating cooldown (30s → 60s → 120s …) and a rolling cap (five per hour) keyed per email, so a victim's inbox cannot be flooded. It is keyed on the submitted address alone, never on whether it resolves to a user, so it stays enumeration-safe. |
 | **Session fixation** | The session id is regenerated on a successful login. |
 
-Raw tokens and full link URLs are never logged. Throttled responses carry the standard `Retry-After` and `X-RateLimit-*` headers, so API and SPA clients can back off correctly. For high-risk deployments, layer a CAPTCHA or challenge widget on top via the `captcha` guard (see [Extension points](#extension-points)).
+Raw tokens and full link URLs are never logged. Throttled responses carry the standard `Retry-After` and `X-RateLimit-*` headers, so API and SPA clients can back off correctly. The resend cap is a per-account control keyed on the submitted email and enforced *before* user lookup; because it can be used to keep a known address throttled, pair it with the `captcha` guard — which runs first — in hostile settings (see [Holding back repeated sends](#holding-back-repeated-sends)). For high-risk deployments, layer a CAPTCHA or challenge widget on top via the `captcha` guard (see [Extension points](#extension-points)).
 
 See [SECURITY.md](SECURITY.md) for the supported versions and how to report a vulnerability.
 

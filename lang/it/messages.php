@@ -33,6 +33,7 @@ return [
     'status_code_sent' => 'Se un account corrisponde a quell’email, ti abbiamo inviato un codice di accesso.',
     'consume_failed' => 'Questa richiesta di accesso non è valida o è scaduta. Richiedine una nuova.',
     'captcha_failed' => 'La verifica non è riuscita. Riprova.',
+    'resend_throttled' => 'Attendi :seconds secondi prima di richiedere un’altra email di accesso.',
 
     // Notification — magic link.
     'mail_link_subject' => 'Accedi a :app',

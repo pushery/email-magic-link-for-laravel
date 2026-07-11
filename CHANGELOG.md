@@ -4,6 +4,17 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.1] - 2026-07-12
+
+### Added
+
+- A README recipe for **authorizing a gated resource without login** — a one-time
+  file download or gated view. Mint a single-use token with the Mint-API /
+  `TokenStore` and consume it on your own route with `claimLink()`; a successful
+  claim authorizes serving the resource without creating a session. No new
+  channel, no serialized payload — it reuses the existing single-use,
+  hashed-at-rest token model.
+
 ## [0.17.0] - 2026-07-11
 
 ### Added

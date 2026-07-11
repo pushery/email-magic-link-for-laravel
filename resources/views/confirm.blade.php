@@ -12,6 +12,10 @@
 
     <form method="POST" action="{{ $action }}">
         @csrf
+        @if ($requiresPassphrase ?? false)
+            <label for="passphrase">{{ __('email-magic-link::messages.passphrase_label') }}</label>
+            <input type="password" name="passphrase" id="passphrase" autocomplete="off" required autofocus>
+        @endif
         <button type="submit">{{ __('email-magic-link::messages.sign_in') }}</button>
     </form>
 @endsection

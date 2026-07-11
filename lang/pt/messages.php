@@ -28,6 +28,12 @@ return [
     'code_intro' => 'Enviámos-lhe um código de uso único por e-mail. Introduza-o abaixo para concluir o início de sessão.',
     'code_label' => 'Código de acesso',
 
+    // Confirmation passphrase gate.
+    'passphrase_label' => 'Frase de acesso',
+
+    // Invalid link page.
+    'invalid_title' => 'Pedido de acesso inválido',
+
     // Status and error messages.
     'status_link_sent' => 'Se existir uma conta com esse e-mail, enviámos um link de acesso.',
     'status_code_sent' => 'Se existir uma conta com esse e-mail, enviámos um código de acesso.',

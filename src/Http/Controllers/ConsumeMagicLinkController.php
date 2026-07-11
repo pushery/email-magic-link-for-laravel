@@ -23,7 +23,9 @@ final class ConsumeMagicLinkController
 
     public function __invoke(Request $request, string $token, TokenStore $store): Response
     {
-        $result = $store->claimLink($token);
+        $passphrase = $request->string('passphrase')->toString();
+
+        $result = $store->claimLink($token, $passphrase !== '' ? $passphrase : null);
         $claimed = $result->token;
 
         if (! $result->successful || ! $claimed instanceof MagicLinkToken) {

@@ -15,6 +15,7 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Hash;
 
 /**
  * Eloquent-backed token store.
@@ -30,10 +31,22 @@ final readonly class DefaultTokenStore implements TokenStore
         private TokenHasher $hasher,
     ) {}
 
-    public function issue(Authenticatable $user, string $guard, string $channel): IssuedToken
+    public function issue(Authenticatable $user, string $guard, string $channel, ?int $maxUses = null, ?string $passphrase = null): IssuedToken
     {
         $now = Carbon::now();
         $userId = $this->identifierOf($user);
+
+        // Only links may be redeemed more than once; a code is always single-use.
+        // A per-call override wins over the configured default, clamped to >= 1.
+        $usesRemaining = $channel === 'link'
+            ? max(1, $maxUses ?? $this->config->maxUses())
+            : 1;
+
+        // A passphrase gates links only (a code is itself the secret). Hashed with
+        // bcrypt because it is a human-chosen shared secret, not a random token.
+        $passphraseHash = $channel === 'link' && is_string($passphrase) && $passphrase !== ''
+            ? Hash::make($passphrase)
+            : null;
 
         if ($channel === 'code') {
             // Keep at most one active code per user PER GUARD so a claim is
@@ -54,6 +67,8 @@ final readonly class DefaultTokenStore implements TokenStore
         $record->token_hash = $this->hasher->hash($plaintext);
         $record->channel = $channel;
         $record->attempts = 0;
+        $record->uses_remaining = $usesRemaining;
+        $record->passphrase_hash = $passphraseHash;
         $record->expires_at = $now->copy()->addSeconds($this->config->ttlFor($channel));
         $record->consumed_at = null;
         $record->save();
@@ -61,23 +76,34 @@ final readonly class DefaultTokenStore implements TokenStore
         return new IssuedToken($plaintext, $record);
     }
 
-    public function claimLink(string $token): ClaimResult
+    public function claimLink(string $token, ?string $passphrase = null): ClaimResult
     {
         $now = Carbon::now();
         $hash = $this->hasher->hash($token);
 
-        if ($this->atomicClaim('token_hash', $hash, 'link', $now)) {
-            $model = MagicLinkToken::query()
-                ->where('token_hash', $hash)
-                ->where('channel', 'link')
-                ->first();
+        // Verify the passphrase BEFORE the atomic claim, so a wrong passphrase
+        // never spends a use of a multi-use link. A generic failure keeps the
+        // response indistinguishable from an unknown or expired token.
+        $existing = $this->findLinkByHash($hash);
 
-            return $model !== null
+        if ($existing?->passphrase_hash !== null && ! $this->passphraseMatches($passphrase, $existing->passphrase_hash)) {
+            return ClaimResult::failed(ClaimFailure::InvalidPassphrase);
+        }
+
+        if ($this->atomicClaim('token_hash', $hash, 'link', $now)) {
+            $model = $this->findLinkByHash($hash);
+
+            return $model instanceof MagicLinkToken
                 ? ClaimResult::success($model)
                 : ClaimResult::failed(ClaimFailure::NotFound);
         }
 
         return ClaimResult::failed($this->classifyLinkFailure($hash, $now));
+    }
+
+    public function requiresPassphrase(string $token): bool
+    {
+        return $this->findLinkByHash($this->hasher->hash($token))?->requiresPassphrase() ?? false;
     }
 
     public function claimCode(Authenticatable $user, string $code, string $guard): ClaimResult
@@ -170,40 +196,57 @@ final readonly class DefaultTokenStore implements TokenStore
     }
 
     /**
-     * Atomically flip consumed_at on the single active row matching the column.
+     * Atomically spend one use of the single active row matching the column.
      *
-     * Returns true only for the request that wins the race.
+     * A single conditional UPDATE decrements uses_remaining and only flips
+     * consumed_at once it reaches zero, so it is race-free for both single-use
+     * (uses_remaining 1 -> 0, consumed) and multi-use links: two concurrent
+     * claims each decrement exactly once under the row lock and can never take
+     * the counter below zero (the `uses_remaining > 0` guard fails the loser).
+     * Returns true only for a claim that spent a use.
+     *
+     * consumed_at is assigned BEFORE the decrement in the SET list on purpose:
+     * MySQL evaluates SET left to right and lets a later clause see the updated
+     * value, so the CASE must read uses_remaining while it still holds the
+     * pre-decrement count. PostgreSQL and SQLite always read the old row values,
+     * so the ordering is a no-op there — but it makes all three engines agree.
      */
     private function atomicClaim(string $column, string $value, string $channel, Carbon $now): bool
     {
         $connection = $this->connection();
 
-        if ($connection->getDriverName() === 'pgsql') {
-            $returned = $connection->select(
-                "update magic_link_tokens set consumed_at = ?, updated_at = ? where {$column} = ? and channel = ? and consumed_at is null and expires_at > ? returning id",
-                [$now, $now, $value, $channel, $now],
-            );
+        $sql = 'update magic_link_tokens set '
+            .'consumed_at = case when uses_remaining <= 1 then ? else consumed_at end, '
+            .'uses_remaining = uses_remaining - 1, updated_at = ? '
+            ."where {$column} = ? and channel = ? and consumed_at is null and expires_at > ? and uses_remaining > 0";
+        $bindings = [$now, $now, $value, $channel, $now];
 
-            return $returned !== [];
+        if ($connection->getDriverName() === 'pgsql') {
+            return $connection->select($sql.' returning id', $bindings) !== [];
         }
 
-        return $connection->table('magic_link_tokens')
-            ->where($column, $value)
-            ->where('channel', $channel)
-            ->whereNull('consumed_at')
-            ->where('expires_at', '>', $now)
-            ->update(['consumed_at' => $now, 'updated_at' => $now]) === 1;
+        return $connection->update($sql, $bindings) === 1;
+    }
+
+    private function findLinkByHash(string $hash): ?MagicLinkToken
+    {
+        return MagicLinkToken::query()
+            ->where('token_hash', $hash)
+            ->where('channel', 'link')
+            ->first();
+    }
+
+    private function passphraseMatches(?string $passphrase, string $hash): bool
+    {
+        return is_string($passphrase) && $passphrase !== '' && Hash::check($passphrase, $hash);
     }
 
     private function classifyLinkFailure(string $hash, Carbon $now): ClaimFailure
     {
-        $row = MagicLinkToken::query()
-            ->where('token_hash', $hash)
-            ->where('channel', 'link')
-            ->first();
+        $row = $this->findLinkByHash($hash);
 
         return match (true) {
-            $row === null => ClaimFailure::NotFound,
+            ! $row instanceof MagicLinkToken => ClaimFailure::NotFound,
             $row->isConsumed() => ClaimFailure::AlreadyConsumed,
             $row->isExpired($now) => ClaimFailure::Expired,
             default => ClaimFailure::NotFound,

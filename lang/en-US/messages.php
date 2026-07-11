@@ -28,6 +28,12 @@ return [
     'code_intro' => 'We emailed you a one-time code. Enter it below to finish signing in.',
     'code_label' => 'Sign-in code',
 
+    // Confirmation passphrase gate.
+    'passphrase_label' => 'Passphrase',
+
+    // Invalid link page.
+    'invalid_title' => 'Sign-in request invalid',
+
     // Status and error messages.
     'status_link_sent' => 'If an account matches that email, we have sent a sign-in link.',
     'status_code_sent' => 'If an account matches that email, we have sent a sign-in code.',

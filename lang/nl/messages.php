@@ -28,6 +28,12 @@ return [
     'code_intro' => 'We hebben je een eenmalige code gemaild. Voer deze hieronder in om het inloggen te voltooien.',
     'code_label' => 'Inlogcode',
 
+    // Confirmation passphrase gate.
+    'passphrase_label' => 'Wachtwoordzin',
+
+    // Invalid link page.
+    'invalid_title' => 'Inlogaanvraag ongeldig',
+
     // Status and error messages.
     'status_link_sent' => 'Als een account overeenkomt met dat e-mailadres, hebben we een inloglink gestuurd.',
     'status_code_sent' => 'Als een account overeenkomt met dat e-mailadres, hebben we een inlogcode gestuurd.',

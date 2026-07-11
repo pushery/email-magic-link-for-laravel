@@ -16,5 +16,6 @@ enum ClaimFailure
     case Expired;
     case AlreadyConsumed;
     case InvalidCode;
+    case InvalidPassphrase;
     case LockedOut;
 }

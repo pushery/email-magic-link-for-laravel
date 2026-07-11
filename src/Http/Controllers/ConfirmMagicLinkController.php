@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace EmailMagicLink\Http\Controllers;
 
+use EmailMagicLink\Contracts\TokenStore;
 use EmailMagicLink\Support\MagicLinkConfig;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
@@ -21,6 +22,7 @@ final readonly class ConfirmMagicLinkController
     public function __construct(
         private MagicLinkConfig $config,
         private Factory $views,
+        private TokenStore $store,
     ) {}
 
     public function __invoke(string $token): View
@@ -28,6 +30,7 @@ final readonly class ConfirmMagicLinkController
         return $this->views->make($this->config->view('confirm'), [
             'token' => $token,
             'action' => route('email-magic-link.consume', ['token' => $token]),
+            'requiresPassphrase' => $this->store->requiresPassphrase($token),
         ]);
     }
 }

@@ -21,13 +21,27 @@ interface TokenStore
      * Issue a fresh token for the user and return the plaintext secret.
      *
      * @param  'link'|'code'  $channel
+     * @param  int|null  $maxUses  Redemptions allowed for a link; null uses the
+     *                             configured default. Ignored for codes (always 1).
+     * @param  string|null  $passphrase  An optional shared secret that must be
+     *                                   entered on the confirmation page before a
+     *                                   link is consumed. Link-only; not 2FA.
      */
-    public function issue(Authenticatable $user, string $guard, string $channel): IssuedToken;
+    public function issue(Authenticatable $user, string $guard, string $channel, ?int $maxUses = null, ?string $passphrase = null): IssuedToken;
 
     /**
      * Atomically claim a magic-link token by its plaintext value.
+     *
+     * When the link carries a passphrase, it is verified before the token is
+     * spent, so a wrong passphrase never consumes a use of a multi-use link.
      */
-    public function claimLink(string $token): ClaimResult;
+    public function claimLink(string $token, ?string $passphrase = null): ClaimResult;
+
+    /**
+     * Whether the given magic-link token is gated by a passphrase, so the
+     * confirmation page can prompt for it. Read-only; consumes nothing.
+     */
+    public function requiresPassphrase(string $token): bool;
 
     /**
      * Atomically claim a one-time code for a known user on a specific guard,

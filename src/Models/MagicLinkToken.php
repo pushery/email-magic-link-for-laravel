@@ -20,6 +20,8 @@ use Override;
  * @property string $token_hash
  * @property string $channel
  * @property int $attempts
+ * @property int $uses_remaining
+ * @property string|null $passphrase_hash
  * @property Carbon $expires_at
  * @property Carbon|null $consumed_at
  * @property Carbon|null $created_at
@@ -38,6 +40,8 @@ class MagicLinkToken extends Model
         'token_hash',
         'channel',
         'attempts',
+        'uses_remaining',
+        'passphrase_hash',
         'expires_at',
         'consumed_at',
     ];
@@ -50,6 +54,7 @@ class MagicLinkToken extends Model
     {
         return [
             'attempts' => 'integer',
+            'uses_remaining' => 'integer',
             'expires_at' => 'datetime',
             'consumed_at' => 'datetime',
         ];
@@ -63,5 +68,10 @@ class MagicLinkToken extends Model
     public function isConsumed(): bool
     {
         return $this->consumed_at !== null;
+    }
+
+    public function requiresPassphrase(): bool
+    {
+        return $this->passphrase_hash !== null;
     }
 }

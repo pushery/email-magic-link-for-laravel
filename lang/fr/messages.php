@@ -28,6 +28,12 @@ return [
     'code_intro' => 'Nous vous avons envoyé un code à usage unique par e-mail. Saisissez-le ci-dessous pour terminer la connexion.',
     'code_label' => 'Code de connexion',
 
+    // Confirmation passphrase gate.
+    'passphrase_label' => 'Phrase secrète',
+
+    // Invalid link page.
+    'invalid_title' => 'Demande de connexion invalide',
+
     // Status and error messages.
     'status_link_sent' => 'Si un compte correspond à cette adresse e-mail, nous vous avons envoyé un lien de connexion.',
     'status_code_sent' => 'Si un compte correspond à cette adresse e-mail, nous vous avons envoyé un code de connexion.',

@@ -4,6 +4,16 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.1] - 2026-07-11
+
+### Fixed
+
+- The PHP version badge in the README renders again. It relied on the
+  `packagist/php-v` shields.io route, which currently returns empty for every
+  package (a broken upstream endpoint, not specific to this package); it now reads
+  the supported PHP version from the package's own requirement via the
+  `packagist/dependency-v` route.
+
 ## [0.16.0] - 2026-07-07
 
 ### Added

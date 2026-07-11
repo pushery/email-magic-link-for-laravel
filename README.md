@@ -7,7 +7,7 @@
 # Email Magic Link for Laravel
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/pushery/email-magic-link-for-laravel.svg)](https://packagist.org/packages/pushery/email-magic-link-for-laravel)
-[![PHP Version](https://img.shields.io/packagist/php-v/pushery/email-magic-link-for-laravel.svg)](https://packagist.org/packages/pushery/email-magic-link-for-laravel)
+[![PHP Version](https://img.shields.io/packagist/dependency-v/pushery/email-magic-link-for-laravel/php.svg)](https://packagist.org/packages/pushery/email-magic-link-for-laravel)
 [![PHPStan](https://img.shields.io/badge/PHPStan-max-brightgreen.svg)](https://phpstan.org/)
 [![Code Style](https://img.shields.io/badge/code%20style-pint-orange.svg)](https://laravel.com/docs/pint)
 [![License](https://img.shields.io/packagist/l/pushery/email-magic-link-for-laravel.svg)](https://packagist.org/packages/pushery/email-magic-link-for-laravel)

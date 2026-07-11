@@ -146,6 +146,40 @@ The passphrase is stored only as a bcrypt hash and verified **before** the token
 
 > **This is a passphrase gate, not two-factor authentication.** It is a lightweight shared-secret check, not a possession factor. The real second factor remains the [Fortify TOTP handoff](#the-two-factor-handoff-and-its-trade-off) below: a passphrase-gated link for a two-factor user still hands off to the TOTP challenge after the passphrase is accepted — the passphrase is an *additional* gate in front of that flow, never a replacement for it or a way around it.
 
+### Authorizing a gated resource without login
+
+This is a passwordless **login** package, but the same single-use, hashed-at-rest token can authorize access to one specific resource — a one-time file download, a gated view — **without logging anyone in** and without a serialized payload. Mint a token, put the raw token on your own route, and consume it there:
+
+```php
+use EmailMagicLink\Contracts\TokenStore;
+use Illuminate\Support\Facades\URL;
+
+// Mint a single-use token for the user — nothing is sent.
+$issued = app(TokenStore::class)->issue($user, config('auth.defaults.guard'), 'link');
+
+// Build a link to YOUR OWN route with the raw token. It is a 256-bit unguessable
+// secret; sign the route as well for URL-level expiry and tamper-resistance.
+$url = URL::temporarySignedRoute('invoices.download', $issued->record->expires_at, [
+    'token' => $issued->plaintext,
+]);
+// deliver $url however you like — email, SMS, chat …
+```
+
+```php
+// On your route, authorize by consuming the token — without logging anyone in.
+Route::get('/invoices/download', function (Request $request) {
+    $token = (string) $request->query('token');
+    $result = app(TokenStore::class)->claimLink($token);
+
+    abort_unless($result->successful, 403);
+
+    // The claim is atomic and single-use; serve the resource for the token's user.
+    return Storage::download(invoicePathFor($result->token->user_id));
+})->middleware('signed')->name('invoices.download');
+```
+
+Because you call `claimLink()` yourself instead of the bundled consume flow, no session is created — a successful claim is simply your authorization to serve the resource. The token is consumed atomically, stored only as a hash, and expires on its own; a second visit fails exactly like any spent link. Allow a bounded number of downloads by minting with `issue($user, $guard, 'link', maxUses: 3)`. For a low-friction alternative, `EmailMagicLink::issueCode($user)` returns a short raw `code` you can pass around instead of a URL token.
+
 ## Holding back repeated sends
 
 Fixed-window limits cap volume but still let a "send again" button fire on every click until the cap is hit. The **resend guard** layers an escalating cooldown and a rolling cap on top: after each send the next one for that email is held back a little longer — 30 seconds, then 60, then 120, up to a ceiling — and no more than five go out per hour. It is on by default and keyed per email, so it never depends on whether an account exists. Turn it off with `resend.enabled = false`; tune it with the `resend.*` keys above.

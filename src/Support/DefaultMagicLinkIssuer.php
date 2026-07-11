@@ -25,14 +25,14 @@ final readonly class DefaultMagicLinkIssuer implements MagicLinkIssuer
         private AuthManager $auth,
     ) {}
 
-    public function issueLink(Authenticatable $user, ?string $guard = null): IssuedLink
+    public function issueLink(Authenticatable $user, ?string $guard = null, ?int $maxUses = null, ?string $passphrase = null, ?string $baseUrl = null): IssuedLink
     {
         $resolvedGuard = $this->prepare($user, $guard);
 
-        $issued = $this->store->issue($user, $resolvedGuard, 'link');
+        $issued = $this->store->issue($user, $resolvedGuard, 'link', $maxUses, $passphrase);
 
         return new IssuedLink(
-            ConfirmationUrl::for($issued->record, $issued->plaintext),
+            ConfirmationUrl::for($issued->record, $issued->plaintext, $baseUrl),
             $issued->record->expires_at,
             $this->minutesFor('link'),
         );

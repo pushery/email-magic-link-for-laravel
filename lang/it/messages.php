@@ -28,6 +28,12 @@ return [
     'code_intro' => 'Ti abbiamo inviato un codice monouso via email. Inseriscilo qui sotto per completare l’accesso.',
     'code_label' => 'Codice di accesso',
 
+    // Confirmation passphrase gate.
+    'passphrase_label' => 'Frase di accesso',
+
+    // Invalid link page.
+    'invalid_title' => 'Richiesta di accesso non valida',
+
     // Status and error messages.
     'status_link_sent' => 'Se un account corrisponde a quell’email, ti abbiamo inviato un link di accesso.',
     'status_code_sent' => 'Se un account corrisponde a quell’email, ti abbiamo inviato un codice di accesso.',

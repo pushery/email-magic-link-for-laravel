@@ -15,6 +15,16 @@
 
                 <x-wirekit::stack as="form" method="POST" action="{{ $action }}">
                     @csrf
+                    @if ($requiresPassphrase ?? false)
+                        <x-wirekit::input
+                            name="passphrase"
+                            type="password"
+                            :label="__('email-magic-link::messages.passphrase_label')"
+                            autocomplete="off"
+                            required
+                            autofocus
+                        />
+                    @endif
                     <x-wirekit::button type="submit">{{ __('email-magic-link::messages.sign_in') }}</x-wirekit::button>
                 </x-wirekit::stack>
             </x-wirekit::stack>

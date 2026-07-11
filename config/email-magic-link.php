@@ -55,6 +55,23 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Multi-use links
+    |--------------------------------------------------------------------------
+    |
+    | How many times a magic link may be redeemed before it is spent. The default
+    | of 1 keeps every link single-use — the secure default for a login link.
+    | Raise it, or pass a per-link override to the Mint API's issueLink(), to hand
+    | out a link that may be redeemed a bounded number of times (a shared or
+    | multi-device invite). The count is decremented atomically on each claim, so
+    | concurrent redemptions can never exceed the limit. Codes are always
+    | single-use regardless of this value.
+    |
+    */
+
+    'max_uses' => 1,
+
+    /*
+    |--------------------------------------------------------------------------
     | One-time code (code mode)
     |--------------------------------------------------------------------------
     |
@@ -189,6 +206,37 @@ return [
 
     'api' => [
         'enabled' => false,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Invalid / expired link response
+    |--------------------------------------------------------------------------
+    |
+    | How a browser client sees an invalid or expired magic link / one-time code.
+    | "via" selects a built-in strategy — "redirect" | "view" | "abort" | "json"
+    | — or the class-string of your own EmailMagicLink\Contracts\
+    | InvalidLinkResponder implementation for full control.
+    |
+    |   redirect  back to the sign-in form (or "redirect_to") with the generic
+    |             error flashed and the email re-prefilled (the default)
+    |   view      render "view" (it receives a `message` variable)
+    |   abort     abort() with "abort_status", using your app's error page
+    |   json      return the {message, error} envelope to every client
+    |
+    | The response never reveals whether the token was unknown or merely expired,
+    | so it stays enumeration-resistant whichever strategy you pick. "error_code"
+    | is the stable machine code the JSON envelope returns (for JSON clients and
+    | the "json" strategy), analogous to the resend "resend_throttled" code.
+    |
+    */
+
+    'invalid_response' => [
+        'via' => 'redirect',
+        'view' => 'email-magic-link::invalid',
+        'redirect_to' => null,
+        'abort_status' => 403,
+        'error_code' => 'invalid_or_expired',
     ],
 
     /*

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace EmailMagicLink\Support;
 
+use EmailMagicLink\Contracts\InvalidLinkResponder;
 use EmailMagicLink\Notifications\MagicLinkNotification;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Support\Facades\View;
@@ -58,6 +59,15 @@ final readonly class MagicLinkConfig
         }
 
         return $this->ttl();
+    }
+
+    /**
+     * The default number of times a link may be redeemed. Clamped to at least 1,
+     * so it can never mint a link that is dead on arrival.
+     */
+    public function maxUses(): int
+    {
+        return max(1, $this->int($this->config->get('email-magic-link.max_uses'), 1));
     }
 
     public function codeLength(): int
@@ -226,6 +236,74 @@ final readonly class MagicLinkConfig
     public function apiEnabled(): bool
     {
         return $this->bool($this->config->get('email-magic-link.api.enabled'), false);
+    }
+
+    /**
+     * A custom invalid-link responder class named by `via`, or null to use the
+     * bundled default. Only a `via` that names a class implementing
+     * {@see InvalidLinkResponder} counts; the built-in strategy keywords
+     * (view/redirect/abort/json) return null and are handled by the default.
+     *
+     * @return class-string<InvalidLinkResponder>|null
+     */
+    public function invalidLinkResponderClass(): ?string
+    {
+        $via = $this->config->get('email-magic-link.invalid_response.via');
+
+        return is_string($via) && is_a($via, InvalidLinkResponder::class, true) ? $via : null;
+    }
+
+    /**
+     * The built-in invalid-link strategy. Any value that is not a recognised
+     * strategy (including a custom responder class-string, handled separately)
+     * falls back to the enumeration-safe redirect.
+     *
+     * @return 'redirect'|'view'|'abort'|'json'
+     */
+    public function invalidResponseMode(): string
+    {
+        return match ($this->string($this->config->get('email-magic-link.invalid_response.via'), 'redirect')) {
+            'view' => 'view',
+            'abort' => 'abort',
+            'json' => 'json',
+            default => 'redirect',
+        };
+    }
+
+    public function invalidResponseView(): string
+    {
+        return $this->string(
+            $this->config->get('email-magic-link.invalid_response.view'),
+            'email-magic-link::invalid',
+        );
+    }
+
+    /**
+     * Where the redirect strategy sends the user; null keeps them on the sign-in
+     * form (with the error flashed), which is the default.
+     */
+    public function invalidResponseRedirectTo(): ?string
+    {
+        $to = $this->config->get('email-magic-link.invalid_response.redirect_to');
+
+        return is_string($to) && $to !== '' ? $to : null;
+    }
+
+    public function invalidResponseAbortStatus(): int
+    {
+        return $this->int($this->config->get('email-magic-link.invalid_response.abort_status'), 403);
+    }
+
+    /**
+     * The stable machine-readable code the JSON envelope returns for an
+     * invalid/expired link, so a client can branch on it without parsing prose.
+     */
+    public function invalidResponseErrorCode(): string
+    {
+        return $this->string(
+            $this->config->get('email-magic-link.invalid_response.error_code'),
+            'invalid_or_expired',
+        );
     }
 
     /**

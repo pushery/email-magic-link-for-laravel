@@ -9,11 +9,13 @@ use EmailMagicLink\Captcha\NullCaptchaGuard;
 use EmailMagicLink\Console\Commands\InstallCommand;
 use EmailMagicLink\Console\Commands\PurgeExpiredTokensCommand;
 use EmailMagicLink\Contracts\CaptchaGuard;
+use EmailMagicLink\Contracts\InvalidLinkResponder;
 use EmailMagicLink\Contracts\MagicLinkAuthenticator;
 use EmailMagicLink\Contracts\MagicLinkIssuer;
 use EmailMagicLink\Contracts\ResendGuard;
 use EmailMagicLink\Contracts\TokenStore;
 use EmailMagicLink\Contracts\UserLookup;
+use EmailMagicLink\Http\Responses\DefaultInvalidLinkResponder;
 use EmailMagicLink\Lookups\DefaultUserLookup;
 use EmailMagicLink\Stores\DefaultTokenStore;
 use EmailMagicLink\Support\DefaultMagicLinkIssuer;
@@ -85,6 +87,12 @@ final class EmailMagicLinkServiceProvider extends ServiceProvider
             $custom = $app->make(MagicLinkConfig::class)->captcha();
 
             return $this->resolveContract($app, CaptchaGuard::class, $custom, NullCaptchaGuard::class);
+        });
+
+        $this->app->singleton(InvalidLinkResponder::class, function (Application $app): InvalidLinkResponder {
+            $custom = $app->make(MagicLinkConfig::class)->invalidLinkResponderClass();
+
+            return $this->resolveContract($app, InvalidLinkResponder::class, $custom, DefaultInvalidLinkResponder::class);
         });
 
         $this->app->singleton(MagicLinkAuthenticator::class, DefaultAuthenticator::class);

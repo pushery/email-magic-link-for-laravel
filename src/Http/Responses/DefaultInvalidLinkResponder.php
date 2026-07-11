@@ -1,0 +1,62 @@
+<?php
+
+declare(strict_types=1);
+
+namespace EmailMagicLink\Http\Responses;
+
+use EmailMagicLink\Contracts\InvalidLinkResponder;
+use EmailMagicLink\Support\MagicLinkConfig;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
+
+/**
+ * The bundled invalid-link responder, selected by `invalid_response.via`:
+ *
+ *   redirect  send the user back to the sign-in form (default) — or to a
+ *             configured URL — with the generic error flashed and the email
+ *             re-prefilled. Preserves the original browser behaviour.
+ *   view      render a Blade view (receives `message`), so the host owns the
+ *             branding of the error page.
+ *   abort     abort() with a configurable HTTP status, handing off to the
+ *             application's own error page.
+ *   json      return the JSON envelope ({message, error}) to every client, not
+ *             only those that negotiated JSON.
+ *
+ * Every branch uses the same generic message and never inspects why the token
+ * failed, so the response is identical for an unknown and an expired token.
+ */
+final readonly class DefaultInvalidLinkResponder implements InvalidLinkResponder
+{
+    public function __construct(private MagicLinkConfig $config) {}
+
+    public function respond(Request $request, string $message, string $failureRoute): Response
+    {
+        return match ($this->config->invalidResponseMode()) {
+            'view' => response()->view($this->config->invalidResponseView(), ['message' => $message]),
+            'abort' => abort($this->config->invalidResponseAbortStatus(), $message),
+            'json' => new JsonResponse(
+                ['message' => $message, 'error' => $this->config->invalidResponseErrorCode()],
+                422,
+            ),
+            default => $this->redirect($request, $failureRoute, $message),
+        };
+    }
+
+    private function redirect(Request $request, string $failureRoute, string $message): RedirectResponse
+    {
+        $target = $this->config->invalidResponseRedirectTo();
+
+        $redirect = $target !== null
+            ? redirect()->to($target)
+            : redirect()->route($failureRoute);
+
+        // Flash the email and guard (never the secret code) so the form can
+        // re-prefill on retry without putting them in the URL — keeping the
+        // response shape identical and enumeration-resistant.
+        return $redirect
+            ->withErrors(['email' => $message])
+            ->withInput($request->except('code'));
+    }
+}

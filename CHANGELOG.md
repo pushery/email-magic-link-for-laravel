@@ -4,6 +4,50 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.0] - 2026-07-11
+
+### Added
+
+- **Per-link base-URL override.** `issueLink($user, baseUrl: 'https://tenant-a.example.com')`
+  builds the confirmation link for another host — useful for multi-domain or
+  multi-tenant apps. The signature is computed over the final host, so the link
+  verifies only when visited there and there is no open redirect.
+- **Optional per-link passphrase gate.** A magic link can now require a shared
+  secret — `issueLink($user, passphrase: '…')` — that the recipient enters on the
+  confirmation page before the link is consumed. The passphrase is stored only as
+  a bcrypt hash and verified before the token is spent, so a wrong passphrase
+  never consumes a use of a multi-use link, and wrong or missing passphrases fail
+  through the same generic, rate-limited response as any other bad link. This is
+  a lightweight gate, **not** two-factor authentication: a passphrase-gated link
+  for a two-factor user still hands off to the Fortify TOTP challenge afterwards —
+  the passphrase never replaces or bypasses the second factor.
+- **Bounded multi-use links.** A magic link can now be redeemed a configurable
+  number of times before it is spent — pass `issueLink($user, maxUses: 3)`, or
+  set the `max_uses` config default. Each redemption is decremented atomically in
+  the same conditional `UPDATE` that consumes the token (never read-then-write),
+  so concurrent redemptions can never exceed the limit; this is proven under real
+  PostgreSQL and MySQL 8.4 row locking. An exhausted link behaves exactly like a
+  spent or expired one, so it stays enumeration-resistant. The default is 1
+  (single-use, unchanged), and one-time codes are always single-use.
+
+  A custom `TokenStore` or `MagicLinkIssuer` implementation must match the widened
+  signatures: `TokenStore::issue()` gains optional `?int $maxUses = null` and
+  `?string $passphrase = null`, `claimLink()` gains `?string $passphrase = null`,
+  `TokenStore` adds `requiresPassphrase(string $token): bool`, and
+  `MagicLinkIssuer::issueLink()` gains optional `?int $maxUses`, `?string
+  $passphrase` and `?string $baseUrl` parameters. Callers of these methods are
+  unaffected. The token table gains `uses_remaining` and `passphrase_hash`
+  columns — run `php artisan migrate` after upgrading.
+- The response to an invalid or expired magic link or one-time code is now
+  configurable under a new `invalid_response` config block. Choose `redirect`
+  (the previous behaviour, still the default), `view` to render your own error
+  page, `abort` to return an HTTP status through your app's error page, or `json`
+  to return the `{message, error}` envelope to every client — or point `via` at
+  your own `EmailMagicLink\Contracts\InvalidLinkResponder` implementation for
+  full control. Every strategy keeps the response generic and identical for an
+  unknown versus an expired token, so the flow stays enumeration-resistant, and
+  the JSON error code is configurable via `invalid_response.error_code`.
+
 ## [0.16.1] - 2026-07-11
 
 ### Fixed

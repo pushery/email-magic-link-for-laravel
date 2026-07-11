@@ -56,7 +56,7 @@
         "test": "pest",
         "test:coverage": "pest --coverage --min=100",
         "test:type-coverage": "pest --type-coverage --min=100",
-        "test:browser": "pest tests/Browser tests/BrowserFortify",
+        "test:browser": "pest tests/Browser tests/BrowserFortify tests/BrowserWireKit",
         "test:browser:wirekit": "pest tests/BrowserWireKit",
         "test:mysql": "pest --testsuite=MySql",
         "analyse": "phpstan analyse",

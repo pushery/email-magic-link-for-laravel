@@ -28,6 +28,12 @@ return [
     'code_intro' => 'Te hemos enviado un código de un solo uso por correo. Introdúcelo abajo para completar el inicio de sesión.',
     'code_label' => 'Código de acceso',
 
+    // Confirmation passphrase gate.
+    'passphrase_label' => 'Frase de acceso',
+
+    // Invalid link page.
+    'invalid_title' => 'Solicitud de acceso no válida',
+
     // Status and error messages.
     'status_link_sent' => 'Si una cuenta coincide con ese correo, te hemos enviado un enlace de acceso.',
     'status_code_sent' => 'Si una cuenta coincide con ese correo, te hemos enviado un código de acceso.',

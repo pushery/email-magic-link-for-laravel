@@ -122,6 +122,29 @@ The minted credential is hashed at rest, single-use, and consumed through the ex
 - **`issueCode` supersedes the previous code** for the same user and guard, so only the most recently issued code can be claimed. (`issueLink` does not invalidate earlier links.)
 - **The channel must be enabled.** With `enabled = false` the API throws `MagicLinkDisabledException` rather than minting a credential that could never be consumed.
 - Need to look a user up by email first? Inject `EmailMagicLink\Contracts\UserLookup` — that is the supported email-to-user path; the Mint-API deliberately takes an already-resolved user.
+- **Build a link for another host** with `issueLink($user, baseUrl: 'https://tenant-a.example.com')` — handy for multi-domain or multi-tenant apps. The signature is computed over that final host, so the link verifies **only** when visited there; there is no open redirect.
+
+### Multi-use links
+
+A magic link is single-use by default. To hand out a link that may be redeemed a bounded number of times — a shared invite, a multi-device sign-in — pass `maxUses`:
+
+```php
+$link = $issuer->issueLink($user, maxUses: 3); // redeemable three times
+```
+
+Each redemption decrements a remaining-uses counter in the same conditional `UPDATE` that consumes the token, so concurrent redemptions can **never** exceed the limit — the count is checked and decremented atomically, never read-then-written. Once exhausted the link behaves exactly like a spent or expired one (the same generic, enumeration-resistant failure). Set the fleet-wide default with the `max_uses` config key; one-time codes are always single-use regardless.
+
+### Passphrase-gated links (not two-factor)
+
+For a high-value link you can require a shared secret — a passphrase you deliver out of band — that the recipient must enter on the confirmation page before the link is consumed:
+
+```php
+$link = $issuer->issueLink($user, passphrase: 'the-secret-you-shared');
+```
+
+The passphrase is stored only as a bcrypt hash and verified **before** the token is spent, so a wrong passphrase never consumes a use of a multi-use link. Wrong and missing passphrases fail through the same generic, rate-limited response as any other bad link, so they leak nothing. When a link carries a passphrase the confirmation page shows a passphrase field automatically.
+
+> **This is a passphrase gate, not two-factor authentication.** It is a lightweight shared-secret check, not a possession factor. The real second factor remains the [Fortify TOTP handoff](#the-two-factor-handoff-and-its-trade-off) below: a passphrase-gated link for a two-factor user still hands off to the TOTP challenge after the passphrase is accepted — the passphrase is an *additional* gate in front of that flow, never a replacement for it or a way around it.
 
 ## Holding back repeated sends
 
@@ -214,6 +237,7 @@ All values live in `config/email-magic-link.php`.
 | `ttl` | `900` | Default token lifetime in seconds. |
 | `link_ttl` | `null` | Link lifetime in seconds; inherits `ttl` when unset. |
 | `code_ttl` | `null` | Code lifetime in seconds; inherits `ttl` when unset (handy for a shorter, hand-typed code). |
+| `max_uses` | `1` | Default redemptions per link (1 = single-use). Override per link via `issueLink($user, maxUses: N)`. |
 | `code_length` | `8` | One-time code length. |
 | `code_alphabet` | unambiguous A–Z/2–9 | Alphabet for codes (governs keyspace). |
 | `max_attempts_per_token` | `5` | Hard per-token lockout for code mode. |
@@ -228,6 +252,11 @@ All values live in `config/email-magic-link.php`.
 | `routes.redirect_to` | `'/'` | Fallback redirect after login. |
 | `routes.intended` | `true` | Return to the originally requested URL after login. |
 | `api.enabled` | `false` | Direct JSON token exchange for SPA/mobile. |
+| `invalid_response.via` | `'redirect'` | Browser response for an invalid/expired link: `'redirect'`, `'view'`, `'abort'`, `'json'`, or a custom `InvalidLinkResponder` class. |
+| `invalid_response.view` | `'email-magic-link::invalid'` | View the `'view'` strategy renders (receives a `message`). |
+| `invalid_response.redirect_to` | `null` | Redirect target for the `'redirect'` strategy; `null` keeps the sign-in form. |
+| `invalid_response.abort_status` | `403` | HTTP status the `'abort'` strategy uses. |
+| `invalid_response.error_code` | `'invalid_or_expired'` | Stable JSON error code (JSON clients and the `'json'` strategy). |
 | `ui.mode` | `'auto'` | `'auto'` (WireKit views if installed) or `'blade'`. |
 | `ui.vite` | `['resources/css/app.css']` | Vite entry the WireKit layout loads. |
 | `fortify.mode` | `'auto'` | `'auto'` (on if Fortify present), `true`, or `false`. |
@@ -239,6 +268,22 @@ All values live in `config/email-magic-link.php`.
 | `resend.cooldown` | `30` / `2` / `900` | Cooldown `base`, growth `factor`, and `max` seconds. |
 | `resend.window` | `60` / `5` | Rolling window `minutes` and `max_sends` within it. |
 | `resend.store` | `null` | Cache store for the guard; `null` uses the default. |
+
+### Invalid or expired links
+
+By default an invalid or expired link redirects the browser back to the sign-in form with a generic message. Set `invalid_response.via` to change that — render your own `view`, `abort()` with an HTTP status, or return the JSON envelope to every client — or point it at a class implementing `EmailMagicLink\Contracts\InvalidLinkResponder` for full control:
+
+```php
+'invalid_response' => [
+    'via' => 'view', // 'redirect' | 'view' | 'abort' | 'json' | YourResponder::class
+    'view' => 'email-magic-link::invalid',
+    'redirect_to' => null,
+    'abort_status' => 403,
+    'error_code' => 'invalid_or_expired',
+],
+```
+
+Whichever strategy you pick, the response never reveals whether the token was unknown or merely expired, so the flow stays enumeration-resistant.
 
 ## One-time codes
 

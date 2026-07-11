@@ -20,11 +20,23 @@ use Illuminate\Contracts\Auth\Authenticatable;
 interface MagicLinkIssuer
 {
     /**
-     * Issue a single-use magic link for the user on the given guard.
+     * Issue a magic link for the user on the given guard.
      *
      * @param  string|null  $guard  An allowed guard, or null for the default.
+     * @param  int|null  $maxUses  How many times the link may be redeemed; null
+     *                             uses the configured `max_uses` (1 = single-use).
+     *                             Each redemption is decremented atomically, so
+     *                             concurrent claims can never exceed the limit.
+     * @param  string|null  $passphrase  A shared secret the recipient must enter
+     *                                   on the confirmation page before the link
+     *                                   is consumed. A lightweight gate, NOT the
+     *                                   Fortify two-factor challenge.
+     * @param  string|null  $baseUrl  Build the link for this host (e.g. a tenant
+     *                                domain) instead of the app's. The signature
+     *                                binds to that host, so there is no open
+     *                                redirect — the link verifies only there.
      */
-    public function issueLink(Authenticatable $user, ?string $guard = null): IssuedLink;
+    public function issueLink(Authenticatable $user, ?string $guard = null, ?int $maxUses = null, ?string $passphrase = null, ?string $baseUrl = null): IssuedLink;
 
     /**
      * Issue a one-time code for the user on the given guard.

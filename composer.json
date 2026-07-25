@@ -1,4 +1,5 @@
 {
+    "$schema": "https://getcomposer.org/schema.json",
     "name": "pushery/email-magic-link-for-laravel",
     "description": "Passwordless email magic-link & OTP authentication for Laravel — standalone or with a correct, no-bypass Fortify 2FA handoff and scanner-safe link consumption.",
     "keywords": [
@@ -26,6 +27,7 @@
     "require-dev": {
         "larastan/larastan": "^3.0",
         "laravel/fortify": "^1.0",
+        "laravel/pao": "^1.1",
         "laravel/pint": "^1.0",
         "orchestra/testbench": "^11.0",
         "pestphp/pest": "^4.0",
@@ -33,7 +35,8 @@
         "pestphp/pest-plugin-laravel": "^4.0",
         "pestphp/pest-plugin-type-coverage": "^4.0",
         "pushery/wirekit": "^2.8",
-        "rector/rector": "^2.0"
+        "rector/rector": "^2.0",
+        "spaze/phpstan-disallowed-calls": "^4.12"
     },
     "suggest": {
         "laravel/fortify": "Enables the no-bypass two-factor (TOTP) handoff: a magic-link user with confirmed 2FA completes Fortify's challenge before being logged in (^1.0).",
@@ -59,12 +62,14 @@
         "test:browser": "pest tests/Browser tests/BrowserFortify tests/BrowserWireKit",
         "test:browser:wirekit": "pest tests/BrowserWireKit",
         "test:mysql": "pest --testsuite=MySql",
+        "test:database": "pest --testsuite=Postgres,MySql",
         "analyse": "phpstan analyse",
         "format": "pint",
         "format:test": "pint --test",
         "rector": "rector process",
         "rector:test": "rector process --dry-run",
-        "mutate": "pest --mutate --everything --covered-only --parallel --processes=4 --min=85",
+        "mutate": "pest --mutate --everything --covered-only --min=85",
+        "mutate:detect": "pest --mutate --everything --covered-only --parallel --processes=4 --min=85",
         "qa": [
             "@format:test",
             "@rector:test",
@@ -74,6 +79,7 @@
         ]
     },
     "config": {
+        "process-timeout": 1800,
         "sort-packages": true,
         "allow-plugins": {
             "pestphp/pest-plugin": true

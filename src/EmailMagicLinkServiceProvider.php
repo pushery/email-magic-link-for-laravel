@@ -203,21 +203,35 @@ final class EmailMagicLinkServiceProvider extends ServiceProvider
                 PurgeExpiredTokensCommand::class,
             ]);
 
+            // Every group is registered TWICE: under its own tag, and under the
+            // umbrella tag `email-magic-link`. Without the umbrella there is no way
+            // to publish everything in one command — `vendor:publish --tag` takes one
+            // tag, and `--provider` publishes untagged groups only. A consumer would
+            // otherwise have to know all four names, and would silently miss any group
+            // added later.
             $this->publishes([
                 __DIR__.'/../config/email-magic-link.php' => config_path('email-magic-link.php'),
-            ], 'email-magic-link-config');
+            ], ['email-magic-link-config', 'email-magic-link']);
 
-            $this->publishes([
+            // publishesMigrations(), not publishes(): it rewrites the bundled
+            // 0001_01_01_00000N ordering prefix to the publish date. With a plain
+            // copy the published migrations keep that prefix and sort BEFORE the
+            // application's own create_users_table, so `migrate` on a fresh app
+            // tries to create a table with a foreign key to users that does not
+            // exist yet. The bundled prefix is correct for auto-loading (it must
+            // sort deterministically among the package's own three) and wrong the
+            // moment the files land in the app's migrations directory.
+            $this->publishesMigrations([
                 __DIR__.'/../database/migrations' => database_path('migrations'),
-            ], 'email-magic-link-migrations');
+            ], ['email-magic-link-migrations', 'email-magic-link']);
 
             $this->publishes([
                 __DIR__.'/../resources/views' => resource_path('views/vendor/email-magic-link'),
-            ], 'email-magic-link-views');
+            ], ['email-magic-link-views', 'email-magic-link']);
 
             $this->publishes([
                 __DIR__.'/../lang' => lang_path('vendor/email-magic-link'),
-            ], 'email-magic-link-lang');
+            ], ['email-magic-link-lang', 'email-magic-link']);
         }
     }
 }

@@ -4,6 +4,44 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.18.0] - 2026-07-26
+
+### Added
+
+- A bundled **Laravel Boost skill** (`resources/boost/skills/email-magic-link-for-laravel/SKILL.md`).
+  Boost surfaces it inside consuming applications, so an agent integrating the package works from
+  the package's own adoption guidance — the routes, the config keys that shape an integration, the
+  Mint API, and the anti-patterns that quietly remove what the package is for.
+- An **umbrella publish tag**. `php artisan vendor:publish --tag="email-magic-link"` now publishes
+  every group at once; previously `--tag` took one group name at a time and there was no way to
+  publish everything, so a consumer had to know all four names and would miss any group added later.
+
+### Changed
+
+- The documentation moved out of the README to
+  [docs.pushery.com/email-magic-link-for-laravel](https://docs.pushery.com/email-magic-link-for-laravel/).
+  Everything the README carried — the detailed installation steps, every configuration key, the
+  Mint API, multi-use and passphrase-gated links, the resend guard, the two-factor handoff, the
+  JSON contract, the extension points and the security model — is there, restructured into
+  navigable pages rather than shortened. The README is now a showcase that links to them, so a
+  reader no longer scrolls a manual to find one default.
+
+### Fixed
+
+- The `EmailMagicLink` facade's `@method` annotation for `issueLink()` advertised only `$user` and
+  `$guard`, so calling it with the `maxUses`, `passphrase` or `baseUrl` arguments added in `0.17.0`
+  failed static analysis even though it worked at runtime. The annotation now matches the
+  `MagicLinkIssuer` contract, and a test keeps the two in step.
+- **Published migrations kept their `0001_01_01_*` ordering prefix.** That prefix is correct while
+  the package auto-loads them, and wrong once they land in an application's `database/migrations`,
+  where it sorts them before `create_users_table` — so `migrate` on a fresh application tried to
+  create a table with a foreign key to a `users` table that did not exist yet. They are now
+  published through `publishesMigrations()`, which rewrites the prefix to the publish date.
+- **A non-string `limiters.request` / `limiters.consume` config value threw during route
+  registration**, i.e. on every request, with an error pointing at the package's routes file rather
+  than at the host's configuration. Both are now resolved through the package's own typed config
+  accessor, which falls back to the documented default.
+
 ## [0.17.1] - 2026-07-12
 
 ### Added

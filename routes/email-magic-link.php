@@ -8,10 +8,19 @@ use EmailMagicLink\Http\Controllers\ConsumeMagicLinkController;
 use EmailMagicLink\Http\Controllers\SendMagicLinkController;
 use EmailMagicLink\Http\Controllers\ShowCodeFormController;
 use EmailMagicLink\Http\Controllers\ShowRequestFormController;
+use EmailMagicLink\Support\MagicLinkConfig;
 use Illuminate\Support\Facades\Route;
 
-$requestLimiter = (string) config('email-magic-link.limiters.request', 'email-magic-link:request');
-$consumeLimiter = (string) config('email-magic-link.limiters.consume', 'email-magic-link:consume');
+// Resolved through MagicLinkConfig, not a raw `(string) config(...)`: config()
+// returns mixed, and casting mixed to string is an error waiting for the first
+// host that sets a limiter to an array or null — it would throw during route
+// registration, i.e. on every request, with a message pointing at this file
+// rather than at their config. MagicLinkConfig::string() narrows and falls back
+// to the documented default instead, and it is the same resolution every other
+// caller in the package already uses, so the two cannot drift.
+$config = app(MagicLinkConfig::class);
+$requestLimiter = $config->requestLimiter();
+$consumeLimiter = $config->consumeLimiter();
 
 // All routes are registered whenever the channel is enabled; the configured
 // mode governs which one actually issues a token, not which routes exist.

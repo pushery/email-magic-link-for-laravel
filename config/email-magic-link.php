@@ -258,12 +258,28 @@ return [
     | Use it when the host ships a pre-compiled stylesheet instead of (or
     | alongside) a Vite build — e.g. a CDN bundle or an asset() path.
     |
+    | "script_nonce" names a class implementing EmailMagicLink\Contracts\
+    | ScriptNonce, which supplies the CSP nonce for the resend countdown's inline
+    | script. Leave it null and the package detects the csp_nonce() helper
+    | (spatie/laravel-csp) by itself; set it only when your nonce lives elsewhere.
+    | Under a strict policy without a nonce the script is blocked SILENTLY — the
+    | countdown simply never runs.
+    |
+    | That nonce is the whole story for the plain screens. The WireKit screens
+    | additionally need "unsafe-eval" in script-src, because WireKit's components
+    | are driven by Alpine and Alpine compiles its expressions with the Function
+    | constructor. On these screens that is the one-time-code field: without it,
+    | the digit boxes stop advancing and pasting a code stops filling them — again
+    | silently. A host whose policy cannot grant "unsafe-eval" should set mode to
+    | "blade"; the plain screens carry the same flow and use no Alpine.
+    |
     */
 
     'ui' => [
         'mode' => env('EMAIL_MAGIC_LINK_UI', 'auto'),
         'vite' => ['resources/css/app.css'],
         'styles' => [],
+        'script_nonce' => null,
     ],
 
     /*
@@ -328,7 +344,37 @@ return [
     | atomic locks (the array, file, database, redis, and memcached stores all
     | do); leave "store" null to use the default cache store.
     |
+    | "enabled" turns off throttling on THIS package's request endpoint and
+    | nothing else. Keys you own stay guarded — the switch is checked by the
+    | endpoint, not by the guard, so disabling magic-link throttling can never
+    | disarm your own flood protection.
+    |
     */
+
+    /*
+    |--------------------------------------------------------------------------
+    | Token pruning
+    |--------------------------------------------------------------------------
+    |
+    | Every request can create a token row, so the table grows unbounded without a
+    | regular purge. The package ships the `email-magic-link:purge` command; this
+    | block decides whether it also SCHEDULES it for you.
+    |
+    | Off by default, deliberately. A package that deletes rows on a schedule
+    | nobody asked for is doing something an operator should choose, and hosts
+    | that already wire `Schedule::command('email-magic-link:purge')` themselves
+    | would otherwise get two entries for one job. Turn it on and the manual line
+    | can go.
+    |
+    | "frequency" accepts: hourly, daily, weekly, monthly. Anything else falls
+    | back to daily rather than failing a boot over a typo in a cleanup cadence.
+    |
+    */
+
+    'prune' => [
+        'schedule' => false,
+        'frequency' => 'daily',
+    ],
 
     'resend' => [
         'enabled' => env('EMAIL_MAGIC_LINK_RESEND', true),

@@ -40,6 +40,7 @@ return [
     'consume_failed' => 'Cette demande de connexion est invalide ou a expiré. Veuillez en demander une nouvelle.',
     'captcha_failed' => 'La vérification a échoué. Veuillez réessayer.',
     'resend_throttled' => 'Veuillez patienter :seconds secondes avant de demander un nouvel e-mail de connexion.',
+    'resend_countdown_label' => 'Temps d’attente avant de pouvoir demander un nouvel e-mail',
 
     // Notification — magic link.
     'mail_link_subject' => 'Connexion à :app',

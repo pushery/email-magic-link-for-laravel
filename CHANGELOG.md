@@ -4,6 +4,90 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.19.0] - 2026-07-26
+
+### Added
+
+- **`php artisan email-magic-link:doctor`** — compares your published config against the one the
+  installed version ships and names every key your file does not mention. Publishing the config
+  freezes it at that version; the package still merges its own defaults underneath, so everything
+  keeps working, but a setting you cannot see is a setting you cannot tune. One consuming
+  application was found running the resend guard on defaults its config file had never heard of.
+  It reports keys the package no longer knows too, since a removed key and a typo look identical
+  from the file. Exits `0` either way — a drifted config is a thing to read, not a thing to fail a
+  deploy on.
+- **Optional self-scheduling of the token purge.** Set `prune.schedule = true` and the package
+  registers `email-magic-link:purge` in your scheduler (`prune.frequency`: hourly, daily, weekly,
+  monthly), so retention no longer needs a line in your own file. Off by default: a package that
+  deletes rows on a cadence nobody chose is making your decision, and an application that already
+  wires the command itself would end up running it twice.
+- **A CSP nonce for the resend countdown.** Its inline `<script>` now carries the application's
+  nonce, so a strict Content-Security-Policy no longer blocks it — silently, which is what made
+  this hard to notice: the countdown is progressive enhancement, so a blocked script produces no
+  error, just a button that never counts down. The bundled default detects `csp_nonce()` with no
+  configuration; point `ui.script_nonce` at your own `ScriptNonce` implementation when your nonce
+  lives elsewhere.
+
+### Fixed
+
+- **`resend.enabled` was a global kill-switch.** It was checked inside the guard itself, so it
+  disarmed *every* key — including the ones your own application guards with the same service,
+  which the contract explicitly invites. An operator setting `EMAIL_MAGIC_LINK_RESEND=false` to
+  stop magic-link throttling could silently remove flood protection from an unrelated subsystem,
+  with no warning and no failing test. The switch now governs this package's request endpoint
+  only. If you pinned `resend.enabled` to `true` to work around this, you no longer need to.
+- **A published config could not inherit nested defaults it predates.** The merge was shallow, so
+  a host that published once received new top-level keys from later releases but never a key added
+  inside a block it already had — that key stayed `null` instead of its shipped default, silently.
+  Measured on a real upgrade: `routes.intended` left the intended-redirect off, and `ui.styles`
+  handed `null` to code expecting a list. Lists still replace wholesale rather than merging, so a
+  guard you removed from `guards` cannot come back.
+- **`pt-PT` was written in the formal `você` form.** It shipped as a byte-identical copy of the
+  base bundle, so the pt-PT/pt-BR split carried none of the difference it exists for. European
+  Portuguese now addresses the reader as `tu` throughout, matching every other locale's register;
+  `pt-BR` keeps `você`.
+- **The WireKit one-time-code screen could not accept the codes this package issues.** WireKit's
+  `otp-input` is digits-only and enforces it four ways — typing a non-digit clears the box,
+  pasting strips it, `inputmode` is numeric, `pattern` is `[0-9]`. The shipped default
+  `code_alphabet` is `ABCDEFGHJKMNPQRSTUVWXYZ23456789`, mostly letters. So on a default install
+  the screen erased every character the user typed from the code they had just been mailed, with
+  no error to explain it. The boxed field is now used only when the configured alphabet really is
+  numeric, where it is correct; otherwise the screen renders a monospace text field, which is what
+  the plain Blade screen has always used.
+
+  Nothing is lost by the swap: auto-advance, arrow navigation and paste-distribution are all
+  digit-filtered, so none of them ever worked for a letter. This is not a new defect — it has been
+  present since the WireKit screens shipped, and it survived because the browser suite renders that
+  screen but never entered a code. It does now.
+- **The delivery choice on the WireKit request screen had no group label.** With both channels
+  enabled, a screen reader announced "Magic link" and "One-time code" with nothing saying what was
+  being chosen. It is now a real `fieldset` with a `legend`, matching the plain Blade screen, which
+  had it all along.
+- **The resend countdown announced itself once a second.** It was a polite live region, and its text
+  changes every second, so waiting thirty seconds meant hearing the remaining time read out thirty
+  times with no way to interrupt. It is now a timer region: the value is read when the reader
+  navigates to it, never on its own. It gains a translatable accessible name in its place —
+  a new `resend_countdown_label` string in all eleven bundled locales, which reaches you even if you
+  published the translations at an earlier version, because a package's own lines are the base a
+  published override merges into.
+
+### Changed
+
+- `en-GB`, `en-US` and `pt-BR` now delegate to their base bundle with a one-line `require` instead
+  of holding a duplicate copy, so there is nothing to keep in step by hand. They resolve exactly as
+  before. (They are deliberately not removed: Laravel falls back to `app.fallback_locale`, not to
+  the base language, so an application whose fallback is `de` would serve German on `en-GB`.)
+- **The `ui` config block now states what the WireKit screens need from a
+  Content-Security-Policy.** `ui.script_nonce` covers this package's own inline script, which is
+  the whole story for the plain screens. The WireKit screens additionally need `'unsafe-eval'` in
+  `script-src`, because WireKit's components are driven by Alpine and Alpine compiles its
+  expressions with the `Function` constructor — on these screens that is the one-time-code field,
+  whose digit boxes stop advancing without it. Like the blocked-script case, it fails silently.
+  A host whose policy cannot grant `'unsafe-eval'` should set `ui.mode` to `blade`.
+
+  Comment-only: no key was added, moved or renamed, so a published config keeps working and
+  `email-magic-link:doctor` reports no drift.
+
 ## [0.18.0] - 2026-07-26
 
 ### Added

@@ -29,13 +29,50 @@
                         :error="$errors->first('email')"
                     />
 
-                    <x-wirekit::otp-input
-                        name="code"
-                        class="eml-otp"
-                        :length="(int) config('email-magic-link.code_length', 8)"
-                        :label="__('email-magic-link::messages.code_label')"
-                        :error="$errors->first('code')"
-                    />
+                    {{-- WireKit's otp-input is digits-only, and it enforces that in four
+                         places: typing a non-digit clears the box, pasting strips every
+                         non-digit, inputmode is numeric and pattern is [0-9]. Our default
+                         code_alphabet is ABCDEFGHJKMNPQRSTUVWXYZ23456789 — mostly letters —
+                         so on a default install those boxes cannot accept the code the
+                         package itself just mailed out.
+
+                         So the boxed field is used only when the configured alphabet really
+                         is numeric, where it is both correct and nicer. Otherwise this falls
+                         back to a single mono input, which is what the plain Blade twin has
+                         always used. Nothing is lost by the swap: auto-advance, arrow
+                         navigation and paste-distribution are all digit-filtered, so they
+                         never worked for a letter in the first place.
+
+                         The single field goes away again once WireKit's boxed input
+                         accepts a caller-supplied alphabet; the branch is reported
+                         upstream and tracked privately until then. --}}
+                    @php($emlAlphabet = (string) config('email-magic-link.code_alphabet', ''))
+                    @php($emlCodeLength = (int) config('email-magic-link.code_length', 8))
+
+                    @if ($emlAlphabet !== '' && ctype_digit($emlAlphabet))
+                        <x-wirekit::otp-input
+                            name="code"
+                            class="eml-otp"
+                            :length="$emlCodeLength"
+                            :label="__('email-magic-link::messages.code_label')"
+                            :error="$errors->first('code')"
+                        />
+                    @else
+                        <x-wirekit::input
+                            name="code"
+                            type="text"
+                            mono
+                            inputmode="text"
+                            autocomplete="one-time-code"
+                            autocapitalize="characters"
+                            spellcheck="false"
+                            :maxlength="$emlCodeLength"
+                            :label="__('email-magic-link::messages.code_label')"
+                            :error="$errors->first('code')"
+                            required
+                            autofocus
+                        />
+                    @endif
 
                     <x-wirekit::button type="submit">{{ __('email-magic-link::messages.sign_in') }}</x-wirekit::button>
                 </x-wirekit::stack>

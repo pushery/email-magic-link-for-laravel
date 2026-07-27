@@ -6,6 +6,7 @@ namespace EmailMagicLink;
 
 use EmailMagicLink\Authenticators\DefaultAuthenticator;
 use EmailMagicLink\Captcha\NullCaptchaGuard;
+use EmailMagicLink\Console\Commands\DoctorCommand;
 use EmailMagicLink\Console\Commands\InstallCommand;
 use EmailMagicLink\Console\Commands\PurgeExpiredTokensCommand;
 use EmailMagicLink\Contracts\CaptchaGuard;
@@ -13,11 +14,14 @@ use EmailMagicLink\Contracts\InvalidLinkResponder;
 use EmailMagicLink\Contracts\MagicLinkAuthenticator;
 use EmailMagicLink\Contracts\MagicLinkIssuer;
 use EmailMagicLink\Contracts\ResendGuard;
+use EmailMagicLink\Contracts\ScriptNonce;
 use EmailMagicLink\Contracts\TokenStore;
 use EmailMagicLink\Contracts\UserLookup;
 use EmailMagicLink\Http\Responses\DefaultInvalidLinkResponder;
 use EmailMagicLink\Lookups\DefaultUserLookup;
 use EmailMagicLink\Stores\DefaultTokenStore;
+use EmailMagicLink\Support\AutoScriptNonce;
+use EmailMagicLink\Support\ConfigMerger;
 use EmailMagicLink\Support\DefaultMagicLinkIssuer;
 use EmailMagicLink\Support\DefaultResendGuard;
 use EmailMagicLink\Support\EntropyGuard;
@@ -25,9 +29,11 @@ use EmailMagicLink\Support\MagicLinkConfig;
 use EmailMagicLink\Support\RateLimits;
 use EmailMagicLink\Support\TokenHasher;
 use Illuminate\Auth\AuthManager;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Contracts\Foundation\CachesConfiguration;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
@@ -58,7 +64,7 @@ final class EmailMagicLinkServiceProvider extends ServiceProvider
     #[Override]
     public function register(): void
     {
-        $this->mergeConfigFrom(__DIR__.'/../config/email-magic-link.php', 'email-magic-link');
+        $this->mergeConfigDeeplyFrom(__DIR__.'/../config/email-magic-link.php', 'email-magic-link');
 
         $this->app->singleton(
             MagicLinkConfig::class,
@@ -93,6 +99,12 @@ final class EmailMagicLinkServiceProvider extends ServiceProvider
             $custom = $app->make(MagicLinkConfig::class)->invalidLinkResponderClass();
 
             return $this->resolveContract($app, InvalidLinkResponder::class, $custom, DefaultInvalidLinkResponder::class);
+        });
+
+        $this->app->singleton(ScriptNonce::class, function (Application $app): ScriptNonce {
+            $custom = $app->make(MagicLinkConfig::class)->scriptNonce();
+
+            return $this->resolveContract($app, ScriptNonce::class, $custom, AutoScriptNonce::class);
         });
 
         $this->app->singleton(MagicLinkAuthenticator::class, DefaultAuthenticator::class);
@@ -134,6 +146,76 @@ final class EmailMagicLinkServiceProvider extends ServiceProvider
 
         $this->registerRateLimiters($config);
         $this->registerRoutes($config);
+        $this->registerPruneSchedule($config);
+    }
+
+    /**
+     * Register the daily purge in the host's scheduler, when asked to.
+     *
+     * Every request can create a token row, so without a purge the table grows
+     * unbounded — and wiring that schedule was setup every consumer had to
+     * remember. Opt-in rather than opt-out: a package that deletes rows on a
+     * schedule nobody asked for is making an operator's decision, and a host that
+     * already wires the command itself would end up with two entries for one job.
+     *
+     * callAfterResolving, not a direct resolve: the scheduler may never be built
+     * at all (a plain HTTP request), and forcing it into existence to register a
+     * cleanup job would be a cost on every request for a benefit on none.
+     */
+    private function registerPruneSchedule(MagicLinkConfig $config): void
+    {
+        if (! $config->pruneSchedule()) {
+            return;
+        }
+
+        $this->callAfterResolving(Schedule::class, function (Schedule $schedule) use ($config): void {
+            $event = $schedule->command('email-magic-link:purge');
+
+            // withoutOverlapping so a long purge on a large table cannot stack:
+            // the next tick would otherwise start a second delete against rows the
+            // first one is already working through.
+            match ($config->pruneFrequency()) {
+                'hourly' => $event->hourly(),
+                'weekly' => $event->weekly(),
+                'monthly' => $event->monthly(),
+                default => $event->daily(),
+            };
+
+            $event->withoutOverlapping();
+        });
+    }
+
+    /**
+     * Laravel's own mergeConfigFrom, but recursive — so a published config is a
+     * starting point rather than a ceiling.
+     *
+     * The shallow version supplies missing TOP-LEVEL keys only, so a host that ran
+     * `vendor:publish` once never receives a key added later inside a block it
+     * already has. It gets `null` instead of the shipped default, silently. See
+     * ConfigMerger for why the recursion stops at lists.
+     *
+     * The cached-configuration check is Laravel's and is kept verbatim: with a
+     * cached config there is nothing to merge into, and writing here would produce
+     * a config that differs between cached and uncached boots.
+     */
+    private function mergeConfigDeeplyFrom(string $path, string $key): void
+    {
+        if ($this->app instanceof CachesConfiguration && $this->app->configurationIsCached()) {
+            return;
+        }
+
+        $config = $this->app->make(Repository::class);
+        $published = $config->get($key, []);
+
+        // `require` returns mixed; the shipped file returns an array, but the type
+        // system cannot know that and a non-array here would be a broken package
+        // rather than a host mistake — so it falls back to nothing to merge.
+        $defaults = require $path;
+
+        $config->set($key, ConfigMerger::deep(
+            is_array($defaults) ? $defaults : [],
+            is_array($published) ? $published : [],
+        ));
     }
 
     private function registerFortifyBridge(MagicLinkConfig $config): void
@@ -199,6 +281,7 @@ final class EmailMagicLinkServiceProvider extends ServiceProvider
     {
         if ($this->app->runningInConsole()) {
             $this->commands([
+                DoctorCommand::class,
                 InstallCommand::class,
                 PurgeExpiredTokensCommand::class,
             ]);

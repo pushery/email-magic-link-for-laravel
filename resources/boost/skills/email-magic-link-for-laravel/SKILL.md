@@ -37,6 +37,16 @@ publishes the config and prints the setup steps; the migration is loaded from th
 package, so `migrate` creates the token table without publishing anything. Publish
 it only to customize it.
 
+After a later upgrade, ask what the published config does not know about yet:
+
+```bash
+php artisan email-magic-link:doctor
+```
+
+Publishing freezes the file at that version. The package still merges its own
+defaults underneath, so nothing breaks — but a key the file never mentions is a
+setting the operator cannot see or tune.
+
 Requires PHP `^8.4` and Laravel `^13.0`. The emails are queued
 (`ShouldQueue`), so a queue worker must be running or nothing is delivered.
 
@@ -65,6 +75,8 @@ decide the shape of the integration:
 | `api.enabled` | Adds the JSON contract for first-party SPA/mobile clients |
 | `invalid_response.via` | What an expired or invalid link renders: `redirect`, `view`, `abort`, `json`, or your own `InvalidLinkResponder` class-string |
 | `fortify.mode` | `auto` (bridge on when Fortify is installed), plus `respect_two_factor` |
+| `prune.schedule` | Register the daily token purge in the scheduler. Off by default — see Housekeeping |
+| `ui.script_nonce` | A `ScriptNonce` class supplying the CSP nonce for the countdown script; `null` auto-detects `csp_nonce()` |
 
 ### 3. Apply the package
 
@@ -112,11 +124,21 @@ $code = EmailMagicLink::issueCode($user);              // one-time code, nothing
 `issueLink()` also takes `guard`, `passphrase` and `baseUrl`; `issueCode()` takes
 `guard`. Both return a value object carrying the credential and its expiry.
 
-**Housekeeping.** Schedule the purge so spent and expired tokens do not accumulate:
+**Housekeeping.** Spent and expired tokens must be purged or the table grows
+unbounded. Either let the package register the schedule:
+
+```php
+// config/email-magic-link.php
+'prune' => ['schedule' => true, 'frequency' => 'daily'],
+```
+
+…or wire it yourself and leave the switch off:
 
 ```php
 Schedule::command('email-magic-link:purge')->daily();
 ```
+
+Do not do both — that is two scheduler entries for one job.
 
 ## Examples
 
@@ -162,6 +184,10 @@ falls back to a bundled default.
   "no such user" message undoes it.
 - Do not raise `link_ttl` to days to avoid expiry complaints. Lengthen the resend
   cooldown instead, or switch to bounded multi-use links.
+- Do not assume `resend.enabled` turns off the resend guard everywhere. It governs
+  this package's request endpoint only; keys your own application guards with the
+  same contract stay guarded. (Before 0.19.0 it was global — if you pinned it to
+  `true` as a workaround, you can stop.)
 - Do not treat the passphrase gate as two-factor. It is a shared secret on the
   link; a passphrase-gated link for a 2FA user still goes through the Fortify
   challenge.

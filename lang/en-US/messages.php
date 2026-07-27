@@ -2,56 +2,15 @@
 
 declare(strict_types=1);
 
-return [
-    // Shared.
-    'heading' => 'Sign in to :app',
-    'email_label' => 'Email address',
-    'sign_in' => 'Sign in',
-
-    // Request form.
-    'request_title' => 'Sign in',
-    'request_intro_link' => 'Enter your email address and we will send you a secure sign-in link.',
-    'request_intro_code' => 'Enter your email address and we will send you a secure sign-in code.',
-    'request_send_link' => 'Send sign-in link',
-    'request_send_code' => 'Send sign-in code',
-    'delivery_legend' => 'Delivery',
-    'delivery_link' => 'Magic link',
-    'delivery_code' => 'One-time code',
-
-    // Confirmation page.
-    'confirm_title' => 'Confirm sign in',
-    'confirm_intro' => 'For your security, confirm that you want to sign in. This link can only be used once.',
-
-    // Code entry form.
-    'code_title' => 'Enter your code',
-    'code_heading' => 'Enter your sign-in code',
-    'code_intro' => 'We emailed you a one-time code. Enter it below to finish signing in.',
-    'code_label' => 'Sign-in code',
-
-    // Confirmation passphrase gate.
-    'passphrase_label' => 'Passphrase',
-
-    // Invalid link page.
-    'invalid_title' => 'Sign-in request invalid',
-
-    // Status and error messages.
-    'status_link_sent' => 'If an account matches that email, we have sent a sign-in link.',
-    'status_code_sent' => 'If an account matches that email, we have sent a sign-in code.',
-    'consume_failed' => 'This sign-in request is invalid or has expired. Please request a new one.',
-    'captcha_failed' => 'The verification challenge failed. Please try again.',
-    'resend_throttled' => 'Please wait :seconds seconds before requesting another sign-in email.',
-
-    // Notification — magic link.
-    'mail_link_subject' => 'Sign in to :app',
-    'mail_link_intro' => 'Use the button below to sign in to :app.',
-    'mail_link_action' => 'Sign in',
-    'mail_link_expiry' => 'This link expires in :minutes minutes and can be used once.',
-
-    // Notification — one-time code.
-    'mail_code_subject' => 'Your :app sign-in code',
-    'mail_code_intro' => 'Your sign-in code for :app is:',
-    'mail_code_expiry' => 'This code expires in :minutes minutes.',
-
-    // Notification — shared.
-    'mail_ignore' => 'If you did not request this, you can safely ignore this email.',
-];
+// American English. The bundle EXISTS but carries no divergence from `en`, and it
+// delegates rather than duplicating: a copy would have to be kept in step by hand
+// on every string change, which is the drift this package cannot detect.
+//
+// Deleting it instead — the obvious simplification — is NOT safe, and that was
+// measured rather than assumed. Laravel falls back to `app.fallback_locale`, not
+// to the base language: with `fallback_locale = 'de'` and no bundle here, a
+// visitor on `en-US` is served GERMAN. Keeping the file is what makes the locale
+// resolve to American English whatever the host's fallback is.
+//
+// Give this file real content the moment a string diverges from `en`.
+return require __DIR__.'/../en/messages.php';

@@ -40,6 +40,7 @@ return [
     'consume_failed' => 'Deze inlogaanvraag is ongeldig of verlopen. Vraag een nieuwe aan.',
     'captcha_failed' => 'De verificatie is mislukt. Probeer het opnieuw.',
     'resend_throttled' => 'Wacht :seconds seconden voordat je een nieuwe inlogmail aanvraagt.',
+    'resend_countdown_label' => 'Wachttijd voordat je een nieuwe e-mail kunt aanvragen',
 
     // Notification — magic link.
     'mail_link_subject' => 'Inloggen bij :app',

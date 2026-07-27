@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace EmailMagicLink\Support;
 
 use EmailMagicLink\Contracts\InvalidLinkResponder;
+use EmailMagicLink\Contracts\ScriptNonce;
 use EmailMagicLink\Notifications\MagicLinkNotification;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Support\Facades\View;
@@ -233,6 +234,34 @@ final readonly class MagicLinkConfig
         return $this->bool($this->config->get('email-magic-link.routes.intended'), true);
     }
 
+    /**
+     * Whether the package registers the daily purge in the host's scheduler.
+     */
+    public function pruneSchedule(): bool
+    {
+        return $this->bool($this->config->get('email-magic-link.prune.schedule'), false);
+    }
+
+    /**
+     * The cadence for the self-registered purge.
+     *
+     * Mapped through a fixed set rather than passed to the scheduler as a method
+     * name: a config value that reaches ->{$method}() is a config value that can
+     * call anything on the Schedule object. An unrecognised cadence falls back to
+     * daily — a typo in a cleanup interval must not take down a boot.
+     *
+     * @return 'hourly'|'daily'|'weekly'|'monthly'
+     */
+    public function pruneFrequency(): string
+    {
+        return match ($this->string($this->config->get('email-magic-link.prune.frequency'), 'daily')) {
+            'hourly' => 'hourly',
+            'weekly' => 'weekly',
+            'monthly' => 'monthly',
+            default => 'daily',
+        };
+    }
+
     public function apiEnabled(): bool
     {
         return $this->bool($this->config->get('email-magic-link.api.enabled'), false);
@@ -314,6 +343,18 @@ final readonly class MagicLinkConfig
         return $this->string($this->config->get('email-magic-link.ui.mode'), 'auto') === 'blade'
             ? 'blade'
             : 'auto';
+    }
+
+    /**
+     * A custom CSP-nonce source, or null to auto-detect one.
+     *
+     * @return class-string<ScriptNonce>|null
+     */
+    public function scriptNonce(): ?string
+    {
+        $source = $this->config->get('email-magic-link.ui.script_nonce');
+
+        return is_string($source) && is_a($source, ScriptNonce::class, true) ? $source : null;
     }
 
     public function usesWireKit(): bool

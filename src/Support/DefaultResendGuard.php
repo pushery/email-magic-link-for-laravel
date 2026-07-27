@@ -20,6 +20,17 @@ use RuntimeException;
  * step, capped) and whether the window cap is reached. The attempt path takes a
  * short cache lock so a burst of concurrent requests for one key cannot each
  * read the same window and slip past the cap.
+ *
+ * This guard ALWAYS guards. The `resend.enabled` switch is checked by the
+ * package's own request endpoint before it calls in — never here. It used to be
+ * checked in attempt() and peek(), which made it a global kill-switch: a host
+ * that injects this contract for its own keys (the contract explicitly invites
+ * that, and names "two-factor:{user id}" as the example) had its guard silently
+ * disarmed by an env flag named for, and documented as, the magic-link request
+ * flow. The failure was invisible — ResendDecision::allowed() is the same object
+ * a legitimately-allowed send returns. An operator turning off magic-link
+ * throttling must not be able to turn off an unrelated subsystem's flood
+ * protection without ever being told.
  */
 final readonly class DefaultResendGuard implements ResendGuard
 {
@@ -36,10 +47,6 @@ final readonly class DefaultResendGuard implements ResendGuard
 
     public function attempt(string $key): ResendDecision
     {
-        if (! $this->config->resendEnabled()) {
-            return ResendDecision::allowed();
-        }
-
         $store = $this->repository()->getStore();
 
         if (! $store instanceof LockProvider) {
@@ -60,10 +67,6 @@ final readonly class DefaultResendGuard implements ResendGuard
 
     public function peek(string $key): ResendDecision
     {
-        if (! $this->config->resendEnabled()) {
-            return ResendDecision::allowed();
-        }
-
         return $this->evaluate($key, false);
     }
 

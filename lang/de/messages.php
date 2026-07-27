@@ -40,6 +40,7 @@ return [
     'consume_failed' => 'Diese Anmeldeanfrage ist ungültig oder abgelaufen. Bitte fordere eine neue an.',
     'captcha_failed' => 'Die Sicherheitsprüfung ist fehlgeschlagen. Bitte versuche es erneut.',
     'resend_throttled' => 'Bitte warte :seconds Sekunden, bevor du eine weitere Anmelde-E-Mail anforderst.',
+    'resend_countdown_label' => 'Wartezeit, bis du eine weitere E-Mail anfordern kannst',
 
     // Notification — magic link.
     'mail_link_subject' => 'Bei :app anmelden',

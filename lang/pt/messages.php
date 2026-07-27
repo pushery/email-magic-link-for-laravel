@@ -40,6 +40,7 @@ return [
     'consume_failed' => 'Este pedido de acesso é inválido ou expirou. Solicite um novo.',
     'captcha_failed' => 'A verificação falhou. Tente novamente.',
     'resend_throttled' => 'Aguarde :seconds segundos antes de solicitar outro e-mail de acesso.',
+    'resend_countdown_label' => 'Tempo de espera antes de poder solicitar outro e-mail',
 
     // Notification — magic link.
     'mail_link_subject' => 'Iniciar sessão em :app',

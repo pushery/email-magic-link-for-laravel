@@ -55,10 +55,19 @@ final class SendMagicLinkController
 
         // Escalating cooldown + rolling cap, keyed on the submitted email alone
         // (never on whether it resolves to a user), so it stays enumeration-safe.
-        $decision = $resendGuard->attempt(ResendKey::forRequest($email));
+        //
+        // `resend.enabled` is checked HERE, not inside the guard. It is the switch
+        // for THIS endpoint, which is what its name and documentation promise. When
+        // the check lived in DefaultResendGuard it disarmed every key, including the
+        // host application's own — the contract invites hosts to inject the guard
+        // for their own mail endpoints, so an operator disabling magic-link
+        // throttling was also disabling, say, a second-factor flood guard, silently.
+        if ($config->resendEnabled()) {
+            $decision = $resendGuard->attempt(ResendKey::forRequest($email));
 
-        if (! $decision->allowed) {
-            return $this->resendThrottled($request, $decision);
+            if (! $decision->allowed) {
+                return $this->resendThrottled($request, $decision);
+            }
         }
 
         $channel = $this->resolveChannel($request->requestedChannel(), $config->mode());

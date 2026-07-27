@@ -52,6 +52,10 @@ final class InstallCommand extends Command
         $this->newLine();
         $this->line("  3. Point your sign-in link at route('email-magic-link.request.form').");
         $this->newLine();
+        $this->line('  4. Later, after upgrading the package, check what your published config');
+        $this->line('     does not know about yet:');
+        $this->line('       php artisan email-magic-link:doctor');
+        $this->newLine();
         $this->line('The migration is loaded automatically; publish it with');
         $this->line('  php artisan vendor:publish --tag=email-magic-link-migrations');
         $this->line('only if you need to customize it.');

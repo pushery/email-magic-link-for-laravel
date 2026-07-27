@@ -40,6 +40,7 @@ return [
     'consume_failed' => 'Questa richiesta di accesso non è valida o è scaduta. Richiedine una nuova.',
     'captcha_failed' => 'La verifica non è riuscita. Riprova.',
     'resend_throttled' => 'Attendi :seconds secondi prima di richiedere un’altra email di accesso.',
+    'resend_countdown_label' => 'Tempo di attesa prima di poter richiedere un’altra email',
 
     // Notification — magic link.
     'mail_link_subject' => 'Accedi a :app',

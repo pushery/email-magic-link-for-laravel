@@ -22,6 +22,12 @@ use EmailMagicLink\Support\ResendDecision;
  * namespace of your own (for example "two-factor:{user id}") — the package
  * keys its request endpoint with "request:{email}", and keys are shared per
  * store.
+ *
+ * A key you own is ALWAYS guarded. The `resend.enabled` config switch turns off
+ * throttling on the package's own request endpoint and nothing else: it is
+ * checked by that endpoint, not by the guard. Before 0.19.0 it was checked
+ * inside the guard, so it silently disarmed host keys too — if you pinned
+ * `resend.enabled` to true to work around that, you no longer need to.
  */
 interface ResendGuard
 {

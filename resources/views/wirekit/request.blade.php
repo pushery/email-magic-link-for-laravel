@@ -28,10 +28,16 @@
                     />
 
                     @if ($mode === 'both')
-                        <x-wirekit::stack gap="sm">
+                        {{-- A fieldset with a legend, not a bare stack: the two radios are a
+                             choice, and without a group label a screen reader announces
+                             "Magic link" and "One-time code" with nothing saying what is
+                             being chosen. The plain Blade twin has always used
+                             fieldset + legend; this set had lost it. field.set brings its
+                             own spacing, so it replaces the stack rather than wrapping it. --}}
+                        <x-wirekit::field.set :legend="__('email-magic-link::messages.delivery_legend')">
                             <x-wirekit::radio name="channel" value="link" :label="__('email-magic-link::messages.delivery_link')" checked />
                             <x-wirekit::radio name="channel" value="code" :label="__('email-magic-link::messages.delivery_code')" />
-                        </x-wirekit::stack>
+                        </x-wirekit::field.set>
                     @endif
 
                     <x-wirekit::button type="submit">

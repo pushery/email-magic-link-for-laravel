@@ -40,6 +40,7 @@ return [
     'consume_failed' => 'Esta solicitud de acceso no es válida o ha caducado. Solicita una nueva.',
     'captcha_failed' => 'La verificación ha fallado. Inténtalo de nuevo.',
     'resend_throttled' => 'Espera :seconds segundos antes de solicitar otro correo de acceso.',
+    'resend_countdown_label' => 'Tiempo de espera antes de poder solicitar otro correo',
 
     // Notification — magic link.
     'mail_link_subject' => 'Inicia sesión en :app',

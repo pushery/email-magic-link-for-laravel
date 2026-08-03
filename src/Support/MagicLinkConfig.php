@@ -283,7 +283,7 @@ final readonly class MagicLinkConfig
     }
 
     /**
-     * The built-in invalid-link strategy. Any value that is not a recognised
+     * The built-in invalid-link strategy. Any value that is not a recognized
      * strategy (including a custom responder class-string, handled separately)
      * falls back to the enumeration-safe redirect.
      *

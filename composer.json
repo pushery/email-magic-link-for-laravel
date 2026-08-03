@@ -25,16 +25,20 @@
         "laravel/framework": "^13.0"
     },
     "require-dev": {
+        "cweagans/composer-patches": "^1.7",
         "larastan/larastan": "^3.0",
         "laravel/fortify": "^1.0",
         "laravel/pao": "^1.1",
         "laravel/pint": "^1.0",
         "orchestra/testbench": "^11.0",
-        "pestphp/pest": "^4.0",
-        "pestphp/pest-plugin-browser": "^4.3",
-        "pestphp/pest-plugin-laravel": "^4.0",
-        "pestphp/pest-plugin-type-coverage": "^4.0",
-        "phpstan/phpstan": "^2.2 !=2.2.6",
+        "pestphp/pest": "^5.0",
+        "pestphp/pest-plugin-agent": "^5.0",
+        "pestphp/pest-plugin-browser": "^5.0",
+        "pestphp/pest-plugin-evals": "^5.0",
+        "pestphp/pest-plugin-laravel": "^5.0",
+        "pestphp/pest-plugin-phpstan": "^5.0",
+        "pestphp/pest-plugin-rector": "^5.0",
+        "pestphp/pest-plugin-type-coverage": "^5.0",
         "pushery/wirekit": "^2.8",
         "rector/rector": "^2.0",
         "spaze/phpstan-disallowed-calls": "^4.12"
@@ -62,9 +66,10 @@
         "test:type-coverage": "pest --type-coverage --min=100",
         "test:browser": "pest tests/Browser tests/BrowserFortify tests/BrowserWireKit",
         "test:browser:wirekit": "pest tests/BrowserWireKit",
+        "test:evals": "pest tests/Evals --evals",
         "test:mysql": "pest --testsuite=MySql",
         "test:database": "pest --testsuite=Postgres,MySql",
-        "analyse": "phpstan analyse",
+        "analyse": "phpstan analyse --memory-limit=1G",
         "format": "pint",
         "format:test": "pint --test",
         "rector": "rector process",
@@ -80,13 +85,14 @@
         ]
     },
     "config": {
-        "process-timeout": 1800,
+        "process-timeout": 0,
         "sort-packages": true,
         "allow-plugins": {
             "pestphp/pest-plugin": true
         }
     },
     "extra": {
+        "composer-exit-on-patch-failure": true,
         "laravel": {
             "providers": [
                 "EmailMagicLink\\EmailMagicLinkServiceProvider"

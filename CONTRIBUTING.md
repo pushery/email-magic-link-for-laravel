@@ -3,6 +3,17 @@
 Thanks for considering a contribution. This package holds itself to a strict quality
 bar, and every pull request is expected to keep all of the gates green.
 
+## Local requirements
+
+**PHP 8.4.1 or newer to work on the package, even though the package itself installs on
+8.4.0.** The two floors are different on purpose. The published requirement stays `^8.4`
+and it is honest: on 8.4.0 Composer resolves the runtime tree to the Symfony 8.0 line and
+installs cleanly. The development toolchain does not have that option — Pest 5 and the
+current Laravel test stack pull Symfony 8.1, which requires `php >=8.4.1`.
+
+So on exactly 8.4.0 `composer install` fails here with a message naming `symfony/process`
+or `phpunit/phpunit`, never Pest. Upgrade the patch version; nothing else is wrong.
+
 ## Getting started
 
 ```bash

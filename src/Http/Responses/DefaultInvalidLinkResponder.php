@@ -16,7 +16,7 @@ use Symfony\Component\HttpFoundation\Response;
  *
  *   redirect  send the user back to the sign-in form (default) — or to a
  *             configured URL — with the generic error flashed and the email
- *             re-prefilled. Preserves the original browser behaviour.
+ *             re-prefilled. Preserves the original browser behavior.
  *   view      render a Blade view (receives `message`), so the host owns the
  *             branding of the error page.
  *   abort     abort() with a configurable HTTP status, handing off to the

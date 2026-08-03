@@ -55,7 +55,7 @@ final class ConfigMerger
     /**
      * A list is a value, not a structure to merge into.
      *
-     * `array_is_list([])` is true, which is the behaviour we want: an empty array
+     * `array_is_list([])` is true, which is the behavior we want: an empty array
      * the host published is an explicit "nothing here", and merging the package's
      * entries back into it would undo that choice.
      *

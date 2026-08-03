@@ -259,19 +259,34 @@ return [
     | alongside) a Vite build — e.g. a CDN bundle or an asset() path.
     |
     | "script_nonce" names a class implementing EmailMagicLink\Contracts\
-    | ScriptNonce, which supplies the CSP nonce for the resend countdown's inline
-    | script. Leave it null and the package detects the csp_nonce() helper
-    | (spatie/laravel-csp) by itself; set it only when your nonce lives elsewhere.
-    | Under a strict policy without a nonce the script is blocked SILENTLY — the
-    | countdown simply never runs.
+    | ScriptNonce, which supplies the CSP nonce for every tag the bundled screens
+    | emit that a strict policy would otherwise reject: the resend countdown's
+    | inline script, the WireKit layout's inline stylesheet, and the <link> and
+    | <script> WireKit itself writes. Leave it null and the package finds the nonce
+    | on its own — it reads the "csp-nonce" container binding spatie/laravel-csp
+    | registers, and falls back to a global csp_nonce() function for hosts that
+    | define one. Set it only when your nonce lives somewhere else entirely.
+    | Under a strict policy without a nonce these are blocked SILENTLY — the
+    | countdown simply never runs, and the screen renders unstyled.
     |
-    | That nonce is the whole story for the plain screens. The WireKit screens
-    | additionally need "unsafe-eval" in script-src, because WireKit's components
-    | are driven by Alpine and Alpine compiles its expressions with the Function
-    | constructor. On these screens that is the one-time-code field: without it,
-    | the digit boxes stop advancing and pasting a code stops filling them — again
-    | silently. A host whose policy cannot grant "unsafe-eval" should set mode to
-    | "blade"; the plain screens carry the same flow and use no Alpine.
+    | The WireKit screens have one more requirement, and it is not a nonce. Their
+    | components are driven by Alpine, and Alpine's default build compiles its
+    | expressions with the Function constructor, which needs "unsafe-eval" in
+    | script-src. On these screens that is the one-time-code field: without it the
+    | digit boxes stop advancing and pasting a code stops filling them — again
+    | silently. Two answers, and only one of them is complete:
+    |
+    |   1. Set mode to "blade". The plain screens carry the same flow and use no
+    |      Alpine and no Livewire, so they need no exception at all. This is the
+    |      reliable answer.
+    |   2. Set wirekit.scripts.bundle to "csp" (WireKit 2.24.0+) — most of the way,
+    |      not all of it. That bundle is built against Alpine's CSP distribution, so
+    |      WireKit's own components stop needing "unsafe-eval". But @wirekitScripts
+    |      force-injects Livewire's assets (that is how Alpine reaches a page with no
+    |      Livewire component on it), and Livewire compiles its own directives at
+    |      runtime the same way — so the page still needs "unsafe-eval" unless the app
+    |      also runs Livewire's CSP distribution. The bundle also CONTAINS Alpine and
+    |      starts it, so an app on it must not load its own as well.
     |
     */
 

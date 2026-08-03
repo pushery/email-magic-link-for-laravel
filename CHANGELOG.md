@@ -4,6 +4,83 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.20.0] - 2026-08-03
+
+### Fixed
+
+- **The CSP nonce is found again.** `AutoScriptNonce` looked for a global `csp_nonce()`
+  function. That function was introduced in spatie/laravel-csp 2.10.3 and does not exist in
+  **any** 3.x release — every 3.x version publishes `autoload.psr-4` and no `autoload.files`,
+  so it cannot define a global function at all. Detection therefore returned `null` for every
+  application on the current series, the resend countdown's inline script shipped with no
+  nonce, and a strict policy blocked it **silently** — the countdown never ran and the button
+  stayed live, so a reader who clicked too early met a rejection instead of a visible wait.
+
+  It now reads the `csp-nonce` container binding that package actually registers — the same
+  one its own `@cspNonce` directive reads — and keeps the function as a fallback for
+  applications that define one themselves. Both are probed by name, so this package still
+  references none of that package's symbols and stays installable without it.
+
+  Reported independently by four consuming applications, which is what a failure with no error
+  message costs.
+
+- **The WireKit screens can be served under a strict policy at all.** The same nonce now
+  reaches three more tags that a strict policy rejects just as hard: the WireKit layout's
+  inline `<style>` block — which was this package's own, and had never carried one — and the
+  `<link>` and `<script>` WireKit itself writes, both of which accept a nonce as of WireKit
+  2.24.0. Under a policy built on `'strict-dynamic'` the nonce is the only thing that grants a
+  tag, so before this the screen rendered unstyled with nothing in the logs.
+
+- **The WireKit layout emitted its two script tags in the wrong order.** `@wirekitScripts`
+  registers WireKit's Alpine plugins on the `alpine:init` event and `@livewireScripts` is what
+  boots Alpine, so WireKit has to come first — WireKit's own installer writes exactly that order
+  when it generates a layout. This layout had them reversed, which can cost the one-time-code
+  field its auto-advance and its paste distribution while the field still accepts typing one box
+  at a time. Nothing caught it because the browser suite asserts the screens render *styled*, and
+  styling is CSS; a missed plugin registration is invisible to it. A rendering guard now pins the
+  order.
+
+- US spelling on the published surface. Eight British spellings had accumulated across four
+  source files, a Blade view and this changelog.
+
+### Changed
+
+- **The one-time-code screen renders the boxed field for every alphabet.** WireKit's
+  `otp-input` used to accept digits only and enforced it four ways, so the shipped default
+  alphabet — `ABCDEFGHJKMNPQRSTUVWXYZ23456789`, mostly letters — could not be typed into it:
+  every keystroke was discarded and the boxes stayed empty. This package worked around that by
+  rendering a single monospace field whenever the alphabet contained letters. WireKit 2.24.0
+  added an `alphabet` prop that derives the typing filter, the paste filter, the keyboard hint
+  and the validation pattern from one value, so the workaround is gone and the boxed field is
+  back for everyone. A single-case alphabet is now matched case-insensitively too, so a code
+  typed in lowercase is accepted rather than silently refused.
+
+  **If you published `resources/views/vendor/email-magic-link/wirekit/`, republish it** to pick
+  this up. Nothing else changes: the plain Blade screens use a single field either way, and the
+  flow, routes and validation are untouched.
+
+- **A host that cannot grant `'unsafe-eval'` no longer has to give up the WireKit look.**
+  Setting WireKit's own `wirekit.scripts.bundle` to `'csp'` serves a build made against Alpine's
+  CSP distribution. The documentation used to say the only option was `ui.mode = 'blade'`; it
+  now names both.
+
+### Changed — development only
+
+Nothing in this section changes what the package does at runtime. It is recorded because
+`composer.json` and `CONTRIBUTING.md` are part of the published package, so a reader of the
+public repository sees the difference.
+
+- **The development toolchain moved to Pest 5**, together with its plugin set (browser,
+  Laravel, type-coverage, plus the PHPStan extension, the Rector set, the agent helper and
+  the evals plugin). The published requirement is unchanged and still `php: ^8.4` — on
+  8.4.0 the runtime tree resolves to the Symfony 8.0 line and installs cleanly. **Working
+  on the package now needs PHP 8.4.1 or newer**, because the test toolchain pulls Symfony
+  8.1, which requires it. `CONTRIBUTING.md` says so, and names the confusing symptom: on
+  exactly 8.4.0 `composer install` fails citing `symfony/process`, never Pest.
+- `composer.json` gains a `test:evals` script and drops the finite `process-timeout` in
+  favour of `0`. Both are development-side only; no runtime dependency, autoload entry or
+  published default moved.
+
 ## [0.19.0] - 2026-07-26
 
 ### Added
@@ -173,7 +250,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   columns — run `php artisan migrate` after upgrading.
 - The response to an invalid or expired magic link or one-time code is now
   configurable under a new `invalid_response` config block. Choose `redirect`
-  (the previous behaviour, still the default), `view` to render your own error
+  (the previous behavior, still the default), `view` to render your own error
   page, `abort` to return an HTTP status through your app's error page, or `json`
   to return the `{message, error}` envelope to every client — or point `via` at
   your own `EmailMagicLink\Contracts\InvalidLinkResponder` implementation for

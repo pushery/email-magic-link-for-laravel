@@ -144,7 +144,7 @@ final readonly class DefaultTokenStore implements TokenStore
             }
 
             if (! $this->atomicClaim('id', (string) $token->id, 'code', $now)) {
-                // Unreachable once the row lock above serialises claims; kept as a
+                // Unreachable once the row lock above serializes claims; kept as a
                 // defensive backstop that maps a losing race to a clean outcome.
                 return ClaimResult::failed(ClaimFailure::AlreadyConsumed); // @codeCoverageIgnore
             }

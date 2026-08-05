@@ -279,7 +279,7 @@ return [
     |   1. Set mode to "blade". The plain screens carry the same flow and use no
     |      Alpine and no Livewire, so they need no exception at all. This is the
     |      reliable answer.
-    |   2. Set wirekit.scripts.bundle to "csp" (WireKit 2.24.0+) — most of the way,
+    |   2. Set wirekit.scripts.bundle to "csp" (WireKit 2.22.0+) — most of the way,
     |      not all of it. That bundle is built against Alpine's CSP distribution, so
     |      WireKit's own components stop needing "unsafe-eval". But @wirekitScripts
     |      force-injects Livewire's assets (that is how Alpine reaches a page with no

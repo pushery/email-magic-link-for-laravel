@@ -39,13 +39,13 @@
         "pestphp/pest-plugin-phpstan": "^5.0",
         "pestphp/pest-plugin-rector": "^5.0",
         "pestphp/pest-plugin-type-coverage": "^5.0",
-        "pushery/wirekit": "^2.8",
+        "pushery/wirekit": "^2.26",
         "rector/rector": "^2.0",
         "spaze/phpstan-disallowed-calls": "^4.12"
     },
     "suggest": {
         "laravel/fortify": "Enables the no-bypass two-factor (TOTP) handoff: a magic-link user with confirmed 2FA completes Fortify's challenge before being logged in (^1.0).",
-        "pushery/wirekit": "Renders the sign-in screens with WireKit components when installed; the package auto-detects it and falls back to plain Blade otherwise."
+        "pushery/wirekit": "Renders the sign-in screens with WireKit components when installed; the package auto-detects it and falls back to plain Blade otherwise. The screens are developed and tested against 2.26 and up: the one-time-code field needs the alphabet prop (2.22) to accept a non-numeric code at all, and its case-folding validation pattern (2.26) to accept that code in lower case without scripting."
     },
     "autoload": {
         "psr-4": {

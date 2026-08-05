@@ -17,7 +17,7 @@
          are injected ONLY by this directive. Without it every var(--*-wk-*)
          resolves to nothing and the components render completely unstyled.
 
-         The nonce argument arrived in WireKit 2.24.0. Under a policy
+         The nonce argument arrived in WireKit 2.22.0. Under a policy
          built on 'strict-dynamic' the nonce is the ONLY thing that grants a tag —
          same origin is not enough — so before this the WireKit screens could not
          be served under the very policy an auth page is most likely to carry. An
@@ -54,7 +54,7 @@
         }
         .eml-shell { width: 100%; max-width: 24rem; padding: 2rem; box-sizing: border-box; }
         /* Only the CENTERING is still ours. The `flex-wrap: wrap` half of this rule
-           was a workaround and is retired: WireKit 2.24.0 ships the
+           was a workaround and is retired: WireKit 2.21.1 ships the
            digit row as `flex flex-wrap gap-2`, so a long code wraps on its own.
            It does not center the wrapped remainder, and on this 24rem card an
            eight-digit code always wraps — two boxes hanging at the left edge under
@@ -78,13 +78,23 @@
          is CSS, so a missed plugin registration is invisible to it.
 
          Nonced for the same reason as the stylesheet above. A host that cannot
-         grant 'unsafe-eval' has a lever since WireKit 2.24.0 —
+         grant 'unsafe-eval' has a lever since WireKit 2.22.0 —
          `wirekit.scripts.bundle = 'csp'`, built against Alpine's CSP distribution
          — but it is only half the answer here, and the docs say which half:
          @wirekitScripts force-injects Livewire's assets so Alpine reaches a
          pure-Blade page, and Livewire compiles its own directives at runtime the
-         same way Alpine's default build does. --}}
+         same way Alpine's default build does.
+
+         BOTH tags take the nonce, and the second one is easy to forget: WireKit
+         emits its own <script>, and @livewireScripts emits Livewire's. Without an
+         argument Livewire falls back to Vite::cspNonce(), which is a DIFFERENT
+         source than this package's ScriptNonce contract — so a host that resolves
+         its nonce through us and not through Vite got a nonced WireKit tag and a
+         bare Livewire one. Under 'strict-dynamic' the nonce is the only thing that
+         grants a tag, so that one was simply blocked and Alpine never booted.
+         Passing null is byte-identical to passing nothing (`null ?? Vite::cspNonce()`
+         still applies), so a host without a policy renders exactly as before. --}}
     @wirekitScripts($emlNonce)
-    @livewireScripts
+    @livewireScripts(['nonce' => $emlNonce])
 </body>
 </html>

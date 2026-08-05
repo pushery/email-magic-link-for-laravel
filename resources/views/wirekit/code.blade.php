@@ -29,7 +29,7 @@
                         :error="$errors->first('email')"
                     />
 
-                    {{-- One field for every alphabet, since WireKit 2.24.0 gave otp-input
+                    {{-- One field for every alphabet, since WireKit 2.22.0 gave otp-input
                          an `alphabet` prop. Until then it was digits-only and
                          enforced it in four places — typing a non-digit cleared the box,
                          pasting stripped every non-digit, inputmode was numeric and pattern

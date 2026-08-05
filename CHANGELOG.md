@@ -4,6 +4,45 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.20.1] - 2026-08-04
+
+### Fixed
+
+- **The CSP story on the WireKit screens ended one line early.** The layout resolved a
+  nonce and handed it to `@wirekitStyles` and `@wirekitScripts` — and then called
+  `@livewireScripts` with no argument. Livewire falls back to `Vite::cspNonce()` when
+  it is called bare, which is a **different source** than this package's `ScriptNonce`
+  contract, so an application that resolves its nonce through us and not through Vite
+  served a nonced WireKit tag beside a bare Livewire one.
+
+  Under a policy built on `'strict-dynamic'` the nonce is the only thing that grants a
+  tag, so that one was blocked — and a blocked script raises no error and renders no
+  message. Alpine never booted, and the screen looked like a styling bug rather than a
+  policy rejection. This is the same failure shape as the missing countdown nonce in
+  0.20.0, one layer further down.
+
+  `@livewireScripts(['nonce' => $emlNonce])` now carries it. Passing `null` is
+  byte-identical to passing nothing, so an application without a policy renders exactly
+  as before.
+
+### Changed
+
+- **The WireKit screens now state the version they actually need.** `pushery/wirekit`
+  was suggested without a floor, which read as "any 2.x will do". Two of them do not:
+  the one-time-code field needs the `alphabet` prop (WireKit 2.22) to accept a
+  non-numeric code at all, and its case-folding validation pattern (WireKit 2.26) to
+  accept that code in lower case on a page where scripting is unavailable. On an older
+  WireKit the boxed field renders a digits-only pattern and silently refuses the code
+  this package issues.
+
+- **A one-time code typed in lower case is now accepted by the browser too.** With
+  WireKit 2.26 the field's validation pattern carries both cases whenever the alphabet
+  is single-case — like the shipped default — so the lower-case normalization no longer
+  depends on the field's JavaScript running. It was previously refused by the browser's
+  own constraint validation on exactly the strict-CSP page where that JavaScript cannot
+  run. Nothing to change in your application; the documentation no longer carries the
+  restriction.
+
 ## [0.20.0] - 2026-08-03
 
 ### Fixed

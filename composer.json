@@ -62,7 +62,7 @@
     },
     "scripts": {
         "test": "pest",
-        "test:coverage": "pest --coverage --min=100",
+        "test:coverage": "@php -d pcov.directory=. vendor/bin/pest --coverage --min=100",
         "test:type-coverage": "pest --type-coverage --min=100",
         "test:browser": "pest tests/Browser tests/BrowserFortify tests/BrowserWireKit",
         "test:browser:wirekit": "pest tests/BrowserWireKit",
@@ -74,8 +74,8 @@
         "format:test": "pint --test",
         "rector": "rector process",
         "rector:test": "rector process --dry-run",
-        "mutate": "pest --mutate --everything --covered-only --min=85",
-        "mutate:detect": "pest --mutate --everything --covered-only --parallel --processes=4 --min=85",
+        "mutate": "@php -d pcov.directory=. vendor/bin/pest --mutate --everything --covered-only --min=85",
+        "mutate:detect": "@php -d pcov.directory=. vendor/bin/pest --mutate --everything --covered-only --parallel --processes=4 --min=85",
         "qa": [
             "@format:test",
             "@rector:test",

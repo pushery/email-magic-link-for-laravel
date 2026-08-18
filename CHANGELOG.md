@@ -4,6 +4,23 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.20.2] - 2026-08-18
+
+### Changed
+
+- **Development only — nothing changes for an application that installs this package.**
+  The `test:coverage`, `mutate` and `mutate:detect` composer scripts now run through
+  `@php -d pcov.directory=.`.
+
+  pcov collects coverage only within its own directory scope, and with that scope unset it
+  reaches neither `config/` nor `database/`. Both therefore reported 0.0% while the suite
+  had been widened to certify everything the package ships; with the scope set they report
+  100%. The two halves only work together, which is why the scripts moved with it.
+
+  These scripts are run by this package's own contributors, never by the applications that
+  require it, so upgrading from 0.20.1 is a no-op at runtime. Everything else on this
+  release line is tests, continuous-integration lanes and tooling, none of which ship.
+
 ## [0.20.1] - 2026-08-04
 
 ### Fixed

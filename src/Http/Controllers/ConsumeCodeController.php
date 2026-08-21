@@ -8,7 +8,6 @@ use EmailMagicLink\Contracts\TokenStore;
 use EmailMagicLink\Contracts\UserLookup;
 use EmailMagicLink\Http\Controllers\Concerns\CompletesMagicLinkLogin;
 use EmailMagicLink\Http\Requests\ConsumeCodeRequest;
-use EmailMagicLink\Models\MagicLinkToken;
 use EmailMagicLink\Support\ClaimFailure;
 use EmailMagicLink\Support\MagicLinkConfig;
 use Illuminate\Contracts\Auth\Authenticatable;
@@ -40,12 +39,10 @@ final class ConsumeCodeController
         }
 
         $result = $store->claimCode($user, $request->code(), $guard);
-        $claimed = $result->token;
-
-        if (! $result->successful || ! $claimed instanceof MagicLinkToken) {
-            return $this->failedConsumption($request, 'email-magic-link.code.form', $result->failure ?? ClaimFailure::NotFound);
+        if (! $result->succeeded()) {
+            return $this->failedConsumption($request, 'email-magic-link.code.form', $result->failure);
         }
 
-        return $this->completeLogin($request, $claimed, 'email-magic-link.code.form');
+        return $this->completeLogin($request, $result->token, 'email-magic-link.code.form');
     }
 }

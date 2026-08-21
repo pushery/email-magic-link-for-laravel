@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace EmailMagicLink\Console\Commands;
 
+use EmailMagicLink\Contracts\ScriptNonce;
+use EmailMagicLink\Support\AutoScriptNonce;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Foundation\Application;
@@ -38,6 +40,10 @@ final class DoctorCommand extends Command
         if (! is_file($publishedPath)) {
             $this->info('No published config — this application uses the package defaults, so nothing can drift.');
             $this->line('  Publish one with: php artisan vendor:publish --tag=email-magic-link-config');
+
+            // Also on this path: a host with no published config has the same CSP
+            // question, and this branch returns before the report below.
+            $this->reportScriptNonce($config);
 
             return self::SUCCESS;
         }
@@ -82,10 +88,79 @@ final class DoctorCommand extends Command
             $this->info('Your published config matches this version key for key.');
         }
 
+        $this->reportScriptNonce($config);
+
         // Reporting, never gating: this runs in a deploy pipeline and a drifted
         // config is a thing to read, not a thing to fail a release on. `unknown`
         // in particular is often a deliberate leftover during a staged upgrade.
         return self::SUCCESS;
+    }
+
+    /**
+     * Report WHERE a CSP nonce would come from — never what it is.
+     *
+     * `AutoScriptNonce` deliberately falls back to null instead of throwing, because
+     * an exception would take down the sign-in screen over a progressive
+     * enhancement. The price is that a nonce which cannot be resolved produces NO
+     * signal at all: the script ships without the attribute, a strict policy blocks
+     * it, and the only symptom is a resend button that never counts down. That took
+     * four separate consumers to notice.
+     *
+     * A log warning would be the wrong instrument — most hosts have no policy at
+     * all, so it would fire almost always, get filtered, and take the one meaningful
+     * warning with it. This command is already the place someone reads when they
+     * have a question.
+     *
+     * ⚠️ It reports the SOURCE, not the value, and that is a correctness point
+     * rather than caution. The nonce is scoped per request; a console command either
+     * cannot resolve the binding at all or resolves one that no response will ever
+     * carry. Printing it would show a value that is real and useless. Whether the
+     * SOURCE exists is the same question in the console as in a request, so that is
+     * what gets answered.
+     */
+    private function reportScriptNonce(Repository $config): void
+    {
+        $this->newLine();
+
+        $custom = $config->get('email-magic-link.ui.script_nonce');
+
+        if (is_string($custom) && is_a($custom, ScriptNonce::class, true)) {
+            $this->line("CSP nonce   custom ({$custom} via ui.script_nonce)");
+
+            return;
+        }
+
+        if (is_string($custom) && $custom !== '') {
+            // Configured but unusable: the value is ignored and the package falls
+            // back to auto-detection, which looks identical to having configured
+            // nothing. Naming it is the whole point of this command.
+            $this->line("CSP nonce   ui.script_nonce is set to \"{$custom}\", which does not implement ".ScriptNonce::class);
+            $this->line('            The setting is IGNORED and auto-detection runs instead.');
+
+            return;
+        }
+
+        $sources = [];
+
+        if ($this->laravel->bound(AutoScriptNonce::$binding)) {
+            $sources[] = 'the "'.AutoScriptNonce::$binding.'" container binding';
+        }
+
+        if (function_exists(AutoScriptNonce::$helper)) {
+            $sources[] = 'the global '.AutoScriptNonce::$helper.'() function';
+        }
+
+        if ($sources === []) {
+            $this->line('CSP nonce   no source detected — fine if this app has no policy');
+            $this->line('            Under a strict Content-Security-Policy the bundled inline script');
+            $this->line('            would be blocked, and it fails silently. See ui.script_nonce.');
+
+            return;
+        }
+
+        $this->line('CSP nonce   resolved from '.implode(', then ', $sources));
+        $this->line('            Source only: the nonce itself is per-request, so a console run');
+        $this->line('            cannot show the value a response would carry.');
     }
 
     /**

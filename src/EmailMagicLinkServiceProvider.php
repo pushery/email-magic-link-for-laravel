@@ -11,20 +11,27 @@ use EmailMagicLink\Console\Commands\InstallCommand;
 use EmailMagicLink\Console\Commands\PurgeExpiredTokensCommand;
 use EmailMagicLink\Contracts\CaptchaGuard;
 use EmailMagicLink\Contracts\InvalidLinkResponder;
+use EmailMagicLink\Contracts\InvitationHandler;
+use EmailMagicLink\Contracts\InvitationIssuer;
+use EmailMagicLink\Contracts\InvitationStore;
 use EmailMagicLink\Contracts\MagicLinkAuthenticator;
 use EmailMagicLink\Contracts\MagicLinkIssuer;
 use EmailMagicLink\Contracts\ResendGuard;
 use EmailMagicLink\Contracts\ScriptNonce;
 use EmailMagicLink\Contracts\TokenStore;
 use EmailMagicLink\Contracts\UserLookup;
+use EmailMagicLink\Exceptions\InvitationsMisconfiguredException;
 use EmailMagicLink\Http\Responses\DefaultInvalidLinkResponder;
 use EmailMagicLink\Lookups\DefaultUserLookup;
+use EmailMagicLink\Stores\DefaultInvitationStore;
 use EmailMagicLink\Stores\DefaultTokenStore;
 use EmailMagicLink\Support\AutoScriptNonce;
 use EmailMagicLink\Support\ConfigMerger;
+use EmailMagicLink\Support\DefaultInvitationIssuer;
 use EmailMagicLink\Support\DefaultMagicLinkIssuer;
 use EmailMagicLink\Support\DefaultResendGuard;
 use EmailMagicLink\Support\EntropyGuard;
+use EmailMagicLink\Support\InvitationGuard;
 use EmailMagicLink\Support\MagicLinkConfig;
 use EmailMagicLink\Support\RateLimits;
 use EmailMagicLink\Support\TokenHasher;
@@ -115,6 +122,42 @@ final class EmailMagicLinkServiceProvider extends ServiceProvider
             $app->make(AuthManager::class),
         ));
 
+        $this->app->singleton(InvitationStore::class, function (Application $app): InvitationStore {
+            $custom = $app->make(MagicLinkConfig::class)->invitationStore();
+
+            return $this->resolveContract($app, InvitationStore::class, $custom, DefaultInvitationStore::class);
+        });
+
+        $this->app->singleton(InvitationIssuer::class, fn (Application $app): InvitationIssuer => new DefaultInvitationIssuer(
+            $app->make(InvitationStore::class),
+            $app->make(MagicLinkConfig::class),
+        ));
+
+        // Resolved lazily and never defaulted. There is no sensible fallback: what
+        // accepting an invitation means is the one thing the package cannot know, so a
+        // missing handler is an error rather than a no-op. The boot guard normally
+        // catches it first; this closure is what keeps the failure honest if something
+        // resolves the contract on an installation the guard never ran on.
+        $this->app->singleton(InvitationHandler::class, function (Application $app): InvitationHandler {
+            $class = $app->make(MagicLinkConfig::class)->invitationHandler();
+
+            if ($class === null) {
+                throw InvitationsMisconfiguredException::missingHandler();
+            }
+
+            if (! class_exists($class)) {
+                throw InvitationsMisconfiguredException::handlerContract($class);
+            }
+
+            $resolved = $app->make($class);
+
+            if ($resolved instanceof InvitationHandler) {
+                return $resolved;
+            }
+
+            throw InvitationsMisconfiguredException::handlerContract($class);
+        });
+
         $this->app->singleton(ResendGuard::class, fn (Application $app): ResendGuard => new DefaultResendGuard(
             $app->make(CacheFactory::class),
             $app->make(MagicLinkConfig::class),
@@ -143,6 +186,7 @@ final class EmailMagicLinkServiceProvider extends ServiceProvider
 
         // Fail closed before anything user-facing is registered.
         new EntropyGuard($config)->validate();
+        new InvitationGuard($config)->validate();
 
         $this->registerRateLimiters($config);
         $this->registerRoutes($config);
@@ -165,6 +209,17 @@ final class EmailMagicLinkServiceProvider extends ServiceProvider
     private function registerPruneSchedule(MagicLinkConfig $config): void
     {
         if (! $config->pruneSchedule()) {
+            return;
+        }
+
+        // The config flag above answers whether the consumer WANTS the purge. This one
+        // answers whether it CAN run at all: a consumer that called ignoreMigrations()
+        // declined the tables, so the command would hit a relation that does not exist —
+        // a non-zero exit every night, and with schedule monitoring one entry in the error
+        // tracker per night, for a table it deliberately refused. Read from the flag rather
+        // than from the schema: this runs at BOOT, and asking the database there would put
+        // a query on every request to answer a question about a nightly job.
+        if (! self::$runsMigrations) {
             return;
         }
 
@@ -302,7 +357,7 @@ final class EmailMagicLinkServiceProvider extends ServiceProvider
             // application's own create_users_table, so `migrate` on a fresh app
             // tries to create a table with a foreign key to users that does not
             // exist yet. The bundled prefix is correct for auto-loading (it must
-            // sort deterministically among the package's own three) and wrong the
+            // sort deterministically among the package's own) and wrong the
             // moment the files land in the app's migrations directory.
             $this->publishesMigrations([
                 __DIR__.'/../database/migrations' => database_path('migrations'),

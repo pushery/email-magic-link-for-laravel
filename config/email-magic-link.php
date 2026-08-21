@@ -82,6 +82,12 @@ return [
     | guardrail enforces. The default alphabet omits visually ambiguous
     | characters (0/O, 1/I/L) for readability.
     |
+    | Case handling follows the alphabet. One that writes a single case accepts
+    | either case on submission and folds toward the one it mints, so a reader may
+    | type an all-uppercase code in lowercase. One that writes BOTH cases is case
+    | sensitive: there `a` and `A` are distinct characters that are both minted,
+    | and folding would make valid codes unredeemable.
+    |
     */
 
     'code_length' => 8,
@@ -164,8 +170,12 @@ return [
     | Notification
     |--------------------------------------------------------------------------
     |
-    | The notification used to deliver the link or code. Swap it for your own
-    | to control branding, channels, and copy.
+    | The notification used to deliver the link or code. To control branding,
+    | channels, and copy, point this at a class that EXTENDS MagicLinkNotification.
+    |
+    | It is not a contract, and a class that does not extend it is ignored rather
+    | than rejected: the package falls back to the bundled notification, so mail
+    | keeps arriving and the branding never changes.
     |
     */
 
@@ -325,9 +335,15 @@ return [
     | Rate limiting
     |--------------------------------------------------------------------------
     |
-    | Named limiters applied to the request and consume endpoints. Override them
-    | from your application with RateLimiter::for() using the same names. The
-    | "limits" defaults below are used by the bundled limiter definitions.
+    | Named limiters applied to the package's write endpoints. Override them from
+    | your application with RateLimiter::for() using the same names. The "limits"
+    | defaults below are used by the bundled limiter definitions.
+    |
+    | "request" covers ONE route (POST magic-link). "consume" covers FOUR, which
+    | therefore share one budget: POST magic-link/verify/{token}, POST
+    | magic-link/code, and both invitation routes -- including the GET that only
+    | DISPLAYS an invitation, throttled deliberately because the token in its path
+    | is guessable-in-principle and the page confirms whether it exists.
     |
     */
 
@@ -389,6 +405,50 @@ return [
     'prune' => [
         'schedule' => false,
         'frequency' => 'daily',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Invitations
+    |--------------------------------------------------------------------------
+    |
+    | A magic link signs in somebody who already exists. An invitation does the
+    | opposite: it puts an account INTO SERVICE for an address that may have no
+    | account at all -- setting a password, confirming the address, making someone a
+    | member with roles decided in advance by whoever invited them.
+    |
+    | The package owns the token: it issues one, supersedes the previous one when you
+    | re-invite, rejects an unknown, expired, accepted or revoked one identically, and
+    | spends it exactly once. It does NOT own what acceptance means. Setting a
+    | password, creating membership and granting roles are your domain, and they reach
+    | you through "handler" -- a class implementing EmailMagicLink\Contracts\
+    | InvitationHandler. Return an authenticatable from it and the package signs that
+    | user in through the same path a magic link uses, including the Fortify two-factor
+    | handoff; return null and the invitation is accepted without a session.
+    |
+    | "view" is the name of YOUR acceptance screen. No screen ships with the package:
+    | one that carried a password field would put credential handling inside a package
+    | that deliberately handles none. The package renders your view only after the
+    | token has already been checked, so a dead invitation is refused before the
+    | recipient is asked for anything.
+    |
+    | Off by default. When you turn it on, "handler" and "view" are both required and
+    | the package refuses to boot without them rather than failing at the first click.
+    |
+    | "retain_accepted_days" is how long accepted and revoked rows survive the purge.
+    | They carry the invited address in the clear, so this is a retention decision:
+    | 0 deletes them as soon as they settle and keeps no audit trail.
+    |
+    */
+
+    'invitations' => [
+        'enabled' => env('EMAIL_MAGIC_LINK_INVITATIONS_ENABLED', false),
+        'ttl' => (int) env('EMAIL_MAGIC_LINK_INVITATION_TTL', 604800),
+        'store' => null,
+        'handler' => null,
+        'view' => null,
+        'redirect_to' => '/',
+        'retain_accepted_days' => 30,
     ],
 
     'resend' => [

@@ -10,41 +10,40 @@ use Illuminate\Support\Carbon;
 use Override;
 
 /**
- * A single issued magic link or one-time code.
+ * A single issued invitation.
  *
  * Only the keyed hash of the secret is stored. The row is the unit the atomic
- * single-use claim operates on.
+ * single-use claim operates on, and it is addressed by EMAIL rather than by user:
+ * the recipient may have no account yet, which is the whole point.
  *
  * @property int $id
- * @property string $user_id
+ * @property string $email
  * @property string $guard
  * @property string $token_hash
- * @property string $channel
- * @property int $attempts
- * @property int $uses_remaining
- * @property string|null $passphrase_hash
+ * @property array<string, mixed>|null $context
+ * @property string|null $invited_by
  * @property Carbon $expires_at
- * @property Carbon|null $consumed_at
+ * @property Carbon|null $accepted_at
+ * @property Carbon|null $revoked_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-class MagicLinkToken extends Model
+class Invitation extends Model
 {
-    protected $table = 'magic_link_tokens';
+    protected $table = 'email_magic_link_invitations';
 
     /**
      * @var list<string>
      */
     protected $fillable = [
-        'user_id',
+        'email',
         'guard',
         'token_hash',
-        'channel',
-        'attempts',
-        'uses_remaining',
-        'passphrase_hash',
+        'context',
+        'invited_by',
         'expires_at',
-        'consumed_at',
+        'accepted_at',
+        'revoked_at',
     ];
 
     /**
@@ -54,10 +53,10 @@ class MagicLinkToken extends Model
     protected function casts(): array
     {
         return [
-            'attempts' => 'integer',
-            'uses_remaining' => 'integer',
+            'context' => 'array',
             'expires_at' => 'datetime',
-            'consumed_at' => 'datetime',
+            'accepted_at' => 'datetime',
+            'revoked_at' => 'datetime',
         ];
     }
 
@@ -66,13 +65,13 @@ class MagicLinkToken extends Model
         return $this->expires_at->lessThanOrEqualTo($now ?? Carbon::now());
     }
 
-    public function isConsumed(): bool
+    public function isAccepted(): bool
     {
-        return $this->consumed_at !== null;
+        return $this->accepted_at !== null;
     }
 
-    public function requiresPassphrase(): bool
+    public function isRevoked(): bool
     {
-        return $this->passphrase_hash !== null;
+        return $this->revoked_at !== null;
     }
 }

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace EmailMagicLink\Support;
 
-use Illuminate\Support\Carbon;
+use Carbon\CarbonInterface;
 
 /**
  * A freshly minted magic link, ready to deliver over any channel.
@@ -17,7 +17,7 @@ final readonly class IssuedLink
 {
     public function __construct(
         public string $url,
-        public Carbon $expiresAt,
+        public CarbonInterface $expiresAt,
         public int $expiresInMinutes,
     ) {}
 }

@@ -68,7 +68,8 @@ decide the shape of the integration:
 | Key | Effect |
 |---|---|
 | `mode` | `link`, `code`, or `both` — which credential the request form issues |
-| `link_ttl` / `code_ttl` | Per-channel lifetime in seconds (default 900) |
+| `ttl` | Credential lifetime in seconds — **900**, and the only one of the three with a default |
+| `link_ttl` / `code_ttl` | Per-channel override in seconds; `null` (the default) means fall back to `ttl` |
 | `max_uses` | Bounded multi-use links; `1` is single-use |
 | `guard` / `guards` | Which auth guard to sign in to; `guards` is an allowlist |
 | `routes.*` | Prefix, middleware, and the post-login redirect |
@@ -142,26 +143,48 @@ Do not do both — that is two scheduler entries for one job.
 
 ## Examples
 
-Sign in to a second guard, with codes instead of links, behind a custom prefix:
+Sign in to a second guard, with codes instead of links, behind a custom prefix.
+**`guard` is what the request signs in to** — `guards` only widens the allowlist:
 
 ```php
 // config/email-magic-link.php
 'mode' => 'code',
-'guards' => ['admin'],
+'guard' => 'admin',
 'routes' => [
     'prefix' => 'admin/sign-in',
     'redirect_to' => '/admin',
 ],
 ```
 
-Gate a resource behind a link without creating a session — mint the link, deliver
-it yourself, and let consumption redirect to the resource:
+Reach for `guards` only when ONE installation must serve several guards and the
+request picks between them by submitting a `guard` field. An unlisted value falls
+back to `guard` silently rather than erroring, so the endpoint never reveals which
+guards exist:
+
+```php
+'guard' => 'web',
+'guards' => ['admin'],   // a request may now ask for "admin" as well
+```
+
+Deliver a link over your own channel — mint it, send it yourself, skip the
+package's request form and its notification entirely:
 
 ```php
 $link = EmailMagicLink::issueLink($user, maxUses: 3, passphrase: $sharedSecret);
 
 Mail::to($user)->send(new InvoiceReady($link->url, $link->expiresInMinutes));
 ```
+
+**What that link does is sign the user in, and only that.** `$link->url` points at
+the package's confirmation page — an inert signed `GET` that spends nothing. The
+token is consumed when the recipient submits that page, and they then land on
+`routes.redirect_to`, exactly as they would coming through the request form. So:
+
+- it is **not** a session-less channel — a consumed link authenticates a session;
+- it does **not** redirect to a resource of your choosing — point `redirect_to` at
+  the resource, or send the recipient onward once they arrive authenticated.
+
+Deliver `$link->url` verbatim, and never prefetch it.
 
 Swap the resolution of an email address to a user (multi-tenant lookups, soft
 deletes, custom columns) by binding the contract:
@@ -171,9 +194,14 @@ deletes, custom columns) by binding the contract:
 'user_lookup' => App\Auth\TenantUserLookup::class,
 ```
 
-The same pattern applies to `token_store`, `captcha`, `notification` and
-`invalid_response.via` — each takes the class-string of a published contract and
-falls back to a bundled default.
+The same pattern applies to `token_store`, `captcha` and `invalid_response.via`
+— each takes the class-string of a published contract under
+`EmailMagicLink\\Contracts` and falls back to a bundled default.
+
+`notification` is the odd one out and is **not** a contract: it takes a class that
+**extends `MagicLinkNotification`**. Anything else is ignored — the package falls
+back to the bundled notification without raising, so a wrong class-string looks
+like it worked.
 
 ## Anti-Patterns
 

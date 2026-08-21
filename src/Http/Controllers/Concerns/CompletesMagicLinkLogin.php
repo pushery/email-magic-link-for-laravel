@@ -4,14 +4,12 @@ declare(strict_types=1);
 
 namespace EmailMagicLink\Http\Controllers\Concerns;
 
-use EmailMagicLink\Contracts\InvalidLinkResponder;
 use EmailMagicLink\Contracts\MagicLinkAuthenticator;
 use EmailMagicLink\Contracts\ResendGuard;
 use EmailMagicLink\Events\MagicLinkConsumptionFailed;
 use EmailMagicLink\Events\MagicLinkVerified;
 use EmailMagicLink\Models\MagicLinkToken;
 use EmailMagicLink\Support\ClaimFailure;
-use EmailMagicLink\Support\MagicLinkConfig;
 use EmailMagicLink\Support\ResendKey;
 use Illuminate\Auth\AuthManager;
 use Illuminate\Contracts\Auth\Authenticatable;
@@ -27,7 +25,7 @@ use Symfony\Component\HttpFoundation\Response;
  */
 trait CompletesMagicLinkLogin
 {
-    use RespondsToApiClients;
+    use RejectsGenerically;
 
     protected function completeLogin(Request $request, MagicLinkToken $token, string $failureRoute): Response
     {
@@ -78,18 +76,9 @@ trait CompletesMagicLinkLogin
     {
         event(new MagicLinkConsumptionFailed($reason, $request));
 
-        $message = (string) __('email-magic-link::messages.consume_failed');
-        $config = app(MagicLinkConfig::class);
-
-        // A client that negotiated JSON always gets the stable envelope; its
-        // shape is a fixed contract independent of the browser strategy below.
-        if ($this->wantsJson($request)) {
-            return $this->apiError($message, $config->invalidResponseErrorCode(), 422);
-        }
-
-        // The browser response is host-configurable (view/redirect/abort/json,
-        // or a custom class bound in the service provider) but never varies by
-        // the failure reason, so it stays enumeration-resistant.
-        return app(InvalidLinkResponder::class)->respond($request, $message, $failureRoute);
+        // The response itself lives in RejectsGenerically, shared with the invitation
+        // flow. Two copies of "refuse without saying why" is one copy too many: the
+        // moment they can drift, the difference between them is the answer.
+        return $this->genericRejection($request, (string) __('email-magic-link::messages.consume_failed'), $failureRoute);
     }
 }

@@ -6,12 +6,19 @@
 
 # Email Magic Link for Laravel
 
-[![Latest Version on Packagist](https://img.shields.io/packagist/v/pushery/email-magic-link-for-laravel.svg)](https://packagist.org/packages/pushery/email-magic-link-for-laravel)
+[![Latest Version](https://img.shields.io/packagist/v/pushery/email-magic-link-for-laravel.svg)](https://packagist.org/packages/pushery/email-magic-link-for-laravel)
 [![PHP Version](https://img.shields.io/packagist/dependency-v/pushery/email-magic-link-for-laravel/php.svg)](https://packagist.org/packages/pushery/email-magic-link-for-laravel)
-[![Laravel Version](https://badge.laravel.cloud/badge/pushery/email-magic-link-for-laravel)](https://packagist.org/packages/pushery/email-magic-link-for-laravel)
-[![PHPStan](https://img.shields.io/badge/PHPStan-max-brightgreen.svg)](https://phpstan.org/)
+[![Laravel Versions](https://badge.laravel.cloud/badge/pushery/email-magic-link-for-laravel?style=flat)](https://packagist.org/packages/pushery/email-magic-link-for-laravel)
+[![License](https://img.shields.io/packagist/l/pushery/email-magic-link-for-laravel.svg)](LICENSE)
+
+[![Tests](https://img.shields.io/badge/tests-Pest%205-8BC34A.svg)](https://pestphp.com)
+![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)
+![Type Coverage](https://img.shields.io/badge/types-100%25-brightgreen.svg)
+[![PHPStan](https://img.shields.io/badge/PHPStan-max-blue.svg)](https://phpstan.org)
 [![Code Style](https://img.shields.io/badge/code%20style-pint-orange.svg)](https://laravel.com/docs/pint)
-[![License](https://img.shields.io/packagist/l/pushery/email-magic-link-for-laravel.svg)](https://packagist.org/packages/pushery/email-magic-link-for-laravel)
+
+![Databases](https://img.shields.io/badge/tested%20on-PostgreSQL%20%2B%20MySQL-336791.svg)
+![Mutation](https://img.shields.io/badge/mutation-%E2%89%A585%25-blueviolet.svg)
 
 Passwordless email authentication for Laravel — magic links and one-time codes — that works **standalone** or alongside **Laravel Fortify**.
 
@@ -46,6 +53,7 @@ Requires PHP `^8.4` and Laravel `^13.0`. Laravel Fortify (`^1.0`) is optional an
 - **Bounded multi-use links** — hand out a link redeemable N times, with the counter decremented in the same conditional `UPDATE` that consumes it, so concurrent redemptions can never exceed the limit.
 - **Passphrase-gated links** — require a shared secret, delivered out of band, before a high-value link is consumed.
 - **A resend guard** — an escalating cooldown plus a rolling hourly cap, so a repeatedly clicked "send again" cannot flood an inbox. Reusable for your own endpoints.
+- **Invitations** — the other half of the story. A magic link can only sign in somebody who already exists; an invitation puts an account *into service* for an address that has none yet. The package issues the token, supersedes the previous one when you re-invite, refuses every dead one identically, and spends it exactly once — your application decides what accepting one means.
 - **A JSON contract** — stable statuses and error codes for first-party SPA and mobile clients.
 - **Multiple guards** — sign in to an `admin` guard alongside `web`, on an allowlist that keeps guards un-enumerable.
 - **Eleven bundled locales** — English, German, Spanish, French, Italian, Dutch and Portuguese, plus the `en-GB`, `en-US`, `pt-PT` and `pt-BR` regional variants.

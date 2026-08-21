@@ -95,6 +95,74 @@ final readonly class MagicLinkConfig
         return array_values(array_unique(mb_str_split($this->codeAlphabet())));
     }
 
+    /**
+     * How a submitted code must be folded before it is compared, derived from the
+     * configured alphabet rather than assumed.
+     *
+     * `null` means DO NOT FOLD. That is the case for an alphabet that writes both
+     * cases: there `a` and `A` are two different characters, the generator mints
+     * both, and folding either way destroys codes that can then never be redeemed
+     * -- silently, looking exactly like an expired code while the attempt counter
+     * runs down.
+     *
+     * The direction matters as much as the decision. Folding was unconditionally
+     * UPWARD, which is right for the shipped alphabet and wrong for a lower-case
+     * one: the generator mints `abc`, the comparison sees `ABC`, and that alphabet
+     * is as unusable as a mixed one. Nobody reported it because nobody configured
+     * one -- the defect was in the same line the whole time.
+     *
+     * Digits and symbols answer `null` too, and correctly so: they have no case,
+     * so there is nothing to fold and no behavior to change.
+     *
+     * @return 'upper'|'lower'|null
+     */
+    public function codeAlphabetCaseFolding(): ?string
+    {
+        $alphabet = $this->codeAlphabet();
+
+        // The same test `OneTimeCodeFieldTest` already ran to decide whether the
+        // rendered field may widen its validation pattern -- it had the derivation
+        // right while the code that folds did not. Keeping ONE copy is the point: a
+        // field that accepts a case the request then folds away, or the reverse, is
+        // exactly the drift two independent derivations produce.
+        $hasUpper = preg_match('/\p{Lu}/u', $alphabet) === 1;
+        $hasLower = preg_match('/\p{Ll}/u', $alphabet) === 1;
+
+        if ($hasUpper === $hasLower) {
+            return null;
+        }
+
+        return $hasUpper ? 'upper' : 'lower';
+    }
+
+    /**
+     * The alphabet as it EXISTS AT COMPARISON TIME, which is what the entropy
+     * guardrail must certify.
+     *
+     * Under a fold, characters collapse into one another, so counting the
+     * configured distinct characters overstates the keyspace -- the guard whose
+     * only job is to refuse a weak scheme would certify one that is weaker than
+     * it measured. With the fold now derived (a mixed alphabet is no longer
+     * folded at all) the two sets agree again in every case, and this method is
+     * what keeps them agreeing if the derivation ever changes.
+     *
+     * @return list<string>
+     */
+    public function effectiveCodeAlphabetCharacters(): array
+    {
+        $fold = $this->codeAlphabetCaseFolding();
+
+        if ($fold === null) {
+            return $this->codeAlphabetCharacters();
+        }
+
+        $alphabet = $fold === 'upper'
+            ? mb_strtoupper($this->codeAlphabet())
+            : mb_strtolower($this->codeAlphabet());
+
+        return array_values(array_unique(mb_str_split($alphabet)));
+    }
+
     public function maxAttemptsPerToken(): int
     {
         return $this->int($this->config->get('email-magic-link.max_attempts_per_token'), 0);
@@ -513,6 +581,75 @@ final readonly class MagicLinkConfig
             'max' => max(1, $this->int($limit['max'] ?? null, $defaultMax)),
             'per_minutes' => max(1, $this->int($limit['per_minutes'] ?? null, 1)),
         ];
+    }
+
+    /**
+     * Whether the invitation channel is registered at all.
+     *
+     * Off by default and deliberately so: invitations need a host-supplied handler and
+     * acceptance view to mean anything, so a package that switched them on for everybody
+     * would boot into a misconfiguration nobody asked for.
+     */
+    public function invitationsEnabled(): bool
+    {
+        return $this->bool($this->config->get('email-magic-link.invitations.enabled'), false);
+    }
+
+    /**
+     * How long an invitation stays valid, in seconds. Floored at a minute, because a
+     * lifetime shorter than the mail takes to arrive is never what anyone meant.
+     */
+    public function invitationTtl(): int
+    {
+        return max(60, $this->int($this->config->get('email-magic-link.invitations.ttl'), 604800));
+    }
+
+    public function invitationStore(): ?string
+    {
+        $store = $this->config->get('email-magic-link.invitations.store');
+
+        return is_string($store) && $store !== '' ? $store : null;
+    }
+
+    /**
+     * The host class that decides what acceptance MEANS -- setting a password, creating
+     * membership, granting roles. Returned raw rather than resolved so the boot guard can
+     * name the class that is missing or does not implement the contract.
+     */
+    public function invitationHandler(): ?string
+    {
+        $handler = $this->config->get('email-magic-link.invitations.handler');
+
+        return is_string($handler) && $handler !== '' ? $handler : null;
+    }
+
+    /**
+     * The host's acceptance view. A raw view NAME, not a resolved view: this package
+     * bundles no acceptance screen, because one shipping with a password field would put
+     * credential handling inside a package that deliberately owns none.
+     */
+    public function invitationView(): ?string
+    {
+        $view = $this->config->get('email-magic-link.invitations.view');
+
+        return is_string($view) && $view !== '' ? $view : null;
+    }
+
+    public function invitationRedirectTo(): string
+    {
+        return $this->string($this->config->get('email-magic-link.invitations.redirect_to'), '/');
+    }
+
+    /**
+     * How long settled invitations are kept before the purge removes them.
+     *
+     * These rows carry the invited address in the clear, so the window is a data-retention
+     * decision rather than a technical one -- which is why it is configurable and why zero
+     * (delete as soon as they settle) is a legitimate answer.
+     */
+    public function invitationRetainAcceptedDays(): int
+    {
+        return max(0, $this->int($this->config->get('email-magic-link.invitations.retain_accepted_days'), 30));
     }
 
     private function string(mixed $value, string $default): string

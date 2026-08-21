@@ -4,6 +4,108 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.21.0] - 2026-08-21
+
+### Added
+
+- **Invitation tokens — the storage half.** A magic link signs in somebody who already
+  exists; an invitation puts an account into service for an address that may have no
+  account at all. The two cannot share a table: every sign-in row is bound to an indexed,
+  NOT NULL `user_id`, and widening that column would mean altering a populated table in
+  every application that already installed this package.
+
+  So invitations get their own table, `email_magic_link_invitations`, with their own store
+  behind the `EmailMagicLink\Contracts\InvitationStore` contract. The separation also
+  removes a filter someone could forget: the sign-in store narrows on `channel = 'link'`,
+  and here there is no shared table to narrow, so an invitation token cannot reach the
+  sign-in path even in principle.
+
+  What the store guarantees: the plaintext is never stored, only a keyed hash; issuing
+  again supersedes the previous invitation for the same address and guard, so re-inviting
+  never leaves two working links behind; looking at an invitation consumes nothing; and
+  claiming one is a single conditional UPDATE, so two concurrent claims cannot both
+  succeed.
+
+  The `EmailMagicLink\Contracts\InvitationIssuer` contract mints one and hands back the
+  signed URL, and `EmailMagicLink\Contracts\InvitationHandler` is where you say what
+  accepting one MEANS — setting a password, creating membership, granting the roles the
+  inviter chose. Return an authenticatable from it and the package signs that user in
+  through the same path a magic link uses; return null and the invitation is accepted
+  without a session.
+
+  Turning invitations on requires both a handler and an acceptance view, and the package
+  refuses to boot without them rather than failing at the moment an invited person clicks
+  their link. No acceptance screen ships with it: one carrying a password field would put
+  credential handling inside a package that deliberately handles none.
+
+  `email-magic-link:purge` clears settled invitations along with expired tokens, so there
+  is no second command to schedule. The line only appears when invitations are on.
+
+  Two routes carry the acceptance, and the package owns both. The GET is inert — it
+  verifies the signature, checks the invitation, and only then renders your view — so an
+  email security scanner following the link cannot burn it, and a dead invitation is
+  refused *before* the recipient is asked for anything. Only the POST spends it, and it
+  runs the claim and your handler in one transaction: if your handler throws, the
+  acceptance rolls back and the link still works.
+
+  Every dead invitation gets the same answer, byte for byte: unknown, expired, already
+  accepted, revoked, tampered signature. The reason reaches your application through the
+  `InvitationRejected` event and goes nowhere else — anything more specific in the
+  response would answer "was this ever a real link".
+
+  The `invitations` config block defaults to `enabled => false`, so nothing changes for an
+  existing installation.
+
+### Fixed
+
+- **A magic link could be reported as unknown on a deployment with a read connection.**
+  `claimLink()` now runs in a transaction, so every statement it issues uses the write
+  connection.
+
+  `Connection::getReadPdo()` returns the read connection unless a transaction is open,
+  `sticky` is set after an earlier write, or the application forced read-on-write. Claiming
+  a link satisfied none of those — it is usually the first database work of the request — so
+  all four of its statements went to the replica: both lookups, the failure classification,
+  and, on PostgreSQL, the atomic claim itself, which is the one driver that reaches
+  `select()` rather than `update()`.
+
+  The lookups are the quieter half and the likelier one to be seen: a link issued moments
+  ago may not have replicated yet, so a valid link is rejected as unknown — intermittently,
+  and only under replication lag. One-time codes were never affected; `claimCode()` has
+  always run in a transaction.
+
+  Nothing changes for a single-connection deployment, which is the default.
+
+- **An application that sets `Date::use(CarbonImmutable::class)` could not mint at all.**
+  `issueLink()` and `issueCode()` are now typed against `Carbon\CarbonInterface`, as is
+  `MagicLinkToken::isExpired()`.
+
+  The reach was wider than the signatures suggest. Eloquent's `datetime` cast resolves
+  through the `Date` facade on every return path, so under that setting `$token->expires_at`
+  is itself a `CarbonImmutable` — and this package fed exactly that value into `IssuedLink`
+  and `IssuedCode`, which required the mutable `Illuminate\Support\Carbon`. The `TypeError`
+  was therefore raised inside the package on a call that passes no date at all, not at the
+  edge where a caller hands one in. Both entry points were unusable, not merely awkward.
+
+  No class type could ever have covered both cases: `CarbonImmutable` does not extend
+  `Illuminate\Support\Carbon`, and the two branches part further down still, at `DateTime`
+  and `DateTimeImmutable`. `CarbonInterface` is the only surface that spans them, and both
+  implement it.
+
+  **What you get back has not changed.** Without `Date::use()` these values are the mutable
+  `Illuminate\Support\Carbon` they have always been; a test pins that alongside the
+  immutable case.
+
+  Two consequences worth knowing before you upgrade:
+
+  - **Type your own parameters against `CarbonInterface`.** Runtime behavior is unchanged,
+    but code that passes `IssuedLink::$expiresAt` into a parameter typed as
+    `Illuminate\Support\Carbon` will be flagged by your own static analysis, because the
+    property is now declared wider than that.
+  - **If you extend `MagicLinkToken` and override `isExpired()`**, widen your parameter to
+    `?CarbonInterface` in the same upgrade. PHP forbids narrowing an inherited parameter, so
+    an override still typed `?Carbon` is a fatal error at class-load time.
+
 ## [0.20.2] - 2026-08-18
 
 ### Changed

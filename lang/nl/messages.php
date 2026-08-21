@@ -38,6 +38,7 @@ return [
     'status_link_sent' => 'Als een account overeenkomt met dat e-mailadres, hebben we een inloglink gestuurd.',
     'status_code_sent' => 'Als een account overeenkomt met dat e-mailadres, hebben we een inlogcode gestuurd.',
     'consume_failed' => 'Deze inlogaanvraag is ongeldig of verlopen. Vraag een nieuwe aan.',
+    'invitation_failed' => 'Deze uitnodiging is ongeldig of verlopen. Vraag degene die je uitnodigde om een nieuwe.',
     'captcha_failed' => 'De verificatie is mislukt. Probeer het opnieuw.',
     'resend_throttled' => 'Wacht :seconds seconden voordat je een nieuwe inlogmail aanvraagt.',
     'resend_countdown_label' => 'Wachttijd voordat je een nieuwe e-mail kunt aanvragen',

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace EmailMagicLink\Stores;
 
+use Carbon\CarbonInterface;
 use EmailMagicLink\Contracts\TokenStore;
 use EmailMagicLink\Models\MagicLinkToken;
 use EmailMagicLink\Support\ClaimFailure;
@@ -42,8 +43,9 @@ final readonly class DefaultTokenStore implements TokenStore
             ? max(1, $maxUses ?? $this->config->maxUses())
             : 1;
 
-        // A passphrase gates links only (a code is itself the secret). Hashed with
-        // bcrypt because it is a human-chosen shared secret, not a random token.
+        // A passphrase gates links only (a code is itself the secret). Put through the
+        // host's configured hasher rather than the raw-token hash: it is a human-chosen
+        // shared secret, so it needs a slow, salted algorithm, not a fast digest.
         $passphraseHash = $channel === 'link' && is_string($passphrase) && $passphrase !== ''
             ? Hash::make($passphrase)
             : null;
@@ -78,27 +80,40 @@ final readonly class DefaultTokenStore implements TokenStore
 
     public function claimLink(string $token, ?string $passphrase = null): ClaimResult
     {
-        $now = Carbon::now();
-        $hash = $this->hasher->hash($token);
+        // The whole read-check-claim-read runs in a transaction, and the reason is the
+        // READ side rather than the write. Connection::getReadPdo() hands back the read
+        // connection unless a transaction is open, `sticky` is set after a prior write, or
+        // the app forced read-on-write — and claiming a link satisfies none of those: it is
+        // usually the first database work of the request. On a deployment with a read
+        // connection configured, every lookup here would go to the replica, where a link
+        // issued moments ago may not have arrived yet; a valid link would be reported as
+        // unknown, and only under replication lag, which is exactly the failure nobody can
+        // reproduce. Opening a transaction makes all four statements use the write
+        // connection, and makes the sequence atomic on top — the same reasoning claimCode()
+        // already documents below.
+        return $this->connection()->transaction(function () use ($token, $passphrase): ClaimResult {
+            $now = Carbon::now();
+            $hash = $this->hasher->hash($token);
 
-        // Verify the passphrase BEFORE the atomic claim, so a wrong passphrase
-        // never spends a use of a multi-use link. A generic failure keeps the
-        // response indistinguishable from an unknown or expired token.
-        $existing = $this->findLinkByHash($hash);
+            // Verify the passphrase BEFORE the atomic claim, so a wrong passphrase
+            // never spends a use of a multi-use link. A generic failure keeps the
+            // response indistinguishable from an unknown or expired token.
+            $existing = $this->findLinkByHash($hash);
 
-        if ($existing?->passphrase_hash !== null && ! $this->passphraseMatches($passphrase, $existing->passphrase_hash)) {
-            return ClaimResult::failed(ClaimFailure::InvalidPassphrase);
-        }
+            if ($existing?->passphrase_hash !== null && ! $this->passphraseMatches($passphrase, $existing->passphrase_hash)) {
+                return ClaimResult::failed(ClaimFailure::InvalidPassphrase);
+            }
 
-        if ($this->atomicClaim('token_hash', $hash, 'link', $now)) {
-            $model = $this->findLinkByHash($hash);
+            if ($this->atomicClaim('token_hash', $hash, 'link', $now)) {
+                $model = $this->findLinkByHash($hash);
 
-            return $model instanceof MagicLinkToken
-                ? ClaimResult::success($model)
-                : ClaimResult::failed(ClaimFailure::NotFound);
-        }
+                return $model instanceof MagicLinkToken
+                    ? ClaimResult::success($model)
+                    : ClaimResult::failed(ClaimFailure::NotFound);
+            }
 
-        return ClaimResult::failed($this->classifyLinkFailure($hash, $now));
+            return ClaimResult::failed($this->classifyLinkFailure($hash, $now));
+        });
     }
 
     public function requiresPassphrase(string $token): bool
@@ -167,7 +182,7 @@ final readonly class DefaultTokenStore implements TokenStore
         return is_int($deleted) ? $deleted : 0;
     }
 
-    private function recordFailedCodeAttempt(MagicLinkToken $token, int $max, Carbon $now): ClaimResult
+    private function recordFailedCodeAttempt(MagicLinkToken $token, int $max, CarbonInterface $now): ClaimResult
     {
         $connection = $this->connection();
 
@@ -211,7 +226,7 @@ final readonly class DefaultTokenStore implements TokenStore
      * pre-decrement count. PostgreSQL and SQLite always read the old row values,
      * so the ordering is a no-op there — but it makes all three engines agree.
      */
-    private function atomicClaim(string $column, string $value, string $channel, Carbon $now): bool
+    private function atomicClaim(string $column, string $value, string $channel, CarbonInterface $now): bool
     {
         $connection = $this->connection();
 
@@ -222,7 +237,12 @@ final readonly class DefaultTokenStore implements TokenStore
         $bindings = [$now, $now, $value, $channel, $now];
 
         if ($connection->getDriverName() === 'pgsql') {
-            return $connection->select($sql.' returning id', $bindings) !== [];
+            // Explicit `false`: select() defaults to the READ connection, and this one is
+            // an UPDATE. Both callers hold a transaction, so getReadPdo() would return the
+            // write PDO anyway — but that makes the safety a property of the CALLER, and a
+            // future third caller would inherit a silent write-to-replica instead of a
+            // visible mistake.
+            return $connection->select($sql.' returning id', $bindings, false) !== [];
         }
 
         return $connection->update($sql, $bindings) === 1;
@@ -241,7 +261,7 @@ final readonly class DefaultTokenStore implements TokenStore
         return is_string($passphrase) && $passphrase !== '' && Hash::check($passphrase, $hash);
     }
 
-    private function classifyLinkFailure(string $hash, Carbon $now): ClaimFailure
+    private function classifyLinkFailure(string $hash, CarbonInterface $now): ClaimFailure
     {
         $row = $this->findLinkByHash($hash);
 
@@ -262,7 +282,13 @@ final readonly class DefaultTokenStore implements TokenStore
     {
         // The same canonical distinct-character set the entropy guardrail
         // certifies, so the generated distribution matches the proven keyspace.
-        $characters = $this->config->codeAlphabetCharacters();
+        //
+        // EFFECTIVE, not configured: minting a character that the fold then collapses
+        // produces a code that can never be redeemed -- the same failure this fold
+        // was corrected to remove, arriving from the other side. The generator and
+        // the guardrail must read the same set or one of them is describing an
+        // alphabet that does not exist at comparison time.
+        $characters = $this->config->effectiveCodeAlphabetCharacters();
         $length = $this->config->codeLength();
         $bound = count($characters) - 1;
 

@@ -2,11 +2,13 @@
 
 declare(strict_types=1);
 
+use EmailMagicLink\Http\Controllers\AcceptInvitationController;
 use EmailMagicLink\Http\Controllers\ConfirmMagicLinkController;
 use EmailMagicLink\Http\Controllers\ConsumeCodeController;
 use EmailMagicLink\Http\Controllers\ConsumeMagicLinkController;
 use EmailMagicLink\Http\Controllers\SendMagicLinkController;
 use EmailMagicLink\Http\Controllers\ShowCodeFormController;
+use EmailMagicLink\Http\Controllers\ShowInvitationController;
 use EmailMagicLink\Http\Controllers\ShowRequestFormController;
 use EmailMagicLink\Support\MagicLinkConfig;
 use Illuminate\Support\Facades\Route;
@@ -46,3 +48,23 @@ Route::get('magic-link/code', ShowCodeFormController::class)
 Route::post('magic-link/code', ConsumeCodeController::class)
     ->middleware("throttle:{$consumeLimiter}")
     ->name('email-magic-link.code.consume');
+
+// Invitations are a separate channel and register only when the host turns them on:
+// both routes are useless without an acceptance view and a handler, and the boot guard
+// has already refused to start if those are missing.
+if ($config->invitationsEnabled()) {
+    // Deliberately NOT behind `signed`. That middleware answers an expired signature with
+    // 403 and an unknown token with the generic page, and those two answers are
+    // distinguishable -- at a seven-day lifetime, expiry is the ordinary case. The
+    // signature is verified inside the controller and folded into the one refusal.
+    //
+    // Inert like the sign-in confirmation: only the POST spends the invitation, so a
+    // scanner following the link cannot burn it.
+    Route::get('magic-link/invitation/{token}', ShowInvitationController::class)
+        ->middleware("throttle:{$consumeLimiter}")
+        ->name('email-magic-link.invitation.show');
+
+    Route::post('magic-link/invitation/{token}', AcceptInvitationController::class)
+        ->middleware("throttle:{$consumeLimiter}")
+        ->name('email-magic-link.invitation.accept');
+}

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace EmailMagicLink\Support;
 
-use Illuminate\Support\Carbon;
+use Carbon\CarbonInterface;
 
 /**
  * A freshly minted one-time code, ready to deliver over any channel.
@@ -16,7 +16,7 @@ final readonly class IssuedCode
 {
     public function __construct(
         public string $code,
-        public Carbon $expiresAt,
+        public CarbonInterface $expiresAt,
         public int $expiresInMinutes,
     ) {}
 }

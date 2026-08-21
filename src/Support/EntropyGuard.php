@@ -44,7 +44,7 @@ final readonly class EntropyGuard
 
     private function validateCodeKeyspace(): void
     {
-        $alphabetSize = count($this->config->codeAlphabetCharacters());
+        $alphabetSize = count($this->config->effectiveCodeAlphabetCharacters());
         $length = $this->config->codeLength();
         $maxAttempts = $this->config->maxAttemptsPerToken();
         $safetyFactor = $this->config->entropySafetyFactor();

@@ -38,6 +38,7 @@ return [
     'status_link_sent' => 'Wenn ein Konto zu dieser E-Mail-Adresse passt, haben wir einen Anmeldelink gesendet.',
     'status_code_sent' => 'Wenn ein Konto zu dieser E-Mail-Adresse passt, haben wir einen Anmeldecode gesendet.',
     'consume_failed' => 'Diese Anmeldeanfrage ist ungültig oder abgelaufen. Bitte fordere eine neue an.',
+    'invitation_failed' => 'Diese Einladung ist ungültig oder abgelaufen. Bitte die Person, die dich eingeladen hat, um eine neue.',
     'captcha_failed' => 'Die Sicherheitsprüfung ist fehlgeschlagen. Bitte versuche es erneut.',
     'resend_throttled' => 'Bitte warte :seconds Sekunden, bevor du eine weitere Anmelde-E-Mail anforderst.',
     'resend_countdown_label' => 'Wartezeit, bis du eine weitere E-Mail anfordern kannst',

@@ -38,6 +38,7 @@ return [
     'status_link_sent' => 'Si una cuenta coincide con ese correo, te hemos enviado un enlace de acceso.',
     'status_code_sent' => 'Si una cuenta coincide con ese correo, te hemos enviado un código de acceso.',
     'consume_failed' => 'Esta solicitud de acceso no es válida o ha caducado. Solicita una nueva.',
+    'invitation_failed' => 'Esta invitación no es válida o ha caducado. Pide una nueva a quien te invitó.',
     'captcha_failed' => 'La verificación ha fallado. Inténtalo de nuevo.',
     'resend_throttled' => 'Espera :seconds segundos antes de solicitar otro correo de acceso.',
     'resend_countdown_label' => 'Tiempo de espera antes de poder solicitar otro correo',

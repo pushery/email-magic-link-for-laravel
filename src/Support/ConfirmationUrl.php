@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace EmailMagicLink\Support;
 
 use EmailMagicLink\Models\MagicLinkToken;
-use Illuminate\Support\Facades\URL;
 
 /**
  * Builds the signed, single-use confirmation URL for an issued link token.
@@ -13,6 +12,9 @@ use Illuminate\Support\Facades\URL;
  * Centralised so the bundled email flow and the Mint-API emit the byte-for-byte
  * same signed GET URL: the inert confirmation page. Only the POST consume route
  * mutates state, so this URL is safe for link-following scanners and prefetch.
+ *
+ * The signing itself now lives in SignedTokenUrl, shared with the invitation link.
+ * This signature is public API and stays exactly as it was.
  */
 final class ConfirmationUrl
 {
@@ -24,31 +26,6 @@ final class ConfirmationUrl
      */
     public static function for(MagicLinkToken $record, string $plaintext, ?string $baseUrl = null): string
     {
-        if ($baseUrl === null || $baseUrl === '') {
-            return self::sign($record, $plaintext);
-        }
-
-        // Force the host AND scheme from the base URL for this one signing call,
-        // then restore both so no later URL generation in the request inherits
-        // the tenant host. Forcing the scheme too makes an https base URL sign as
-        // https even when the app itself is served over http.
-        URL::forceRootUrl($baseUrl);
-        URL::forceScheme(parse_url($baseUrl, PHP_URL_SCHEME) ?: '');
-
-        try {
-            return self::sign($record, $plaintext);
-        } finally {
-            URL::forceRootUrl(null);
-            URL::forceScheme('');
-        }
-    }
-
-    private static function sign(MagicLinkToken $record, string $plaintext): string
-    {
-        return URL::temporarySignedRoute(
-            'email-magic-link.confirm',
-            $record->expires_at,
-            ['token' => $plaintext],
-        );
+        return SignedTokenUrl::for('email-magic-link.confirm', $record->expires_at, $plaintext, $baseUrl);
     }
 }

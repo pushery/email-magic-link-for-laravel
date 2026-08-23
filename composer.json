@@ -26,7 +26,7 @@
     },
     "require-dev": {
         "cweagans/composer-patches": "^1.7",
-        "larastan/larastan": "^3.0",
+        "larastan/larastan": "3.10.0",
         "laravel/fortify": "^1.0",
         "laravel/pao": "^1.1",
         "laravel/pint": "^1.0",
@@ -36,12 +36,12 @@
         "pestphp/pest-plugin-browser": "^5.0",
         "pestphp/pest-plugin-evals": "^5.0",
         "pestphp/pest-plugin-laravel": "^5.0",
-        "pestphp/pest-plugin-phpstan": "^5.0",
+        "pestphp/pest-plugin-phpstan": "5.1.0",
         "pestphp/pest-plugin-rector": "^5.0",
         "pestphp/pest-plugin-type-coverage": "^5.0",
         "pushery/wirekit": "^2.26",
-        "rector/rector": "^2.0",
-        "spaze/phpstan-disallowed-calls": "^4.12"
+        "rector/rector": "2.6.3",
+        "spaze/phpstan-disallowed-calls": "4.14.0"
     },
     "suggest": {
         "laravel/fortify": "Enables the no-bypass two-factor (TOTP) handoff: a magic-link user with confirmed 2FA completes Fortify's challenge before being logged in (^1.0).",

@@ -339,22 +339,36 @@ return [
     | your application with RateLimiter::for() using the same names. The "limits"
     | defaults below are used by the bundled limiter definitions.
     |
-    | "request" covers ONE route (POST magic-link). "consume" covers FOUR, which
+    | "request" covers ONE route (POST magic-link). "consume" covers THREE, which
     | therefore share one budget: POST magic-link/verify/{token}, POST
-    | magic-link/code, and both invitation routes -- including the GET that only
-    | DISPLAYS an invitation, throttled deliberately because the token in its path
-    | is guessable-in-principle and the page confirms whether it exists.
+    | magic-link/code, and POST magic-link/invitation/{token}. All three SPEND a
+    | credential.
+    |
+    | "invitation_view" covers the one route that is throttled without spending
+    | anything: the GET that DISPLAYS an invitation. It is guarded because the token
+    | in its path is guessable-in-principle and the page confirms whether it exists --
+    | but out of its own budget, because merely looking at an invitation must not
+    | consume the allowance that accepting one needs. Behind a shared egress address
+    | (an office, a carrier's CGNAT, a school) the per-IP budget is shared by every
+    | user on it, so a page reloaded a few times would otherwise cost someone else
+    | their sign-in. Its default is correspondingly higher: a page load is cheap and
+    | a person may open the link more than once.
+    |
+    | The three other GET routes carry no limiter at all: they are forms, they carry
+    | no credential, and they spend nothing.
     |
     */
 
     'limiters' => [
         'request' => 'email-magic-link:request',
         'consume' => 'email-magic-link:consume',
+        'invitation_view' => 'email-magic-link:invitation-view',
     ],
 
     'limits' => [
         'request' => ['max' => 5, 'per_minutes' => 1],
         'consume' => ['max' => 10, 'per_minutes' => 1],
+        'invitation_view' => ['max' => 30, 'per_minutes' => 1],
     ],
 
     /*

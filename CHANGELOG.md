@@ -4,6 +4,82 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.22.0] - 2026-08-23
+
+### Changed
+
+- **The resend countdown's script is now a same-origin file rather than an inline block.**
+  Inline, it needed a Content-Security-Policy nonce under any strict policy — and an
+  application whose policy issues no nonces had nothing it could pass through, so for those
+  hosts the countdown could not be made to run at all. Served from
+  `/magic-link/resend-countdown.js`, a plain `script-src 'self'` accepts it with no nonce and
+  no configuration.
+
+  It still carries the nonce when the application has one, and that is not redundancy: a
+  policy built on `'strict-dynamic'` ignores `'self'`, so there the nonce remains the only
+  thing that grants the tag.
+
+  No build step, no npm, no publishable assets and no `dist/` — the source is a constant in
+  `EmailMagicLink\Support\ResendCountdownScript`, so it is present the moment the package is
+  installed rather than the moment a host remembers to publish something. The URL carries a
+  digest of that source, which is what makes its immutable cache header honest: change the
+  script and the URL changes with it.
+
+  The tag is `defer`, so it no longer blocks the parse of the sign-in screen. Its response
+  is cached `private`, not `public`: the route runs inside your route middleware group, so
+  it leaves with the session and XSRF cookies attached like every other page, and a shared
+  cache that stores a response together with its `Set-Cookie` headers can hand one
+  visitor's session cookie to the next. The browser cache is where the benefit is anyway.
+
+- **The plain layout's inline stylesheet now carries the CSP nonce too.** The WireKit
+  layout has nonced its `<style>` block since the CSP work landed; the plain one had been
+  left out. The consequence is not subtle: under a strict policy that block is blocked, and
+  that block is the entire styling of the bundled screens — the sign-in page arrives
+  completely unstyled. The countdown script degrades politely when it is blocked. This does
+  not. Hosts without a policy render byte-identically.
+
+  The stylesheet stays **inline** rather than moving to a file the way the countdown script
+  did, and that is now a measured decision rather than an inherited default: the whole
+  sign-in screen fits inside one initial congestion window, so it paints in a single round
+  trip. A stylesheet in a file would cost a second, render-blocking round trip on a page
+  that is entirely above the fold. A test holds that threshold, so growing past it is a
+  notice rather than a silent regression.
+
+- **Looking at an invitation no longer spends the budget for accepting one.** The page that
+  displays an invitation was the only `GET` in the package carrying a throttle, and it drew
+  on the `consume` limiter — the same budget as the three routes that actually spend a
+  credential. Reloading the page therefore cost a real sign-in attempt, and because the
+  per-IP half of that limiter is shared, behind one egress address (an office, a carrier's
+  CGNAT, a school) one person reloading could lock another out.
+
+  It now has its own limiter, `limiters.invitation_view`
+  (`email-magic-link:invitation-view`), with its own `limits.invitation_view` default of 30
+  per minute — higher than `consume` because it guards a page load rather than a credential
+  being spent. The route stays throttled: unlike the sign-in confirmation it is not behind
+  `signed`, so its answer tells an unauthenticated caller whether a token exists.
+
+  Nothing to do on upgrade. Hosts that redefine the package limiters with
+  `RateLimiter::for()` can leave the new one alone and get the bundled definition; hosts
+  that want the old behavior can point `limiters.invitation_view` at their consume limiter.
+
+### Fixed
+
+- **A base URL without a scheme produced a link without one.** `issueLink()` and `invite()`
+  take an optional `baseUrl` so a link can be built for another host. Passed a bare host —
+  `tenant.example.com` or `//tenant.example.com` — the generator forced a root URL that
+  carried no scheme of its own, and the root then decided: the link came out as
+  `tenant.example.com/magic-link/verify/...`, absolute nowhere.
+
+  That string goes in an email, and mail clients disagree about it — some make a link, some
+  make none, some make a relative one. For an invitation it is the difference between working
+  and the invited person never getting in.
+
+  A schemeless base URL is now completed with the scheme the application itself is served
+  over, which is the one completion that invents nothing the host has not already stated. A
+  base URL that carries its own scheme is untouched, including a tenant on https while the
+  app runs on http. The signature is still computed over the final URL, so the completed link
+  verifies where it points.
+
 ## [0.21.0] - 2026-08-21
 
 ### Added

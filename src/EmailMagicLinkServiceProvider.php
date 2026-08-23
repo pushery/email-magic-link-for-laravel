@@ -330,6 +330,7 @@ final class EmailMagicLinkServiceProvider extends ServiceProvider
 
         RateLimiter::for($config->requestLimiter(), fn (Request $http): array => $limits->forRequest($http));
         RateLimiter::for($config->consumeLimiter(), fn (Request $http): array => $limits->forConsume($http));
+        RateLimiter::for($config->invitationViewLimiter(), fn (Request $http): array => $limits->forInvitationView($http));
     }
 
     private function registerPublishing(): void

@@ -6,6 +6,7 @@ use EmailMagicLink\Http\Controllers\AcceptInvitationController;
 use EmailMagicLink\Http\Controllers\ConfirmMagicLinkController;
 use EmailMagicLink\Http\Controllers\ConsumeCodeController;
 use EmailMagicLink\Http\Controllers\ConsumeMagicLinkController;
+use EmailMagicLink\Http\Controllers\ResendCountdownScriptController;
 use EmailMagicLink\Http\Controllers\SendMagicLinkController;
 use EmailMagicLink\Http\Controllers\ShowCodeFormController;
 use EmailMagicLink\Http\Controllers\ShowInvitationController;
@@ -23,6 +24,7 @@ use Illuminate\Support\Facades\Route;
 $config = app(MagicLinkConfig::class);
 $requestLimiter = $config->requestLimiter();
 $consumeLimiter = $config->consumeLimiter();
+$invitationViewLimiter = $config->invitationViewLimiter();
 
 // All routes are registered whenever the channel is enabled; the configured
 // mode governs which one actually issues a token, not which routes exist.
@@ -45,6 +47,15 @@ Route::post('magic-link/verify/{token}', ConsumeMagicLinkController::class)
 Route::get('magic-link/code', ShowCodeFormController::class)
     ->name('email-magic-link.code.form');
 
+// The resend countdown's client script, served as a same-origin file so a strict
+// `script-src 'self'` accepts it with no nonce and no host action at all. Inline, it
+// was unreachable for a host whose policy issues no nonces: there was nothing to pass
+// through. Unthrottled and unsigned like the two form routes -- it carries no
+// credential, spends nothing, and its body is a constant. The URL carries a digest of
+// that constant, which is what makes the immutable cache header honest.
+Route::get('magic-link/resend-countdown.js', ResendCountdownScriptController::class)
+    ->name('email-magic-link.resend-countdown-script');
+
 Route::post('magic-link/code', ConsumeCodeController::class)
     ->middleware("throttle:{$consumeLimiter}")
     ->name('email-magic-link.code.consume');
@@ -60,8 +71,17 @@ if ($config->invitationsEnabled()) {
     //
     // Inert like the sign-in confirmation: only the POST spends the invitation, so a
     // scanner following the link cannot burn it.
+    //
+    // It is nevertheless the one GET in the package that carries a limiter, and that
+    // is deliberate rather than left over: unlike the sign-in confirmation it is not
+    // behind `signed`, so an unauthenticated caller can address it with any token it
+    // likes and the answer says whether that token exists.
+    //
+    // Its OWN limiter, though, not the consume one. Sharing that budget would mean
+    // looking at an invitation spends the allowance accepting it needs -- and behind
+    // one egress address, everyone else's sign-in too.
     Route::get('magic-link/invitation/{token}', ShowInvitationController::class)
-        ->middleware("throttle:{$consumeLimiter}")
+        ->middleware("throttle:{$invitationViewLimiter}")
         ->name('email-magic-link.invitation.show');
 
     Route::post('magic-link/invitation/{token}', AcceptInvitationController::class)

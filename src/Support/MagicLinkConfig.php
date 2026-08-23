@@ -504,6 +504,16 @@ final readonly class MagicLinkConfig
     }
 
     /**
+     * The limiter on the one route that is throttled without spending anything: the
+     * GET that displays an invitation. Separate from the consume limiter so viewing
+     * an invitation cannot use up the budget accepting one needs.
+     */
+    public function invitationViewLimiter(): string
+    {
+        return $this->string($this->config->get('email-magic-link.limiters.invitation_view'), 'email-magic-link:invitation-view');
+    }
+
+    /**
      * @return array{max: int, per_minutes: int}
      */
     public function requestLimit(): array
@@ -517,6 +527,17 @@ final readonly class MagicLinkConfig
     public function consumeLimit(): array
     {
         return $this->readLimit('consume', 10);
+    }
+
+    /**
+     * Higher than the consume default on purpose: this guards a page load, not a
+     * credential being spent, and a person may open their invitation more than once.
+     *
+     * @return array{max: int, per_minutes: int}
+     */
+    public function invitationViewLimit(): array
+    {
+        return $this->readLimit('invitation_view', 30);
     }
 
     public function resendEnabled(): bool

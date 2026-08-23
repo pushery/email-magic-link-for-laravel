@@ -3,14 +3,23 @@
      enhancement only: with JavaScript off the button stays usable and the
      server simply holds the next request back again.
 
-     The script carries the application's CSP nonce when there is one. Without
-     it, a strict policy blocks the script and the countdown never runs — and
-     "progressive enhancement" means it fails silently, so the user just meets a
-     rejection when they click too early. See the ScriptNonce contract. --}}
+     The script is an EXTERNAL same-origin file, not an inline block, and that is
+     a CSP decision rather than a tidiness one. Inline, it needed a nonce under any
+     strict policy — and a host whose policy issues no nonces had nothing to pass
+     through, so for them the countdown could not be made to run at all. A file
+     from the app's own origin satisfies `script-src 'self'` with no host action.
+
+     It still carries the nonce when there is one, and that is not belt-and-braces:
+     a policy built on 'strict-dynamic' IGNORES 'self', so under one the nonce is
+     the only thing that grants the tag. See the ScriptNonce contract. --}}
 @php($resendSeconds = (int) session('resend_retry_after'))
 @php($emlNonce = app(\EmailMagicLink\Contracts\ScriptNonce::class)->value())
 
 @if ($resendSeconds > 0)
+    {{-- Inside the conditional, not above it: this partial is included on every render
+         of the request screen and the countdown shows on almost none of them. --}}
+    @php($emlCountdownScript = route('email-magic-link.resend-countdown-script', ['v' => \EmailMagicLink\Support\ResendCountdownScript::version()]))
+
     {{-- role="timer", not role="status". A status region is aria-live="polite", so a
          value that changes every second is announced every second — a screen reader
          reader would hear the remaining time read out eight times instead of being
@@ -30,39 +39,9 @@
 
     {{-- An expression rather than @if: a Blade conditional inside a tag leaves its
          whitespace behind, so the tag renders as `<script >`. The nonce is escaped
-         because it arrives from a host implementation of the contract. --}}
-    <script{!! $emlNonce === null ? '' : ' nonce="'.e($emlNonce).'"' !!}>
-        (function () {
-            var el = document.querySelector('[data-eml-resend]');
+         because it arrives from a host implementation of the contract.
 
-            if (! el) {
-                return;
-            }
-
-            var form = (el.closest('main') || document).querySelector('form');
-            var button = form ? form.querySelector('button[type="submit"], button:not([type])') : null;
-            var template = el.getAttribute('data-template') || '';
-            var remaining = parseInt(el.getAttribute('data-seconds'), 10) || 0;
-
-            if (button) {
-                button.disabled = true;
-            }
-
-            (function tick() {
-                if (remaining <= 0) {
-                    if (button) {
-                        button.disabled = false;
-                    }
-
-                    el.textContent = '';
-
-                    return;
-                }
-
-                el.textContent = template.replace('__seconds__', remaining);
-                remaining -= 1;
-                window.setTimeout(tick, 1000);
-            })();
-        })();
-    </script>
+         `defer` because the script only touches the DOM and must not block the parse
+         of a sign-in screen for a progressive enhancement. --}}
+    <script src="{{ $emlCountdownScript }}" defer{!! $emlNonce === null ? '' : ' nonce="'.e($emlNonce).'"' !!}></script>
 @endif

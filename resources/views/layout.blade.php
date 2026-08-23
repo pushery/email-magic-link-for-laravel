@@ -5,7 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
     <title>@yield('title', __('email-magic-link::messages.sign_in')) &middot; {{ config('app.name') }}</title>
-    <style>
+
+    {{-- The application's per-response CSP nonce, or null when it has no policy.
+         The WireKit layout has noncing its inline <style> since the CSP work; this one
+         did not, and the omission is worth naming because the consequence is not subtle:
+         under a strict policy the block below is blocked, and the block below IS the
+         entire styling of these screens — the sign-in page arrives completely unstyled.
+         The countdown script degrades politely when it is blocked. This does not.
+
+         Same seam the countdown partial uses. --}}
+    @php($emlNonce = app(\EmailMagicLink\Contracts\ScriptNonce::class)->value())
+
+    {{-- An expression rather than @if: a Blade conditional inside a tag leaves its
+         whitespace behind, so the tag renders as `<style >`.
+
+         INLINE, not a file, and that was decided rather than inherited.
+         The countdown's script moved out of the page so a strict `script-src 'self'`
+         accepts it without a nonce, and the same argument appears to apply here. It does
+         not: this whole screen fits inside one initial congestion window, so it paints in
+         ONE round trip. A stylesheet in a file would cost a second one, render-blocking,
+         on a page that is entirely above the fold — to save bytes the browser has already
+         received. That is the standard treatment of critical CSS, and CriticalCssBudgetTest
+         holds the threshold the decision rests on. --}}
+    <style{!! $emlNonce === null ? '' : ' nonce="'.e($emlNonce).'"' !!}>
         :root { color-scheme: light dark; }
         body {
             margin: 0;

@@ -6,6 +6,7 @@ namespace EmailMagicLink\Support;
 
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 
 /**
  * Builds the named rate limiters for the package's throttled endpoints.
@@ -22,6 +23,27 @@ use Illuminate\Http\Request;
 final readonly class RateLimits
 {
     public function __construct(private MagicLinkConfig $config) {}
+
+    /**
+     * Register every limiter this package names, and do it again on demand.
+     *
+     * Public and repeatable on purpose. Laravel keeps named limiters inside the
+     * RateLimiter singleton, which captured its cache repository at boot; an
+     * application that binds a cache per tenant has to discard that singleton so
+     * it is rebuilt against the current one, and the named limiters go with it.
+     * The application re-registers its own afterwards and needs a way to
+     * re-register the package's -- calling this is the whole repair.
+     *
+     * It is also the reason the pairing lives here rather than in the service
+     * provider: a consumer copying three RateLimiter::for() lines by hand silently
+     * loses a fourth limiter added later, and finds out as a 500 in production.
+     */
+    public function define(): void
+    {
+        RateLimiter::for($this->config->requestLimiter(), fn (Request $http): array => $this->forRequest($http));
+        RateLimiter::for($this->config->consumeLimiter(), fn (Request $http): array => $this->forConsume($http));
+        RateLimiter::for($this->config->invitationViewLimiter(), fn (Request $http): array => $this->forInvitationView($http));
+    }
 
     /**
      * @return list<Limit>

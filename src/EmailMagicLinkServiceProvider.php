@@ -41,9 +41,7 @@ use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\Foundation\CachesConfiguration;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use InvalidArgumentException;
@@ -188,7 +186,7 @@ final class EmailMagicLinkServiceProvider extends ServiceProvider
         new EntropyGuard($config)->validate();
         new InvitationGuard($config)->validate();
 
-        $this->registerRateLimiters($config);
+        $this->registerRateLimiters();
         $this->registerRoutes($config);
         $this->registerPruneSchedule($config);
     }
@@ -324,13 +322,17 @@ final class EmailMagicLinkServiceProvider extends ServiceProvider
         }
     }
 
-    private function registerRateLimiters(MagicLinkConfig $config): void
+    /**
+     * The pairing of limiter NAME to limiter closure lives on RateLimits, not here.
+     *
+     * It has to be reachable after boot: an application that swaps its cache per
+     * tenant discards the RateLimiter singleton, and every named limiter goes with
+     * it. A private method that already ran cannot put them back, and the first
+     * request to a package route then answers 500.
+     */
+    private function registerRateLimiters(): void
     {
-        $limits = $this->app->make(RateLimits::class);
-
-        RateLimiter::for($config->requestLimiter(), fn (Request $http): array => $limits->forRequest($http));
-        RateLimiter::for($config->consumeLimiter(), fn (Request $http): array => $limits->forConsume($http));
-        RateLimiter::for($config->invitationViewLimiter(), fn (Request $http): array => $limits->forInvitationView($http));
+        $this->app->make(RateLimits::class)->define();
     }
 
     private function registerPublishing(): void

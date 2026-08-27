@@ -10,7 +10,7 @@
                 <x-wirekit::text>{{ $mode === 'code' ? __('email-magic-link::messages.request_intro_code') : __('email-magic-link::messages.request_intro_link') }}</x-wirekit::text>
 
                 @if (session('status'))
-                    <x-wirekit::alert variant="success" :icon="false">{{ session('status') }}</x-wirekit::alert>
+                    <x-wirekit::alert intent="success" :icon="false">{{ session('status') }}</x-wirekit::alert>
                 @endif
 
                 <x-wirekit::stack as="form" method="POST" action="{{ route('email-magic-link.request') }}">

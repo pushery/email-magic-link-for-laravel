@@ -10,7 +10,7 @@
                 <x-wirekit::text>{{ __('email-magic-link::messages.confirm_intro') }}</x-wirekit::text>
 
                 @error('email')
-                    <x-wirekit::alert variant="danger" :icon="false">{{ $message }}</x-wirekit::alert>
+                    <x-wirekit::alert intent="danger" :icon="false">{{ $message }}</x-wirekit::alert>
                 @enderror
 
                 <x-wirekit::stack as="form" method="POST" action="{{ $action }}">

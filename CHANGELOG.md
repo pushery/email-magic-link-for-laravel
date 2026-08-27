@@ -4,6 +4,44 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.23.0] - 2026-08-27
+
+### Added
+
+- **`RateLimits::define()` registers every limiter this package names, and can be called
+  again at any time.** An application that binds a cache per tenant has to discard Laravel's
+  `RateLimiter` singleton so it is rebuilt against the current cache — and every named
+  limiter goes with it. Applications re-register their own afterwards; this package's could
+  not be re-registered at all, because the only code that knew which name went with which
+  closure was a private method that had already run at boot.
+
+  The result was a `MissingRateLimiterException` and a `500` on the first request to a
+  package route after a tenant switch, on the sign-in and invitation paths — the ones a
+  person needs in order to get in at all.
+
+  Copying the individual `RateLimiter::for()` calls into the application is not the same
+  fix. The limits would still come from here, but the wiring would not, and a limiter added
+  in a later release would go missing silently. Calling `define()` picks that one up without
+  the application changing a line. See "Running under multi-tenancy" in the documentation,
+  which also covers the routes' middleware default.
+
+### Changed
+
+- **The bundled WireKit screens now pass the alert's color as `intent`, which is the name
+  the component actually documents.** They had been passing `variant`, which WireKit's own
+  prop block calls a back-compat alias and resolves as `$intent ?? $variant`.
+
+  Nothing renders differently — measured rather than assumed: for `danger` and for `success`
+  alike, the two spellings produce an identical class list. The change is about what happens
+  when the alias goes. It is the first thing a major release drops, and it would break inside
+  views the application does not own, in every installation at once. The only repair
+  available then is to publish the views, which is the thing an application spends effort
+  getting rid of later.
+
+  Only the three alert tags moved. The word cannot be swept: on most WireKit components
+  `variant` is the canonical name for a different axis entirely, and replacing it there
+  deletes the property the component reads.
+
 ## [0.22.0] - 2026-08-23
 
 ### Changed

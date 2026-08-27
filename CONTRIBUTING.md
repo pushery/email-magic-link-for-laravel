@@ -58,8 +58,11 @@ it locally, provide a database and set `PG_TEST_HOST`, `PG_TEST_PORT`, `PG_TEST_
 ### Mutation testing
 
 Mutation testing runs through Pest 4's built-in mutation plugin (Infection does not
-support Pest 4's function-style tests). The gate is an overall mutation score indicator
-of at least 85%; the security-critical paths — the atomic claim, the entropy guardrail,
+support Pest 4's function-style tests). It is not a gate — nothing refuses a release over
+the score, and the CI lane runs without a floor at all so a measurement is always recorded.
+What the local `composer mutate` enforces is an overall mutation score indicator of at
+least 93%, taken from the last serial run rather than chosen; the security-critical paths
+— the atomic claim, the entropy guardrail,
 and the two-factor handoff — are mutation-tested to effectively 100%, and the residual
 gap is made up of equivalent mutants in glue and presentation code (for example the
 PostgreSQL/portable claim branches, which are behaviorally identical because SQLite

@@ -18,7 +18,7 @@
 [![Code Style](https://img.shields.io/badge/code%20style-pint-orange.svg)](https://laravel.com/docs/pint)
 
 ![Databases](https://img.shields.io/badge/tested%20on-PostgreSQL%20%2B%20MySQL-336791.svg)
-![Mutation](https://img.shields.io/badge/mutation-%E2%89%A585%25-blueviolet.svg)
+![Mutation](https://img.shields.io/badge/mutation-%E2%89%A593%25-blueviolet.svg)
 
 Passwordless email authentication for Laravel — magic links and one-time codes — that works **standalone** or alongside **Laravel Fortify**.
 

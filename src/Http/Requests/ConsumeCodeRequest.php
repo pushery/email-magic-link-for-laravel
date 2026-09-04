@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace EmailMagicLink\Http\Requests;
 
 use EmailMagicLink\Support\MagicLinkConfig;
+use EmailMagicLink\Support\NormalizedEmail;
 use Illuminate\Foundation\Http\FormRequest;
 use Override;
 
@@ -41,7 +42,7 @@ final class ConsumeCodeRequest extends FormRequest
         $code = $this->input('code');
 
         $this->merge([
-            'email' => is_string($email) ? mb_strtolower(trim($email)) : $email,
+            'email' => is_string($email) ? NormalizedEmail::from($email) : $email,
             'code' => is_string($code) ? $this->normalizeCode($code) : $code,
         ]);
     }

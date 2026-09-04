@@ -52,19 +52,23 @@ class MagicLinkNotification extends Notification implements ShouldQueue
     {
         return (new MailMessage)
             ->subject(__('email-magic-link::messages.mail_link_subject', ['app' => $application]))
+            ->greeting(__('email-magic-link::messages.mail_greeting'))
             ->line(__('email-magic-link::messages.mail_link_intro', ['app' => $application]))
             ->action(__('email-magic-link::messages.mail_link_action'), (string) $this->actionUrl)
             ->line(__('email-magic-link::messages.mail_link_expiry', ['minutes' => $this->expiresInMinutes]))
-            ->line(__('email-magic-link::messages.mail_ignore'));
+            ->line(__('email-magic-link::messages.mail_ignore'))
+            ->salutation(__('email-magic-link::messages.mail_salutation', ['app' => $application]));
     }
 
     private function codeMessage(string $application): MailMessage
     {
         return (new MailMessage)
             ->subject(__('email-magic-link::messages.mail_code_subject', ['app' => $application]))
+            ->greeting(__('email-magic-link::messages.mail_greeting'))
             ->line(__('email-magic-link::messages.mail_code_intro', ['app' => $application]))
             ->line((string) $this->code)
             ->line(__('email-magic-link::messages.mail_code_expiry', ['minutes' => $this->expiresInMinutes]))
-            ->line(__('email-magic-link::messages.mail_ignore'));
+            ->line(__('email-magic-link::messages.mail_ignore'))
+            ->salutation(__('email-magic-link::messages.mail_salutation', ['app' => $application]));
     }
 }

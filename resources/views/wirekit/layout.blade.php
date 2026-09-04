@@ -1,10 +1,14 @@
+{{-- The language the page SPEAKS, not the one that was asked for: on a locale this package
+     has no bundle for (and the host published none), the strings fall back, and a `lang`
+     that still names the requested locale sends a screen reader to the wrong voice. --}}
+@php($emlLocale = app('translator')->has('email-magic-link::messages.sign_in', app()->getLocale(), false) ? app()->getLocale() : (string) config('app.fallback_locale', 'en'))
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="{{ str_replace('_', '-', $emlLocale) }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
-    <title>@yield('title', __('email-magic-link::messages.sign_in')) &middot; {{ config('app.name') }}</title>
+    <title>@yield('title', __('email-magic-link::messages.sign_in')) &raquo; {{ config('app.name') }}</title>
 
     {{-- The application's per-response CSP nonce, or null when it has no policy.
          Resolved once here and handed to every tag on this page that a strict
@@ -29,10 +33,11 @@
          @source'd) supplies the component utility classes. ui.vite points at
          the host's Vite entrypoint; set it false for a non-Vite host. ui.styles
          <link>s plain pre-compiled stylesheets (a CDN bundle, an asset() path). --}}
-    @if ($emlVite = config('email-magic-link.ui.vite', ['resources/css/app.css']))
+    @php($emlConfig = app(\EmailMagicLink\Support\MagicLinkConfig::class))
+    @if ($emlVite = $emlConfig->uiVite())
         @vite($emlVite)
     @endif
-    @foreach ((array) config('email-magic-link.ui.styles', []) as $emlStylesheet)
+    @foreach ($emlConfig->uiStyles() as $emlStylesheet)
         <link rel="stylesheet" href="{{ $emlStylesheet }}">
     @endforeach
 
@@ -42,11 +47,14 @@
          shell in a tiny inline stylesheet centers the sign-in screen in any
          host, scanned or not. The card's own surface, spacing, and type still
          come from the WireKit tokens loaded above. --}}
+    {{-- No color-scheme here: WireKit declares `light` on :root and `dark` under .dark
+         (both at zero specificity, since 2.29.0), and an override to `light dark` painted
+         native widgets dark on a page whose tokens stayed light. --}}
     <style{!! $emlNonce === null ? '' : ' nonce="'.e($emlNonce).'"' !!}>
-        :root { color-scheme: light dark; }
         body {
             margin: 0;
             min-height: 100vh;
+            min-height: 100dvh;
             display: grid;
             place-items: center;
             background: var(--color-wk-bg, Canvas);
@@ -78,12 +86,10 @@
          is CSS, so a missed plugin registration is invisible to it.
 
          Nonced for the same reason as the stylesheet above. A host that cannot
-         grant 'unsafe-eval' has a lever since WireKit 2.22.0 —
-         `wirekit.scripts.bundle = 'csp'`, built against Alpine's CSP distribution
-         — but it is only half the answer here, and the docs say which half:
-         @wirekitScripts force-injects Livewire's assets so Alpine reaches a
-         pure-Blade page, and Livewire compiles its own directives at runtime the
-         same way Alpine's default build does.
+         grant 'unsafe-eval' needs Livewire's CSP build (`livewire.csp_safe`), not
+         WireKit's: Livewire's tag carries no `defer` and runs first, so its Alpine is
+         the one that starts; WireKit's `csp` bundle detects it, registers against it
+         and never starts an Alpine of its own. See "WireKit screens" in the docs.
 
          BOTH tags take the nonce, and the second one is easy to forget: WireKit
          emits its own <script>, and @livewireScripts emits Livewire's. Without an

@@ -53,13 +53,11 @@ final readonly class MagicLinkConfig
      */
     public function ttlFor(string $channel): int
     {
-        $override = $this->config->get("email-magic-link.{$channel}_ttl");
+        // The same rule every other integer key follows: an int or a numeric string,
+        // nothing else. A float override used to be truncated here and rejected on `ttl`.
+        $override = $this->int($this->config->get("email-magic-link.{$channel}_ttl"), 0);
 
-        if (is_numeric($override) && (int) $override > 0) {
-            return (int) $override;
-        }
-
-        return $this->ttl();
+        return $override > 0 ? $override : $this->ttl();
     }
 
     /**
@@ -315,7 +313,7 @@ final readonly class MagicLinkConfig
      *
      * Mapped through a fixed set rather than passed to the scheduler as a method
      * name: a config value that reaches ->{$method}() is a config value that can
-     * call anything on the Schedule object. An unrecognised cadence falls back to
+     * call anything on the Schedule object. An unrecognized cadence falls back to
      * daily — a typo in a cleanup interval must not take down a boot.
      *
      * @return 'hourly'|'daily'|'weekly'|'monthly'
@@ -386,9 +384,26 @@ final readonly class MagicLinkConfig
         return is_string($to) && $to !== '' ? $to : null;
     }
 
+    /**
+     * Rows deleted per statement by the purge. One unbounded DELETE holds a row lock
+     * on everything it removes until commit; on a table that grew for months that is
+     * minutes of contention with the claims that are running at the same time.
+     */
+    public function pruneChunk(): int
+    {
+        $chunk = $this->int($this->config->get('email-magic-link.prune.chunk'), 1000);
+
+        return $chunk > 0 ? $chunk : 1000;
+    }
+
     public function invalidResponseAbortStatus(): int
     {
-        return $this->int($this->config->get('email-magic-link.invalid_response.abort_status'), 403);
+        $status = $this->int($this->config->get('email-magic-link.invalid_response.abort_status'), 403);
+
+        // A refusal answers with an error status or not at all: 200 would make the
+        // error page a success, and 0 or 999 is a 500 the moment Symfony renders it.
+        // Same shape as pruneFrequency(): a typo must not take down a sign-in.
+        return $status >= 400 && $status <= 599 ? $status : 403;
     }
 
     /**
@@ -406,6 +421,42 @@ final readonly class MagicLinkConfig
     /**
      * @return 'auto'|'blade'
      */
+    /**
+     * The host's Vite entrypoints for the WireKit layout, or false for a non-Vite host.
+     *
+     * @return list<string>|false
+     */
+    public function uiVite(): array|false
+    {
+        $vite = $this->config->get('email-magic-link.ui.vite', ['resources/css/app.css']);
+
+        if (in_array($vite, [false, null, []], true)) {
+            return false;
+        }
+
+        if (is_string($vite)) {
+            return $vite === '' ? false : [$vite];
+        }
+
+        return is_array($vite) ? array_values(array_filter($vite, is_string(...))) ?: false : false;
+    }
+
+    /**
+     * Pre-compiled stylesheets the WireKit layout links, in order.
+     *
+     * @return list<string>
+     */
+    public function uiStyles(): array
+    {
+        $styles = $this->config->get('email-magic-link.ui.styles', []);
+
+        if (is_string($styles)) {
+            return $styles === '' ? [] : [$styles];
+        }
+
+        return is_array($styles) ? array_values(array_filter($styles, is_string(...))) : [];
+    }
+
     public function uiMode(): string
     {
         return $this->string($this->config->get('email-magic-link.ui.mode'), 'auto') === 'blade'
@@ -455,11 +506,16 @@ final readonly class MagicLinkConfig
             return $mode;
         }
 
-        return match ($mode) {
-            'false' => false,
-            'true' => true,
-            default => 'auto',
-        };
+        if (! is_string($mode) || $mode === 'auto') {
+            return 'auto';
+        }
+
+        // Every spelling the other switches accept -- "0", "off", "no" and their
+        // opposites -- decides here too; EMAIL_MAGIC_LINK_FORTIFY=0 used to fall back
+        // to auto, the one value it was written to leave.
+        $decided = filter_var($mode, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+
+        return is_bool($decided) ? $decided : 'auto';
     }
 
     public function respectTwoFactor(): bool

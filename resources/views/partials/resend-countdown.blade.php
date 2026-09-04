@@ -29,6 +29,7 @@
          announcement. (WireKit's own countdown component reaches the same conclusion
          for the same reason.) --}}
     <p
+        id="eml-resend-countdown"
         class="eml-resend-countdown"
         role="timer"
         aria-label="{{ __('email-magic-link::messages.resend_countdown_label') }}"

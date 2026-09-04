@@ -100,7 +100,14 @@ final readonly class DefaultTokenStore implements TokenStore
             // response indistinguishable from an unknown or expired token.
             $existing = $this->findLinkByHash($hash);
 
-            if ($existing?->passphrase_hash !== null && ! $this->passphraseMatches($passphrase, $existing->passphrase_hash)) {
+            // Nothing to claim. The atomic UPDATE below could only miss, and the
+            // classifier would answer NotFound after a third SELECT -- so the path
+            // every scanner takes costs one statement, not three.
+            if (! $existing instanceof MagicLinkToken) {
+                return ClaimResult::failed(ClaimFailure::NotFound);
+            }
+
+            if ($existing->passphrase_hash !== null && ! $this->passphraseMatches($passphrase, $existing->passphrase_hash)) {
                 return ClaimResult::failed(ClaimFailure::InvalidPassphrase);
             }
 
@@ -172,14 +179,27 @@ final readonly class DefaultTokenStore implements TokenStore
 
     public function purge(): int
     {
-        $deleted = MagicLinkToken::query()
-            ->where(function (Builder $query): void {
-                $query->where('expires_at', '<=', Carbon::now())
-                    ->orWhereNotNull('consumed_at');
-            })
-            ->delete();
+        // In chunks, the way the framework's own pruning idiom works: one unbounded
+        // DELETE over months of rows holds every row lock until commit and stalls the
+        // claims running beside it. The predicate is re-evaluated per chunk, so a row
+        // that expires while the purge runs is picked up by the next one.
+        $chunk = $this->config->pruneChunk();
+        $now = Carbon::now();
+        $deleted = 0;
 
-        return is_int($deleted) ? $deleted : 0;
+        do {
+            $removed = MagicLinkToken::query()
+                ->where(function (Builder $query) use ($now): void {
+                    $query->where('expires_at', '<=', $now)
+                        ->orWhereNotNull('consumed_at');
+                })
+                ->limit($chunk)
+                ->delete();
+            $removed = is_int($removed) ? $removed : 0;
+            $deleted += $removed;
+        } while ($removed === $chunk);
+
+        return $deleted;
     }
 
     private function recordFailedCodeAttempt(MagicLinkToken $token, int $max, CarbonInterface $now): ClaimResult
@@ -230,7 +250,12 @@ final readonly class DefaultTokenStore implements TokenStore
     {
         $connection = $this->connection();
 
-        $sql = 'update magic_link_tokens set '
+        // wrapTable() applies the connection's table prefix and the driver's quoting. A
+        // literal table name here bypasses the prefix that Eloquent and Schema both honor,
+        // so on a prefixed connection every claim ran against a table that does not exist.
+        $table = $connection->getQueryGrammar()->wrapTable((new MagicLinkToken)->getTable());
+
+        $sql = "update {$table} set "
             .'consumed_at = case when uses_remaining <= 1 then ? else consumed_at end, '
             .'uses_remaining = uses_remaining - 1, updated_at = ? '
             ."where {$column} = ? and channel = ? and consumed_at is null and expires_at > ? and uses_remaining > 0";
@@ -250,7 +275,13 @@ final readonly class DefaultTokenStore implements TokenStore
 
     private function findLinkByHash(string $hash): ?MagicLinkToken
     {
+        // Pinned to the write connection: the confirm page asks whether a link wants a
+        // passphrase in a request of its own, after the one that issued the row, and on a
+        // lagging replica the answer was "no" for a link that does. The claim callers hold
+        // a transaction and would reach the write PDO anyway; stating it here keeps the
+        // property on the lookup rather than on whoever calls it.
         return MagicLinkToken::query()
+            ->useWritePdo()
             ->where('token_hash', $hash)
             ->where('channel', 'link')
             ->first();

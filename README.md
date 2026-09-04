@@ -24,7 +24,7 @@ Passwordless email authentication for Laravel — magic links and one-time codes
 
 Plenty of packages send a magic link. This one is built around two properties most of them get wrong:
 
-- **A correct, no-bypass Fortify two-factor handoff.** A user with confirmed TOTP is handed to Fortify's own challenge in a not-yet-authenticated state; the login completes inside Fortify only after the code is verified. There is no path that signs a two-factor user in without the second factor.
+- **A correct, no-bypass Fortify two-factor handoff.** A user with two-factor authentication enabled is handed to Fortify's own challenge in a not-yet-authenticated state; the login completes inside Fortify only after the code is verified. There is no path that signs a two-factor user in without the second factor.
 - **Scanner-safe and prefetch-safe link consumption.** The emailed link is a signed, inert `GET` that only renders a confirmation page. The single-use token is spent solely by an explicit `POST`, so SafeLinks, Mimecast, Proofpoint and browser prefetch cannot burn the link before the human clicks "Sign in".
 
 ## Installation
@@ -33,7 +33,7 @@ Plenty of packages send a magic link. This one is built around two properties mo
 composer require pushery/email-magic-link-for-laravel
 ```
 
-Requires PHP `^8.4` and Laravel `^13.0`. Laravel Fortify (`^1.0`) is optional and only needed for the two-factor handoff. There are no third-party runtime dependencies.
+Requires PHP `^8.4` and Laravel `^13.23`. Laravel Fortify (`^1.0`) is optional and only needed for the two-factor handoff. There are no third-party runtime dependencies.
 
 ## Documentation
 
@@ -48,7 +48,7 @@ Requires PHP `^8.4` and Laravel `^13.0`. Laravel Fortify (`^1.0`) is optional an
 ## What it does
 
 - **Magic links and one-time codes** — pick either, or offer both.
-- **A complete browser flow out of the box** — six routes, the screens, and the emails; point your "log in" link at one route name.
+- **A complete browser flow out of the box** — the routes, the screens, and the emails; point your "log in" link at one route name.
 - **A Mint API** — issue a signed link or a code and get it back without sending anything, to deliver over any channel you like.
 - **Bounded multi-use links** — hand out a link redeemable N times, with the counter decremented in the same conditional `UPDATE` that consumes it, so concurrent redemptions can never exceed the limit.
 - **Passphrase-gated links** — require a shared secret, delivered out of band, before a high-value link is consumed.
@@ -56,8 +56,8 @@ Requires PHP `^8.4` and Laravel `^13.0`. Laravel Fortify (`^1.0`) is optional an
 - **Invitations** — the other half of the story. A magic link can only sign in somebody who already exists; an invitation puts an account *into service* for an address that has none yet. The package issues the token, supersedes the previous one when you re-invite, refuses every dead one identically, and spends it exactly once — your application decides what accepting one means.
 - **A JSON contract** — stable statuses and error codes for first-party SPA and mobile clients.
 - **Multiple guards** — sign in to an `admin` guard alongside `web`, on an allowlist that keeps guards un-enumerable.
-- **Eleven bundled locales** — English, German, Spanish, French, Italian, Dutch and Portuguese, plus the `en-GB`, `en-US`, `pt-PT` and `pt-BR` regional variants.
-- **Styled screens, or none of ours** — the sign-in views render with [WireKit](https://wirekit.app) when it is installed, fall back to dependency-free Blade when it is not, and can be published and rewritten either way.
+- **Bundled locales** — English, German, Spanish, French, Italian, Dutch and Portuguese, plus the `en-GB`, `en-US`, `pt-PT` and `pt-BR` regional variants under both spellings.
+- **Styled screens, or none of ours** — the sign-in views render with [WireKit](https://wirekit.app) when it is installed, fall back to dependency-free Blade when it is not, and can be published and rewritten either way. Browser support follows WireKit's floor on the styled path and the browser's own defaults on the plain one; see the [documentation](https://docs.pushery.com/email-magic-link-for-laravel/#browser-support).
 - **Designed to fail closed** — tokens hashed at rest, nothing serialized into a token, a single race-free conditional claim, and responses that never reveal whether an account exists.
 
 ## Built by PUSHERY

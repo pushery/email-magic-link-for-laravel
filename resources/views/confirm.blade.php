@@ -7,7 +7,7 @@
     <p>{{ __('email-magic-link::messages.confirm_intro') }}</p>
 
     @error('email')
-        <p class="error">{{ $message }}</p>
+        <p class="error" id="email-error" role="alert">{{ $message }}</p>
     @enderror
 
     <form method="POST" action="{{ $action }}">

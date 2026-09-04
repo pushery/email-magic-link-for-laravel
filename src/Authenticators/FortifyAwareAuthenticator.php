@@ -16,7 +16,8 @@ use Symfony\Component\HttpFoundation\Response;
 /**
  * The package's only Fortify-internal coupling.
  *
- * When the verified user has confirmed TOTP, the user is handed off to
+ * When the verified user has two-factor authentication enabled by Fortify's own
+ * verdict, the user is handed off to
  * Fortify's own challenge in a NOT-yet-authenticated state: the login.id /
  * login.remember session keys are set and the request is redirected to the
  * challenge route. The actual login happens inside Fortify, only after the code
@@ -24,7 +25,7 @@ use Symfony\Component\HttpFoundation\Response;
  * guest middleware on the challenge route and bypass the second factor, so this
  * decorator must never do so.
  *
- * Users without confirmed two-factor fall through to the wrapped default
+ * Users without an enabled second factor fall through to the wrapped default
  * authenticator and are logged in directly.
  */
 final readonly class FortifyAwareAuthenticator implements MagicLinkAuthenticator
@@ -36,7 +37,7 @@ final readonly class FortifyAwareAuthenticator implements MagicLinkAuthenticator
 
     public function authenticate(Request $request, Authenticatable $user, string $guard, bool $remember): Response
     {
-        if (! $this->config->respectTwoFactor() || ! $this->hasConfirmedTwoFactor($user)) {
+        if (! $this->config->respectTwoFactor() || ! $this->hasEnabledTwoFactor($user)) {
             return $this->default->authenticate($request, $user, $guard, $remember);
         }
 
@@ -81,10 +82,19 @@ final readonly class FortifyAwareAuthenticator implements MagicLinkAuthenticator
         return $redirect;
     }
 
-    private function hasConfirmedTwoFactor(Authenticatable $user): bool
+    private function hasEnabledTwoFactor(Authenticatable $user): bool
     {
-        // Gate on confirmation, not mere secret presence, so a user mid-setup
-        // is not locked out of their own magic-link login.
+        // Fortify's own verdict, so the magic link challenges exactly the users the
+        // password login challenges. With `confirm` on, that is a secret AND a
+        // confirmed_at, which keeps a user mid-setup out of the challenge; with
+        // `confirm` off -- Fortify's shipped feature registration -- it is a secret
+        // alone, and confirmed_at is never written. Re-deriving the verdict from
+        // confirmed_at let an enabled second factor through on every host that had
+        // never turned confirmation on.
+        if (method_exists($user, 'hasEnabledTwoFactorAuthentication')) {
+            return (bool) $user->hasEnabledTwoFactorAuthentication();
+        }
+
         return data_get($user, 'two_factor_confirmed_at') !== null;
     }
 }

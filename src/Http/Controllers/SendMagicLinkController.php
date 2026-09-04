@@ -9,13 +9,16 @@ use EmailMagicLink\Contracts\ResendGuard;
 use EmailMagicLink\Contracts\TokenStore;
 use EmailMagicLink\Contracts\UserLookup;
 use EmailMagicLink\Events\MagicLinkRequested;
+use EmailMagicLink\Events\MagicLinkRequestRefused;
 use EmailMagicLink\Http\Controllers\Concerns\RespondsToApiClients;
 use EmailMagicLink\Http\Requests\SendMagicLinkRequest;
 use EmailMagicLink\Notifications\MagicLinkNotification;
 use EmailMagicLink\Support\ConfirmationUrl;
 use EmailMagicLink\Support\IssuedToken;
 use EmailMagicLink\Support\MagicLinkConfig;
+use EmailMagicLink\Support\RequestRefusal;
 use EmailMagicLink\Support\ResendDecision;
+use EmailMagicLink\Support\ResendDenialReason;
 use EmailMagicLink\Support\ResendKey;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Notification as NotificationSender;
@@ -78,8 +81,12 @@ final class SendMagicLinkController
         if ($user instanceof Authenticatable) {
             $issued = $store->issue($user, $guard, $channel);
 
+            // The notification is queued, and a worker renders it under ITS locale unless
+            // the request's travels with it. The mail route is an anonymous notifiable
+            // with no locale preference of its own, so this is the only place the
+            // request's language can be captured.
             NotificationSender::route('mail', $email)
-                ->notify($this->buildNotification($issued, $channel, $config));
+                ->notify($this->buildNotification($issued, $channel, $config)->locale(app()->getLocale()));
 
             event(new MagicLinkRequested($user, $channel, $request));
         }
@@ -92,6 +99,8 @@ final class SendMagicLinkController
 
     private function captchaFailed(SendMagicLinkRequest $request): Response
     {
+        event(new MagicLinkRequestRefused(RequestRefusal::Captcha, $request->email(), null, $request));
+
         $message = __('email-magic-link::messages.captcha_failed');
 
         if ($this->wantsJson($request)) {
@@ -105,6 +114,10 @@ final class SendMagicLinkController
 
     private function resendThrottled(SendMagicLinkRequest $request, ResendDecision $decision): Response
     {
+        if ($decision->reason instanceof ResendDenialReason) {
+            event(new MagicLinkRequestRefused(RequestRefusal::fromResendDenial($decision->reason), $request->email(), $decision, $request));
+        }
+
         $seconds = $decision->retryAfterSeconds;
         $message = __('email-magic-link::messages.resend_throttled', ['seconds' => $seconds]);
 
@@ -171,13 +184,12 @@ final class SendMagicLinkController
         }
 
         if ($channel === 'code') {
-            $params = ['email' => $email];
-
-            if ($guard !== null) {
-                $params['guard'] = $guard;
-            }
-
-            return redirect()->route('email-magic-link.code.form', $params)->with('status', $message);
+            // The address rides in the session, never in the URL: a query string
+            // lands in access logs, proxy logs, browser history and the Referer of
+            // every asset the code screen loads. Same handoff the retry path uses.
+            return redirect()->route('email-magic-link.code.form')
+                ->with('status', $message)
+                ->withInput(array_filter(['email' => $email, 'guard' => $guard], fn (?string $value): bool => $value !== null));
         }
 
         return redirect()->route('email-magic-link.request.form')->with('status', $message);

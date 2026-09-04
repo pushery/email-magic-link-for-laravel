@@ -39,15 +39,19 @@ which runs, and each can be run on its own:
 | `composer analyse` | Static analysis — Larastan at `max` level, no errors. |
 | `composer test:type-coverage` | 100% type coverage of `src/`. |
 | `composer test:coverage` | 100% line coverage of `src/`. |
-| `composer mutate` | Mutation testing (see below). |
+
+`composer mutate` (see below) is **not** part of `qa`; it runs separately.
 
 ### Tests
 
 The suite uses [Pest](https://pestphp.com) and Orchestra Testbench. The defining axis is
 **Fortify present versus absent**: the `Integration` suite boots Fortify, while the
 `Unit` and `Feature` suites run the core in isolation and must never reference a Fortify
-symbol. CI exercises both axes across PHP 8.4/8.5, the lowest and highest dependency
-resolutions, and with and without Fortify.
+symbol. CI (the self-hosted Woodpecker gate) runs the suite on PHP 8.4 with `prefer-stable`
+and Fortify installed, against real PostgreSQL 18 and MySQL 8.4 at 100 % line and type
+coverage; a weekly lane repeats it with `prefer-lowest`. The PHP 8.4/8.5 × prefer-lowest/stable
+× with/without-Fortify matrix in `.github/workflows/tests.yml` is a disabled, manual-only
+workflow — run it before a release that changes the dependency floor.
 
 The `Postgres` suite verifies the `RETURNING`-based atomic claim against a real
 PostgreSQL connection. It is skipped automatically when Postgres is unavailable; to run
@@ -55,10 +59,17 @@ it locally, provide a database and set `PG_TEST_HOST`, `PG_TEST_PORT`, `PG_TEST_
 `PG_TEST_USER`, and `PG_TEST_PASSWORD` as needed (defaults target
 `127.0.0.1:5432` / `email_magic_link_test` / `postgres`).
 
+The `MySql` suite does the same against a real MySQL 8.4 connection (MariaDB is rejected, not
+supported — it clears the version floor numerically and is refused by identity). It reads
+`MYSQL_TEST_HOST`, `MYSQL_TEST_PORT`, `MYSQL_TEST_DB`, `MYSQL_TEST_USER` and
+`MYSQL_TEST_PASSWORD` (defaults `127.0.0.1:3308` / `email_magic_link_test` / `root`). Set
+`REQUIRE_DB_TESTS=1` to turn "skipped when unavailable" into a hard failure, which is how CI
+runs both suites.
+
 ### Mutation testing
 
-Mutation testing runs through Pest 4's built-in mutation plugin (Infection does not
-support Pest 4's function-style tests). It is not a gate — nothing refuses a release over
+Mutation testing runs through Pest 5's built-in mutation plugin (Infection doesn't support
+Pest's function-style tests). It isn't a gate: nothing refuses a release over
 the score, and the CI lane runs without a floor at all so a measurement is always recorded.
 What the local `composer mutate` enforces is an overall mutation score indicator of at
 least 93%, taken from the last serial run rather than chosen; the security-critical paths

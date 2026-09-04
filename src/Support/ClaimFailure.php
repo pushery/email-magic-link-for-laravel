@@ -18,4 +18,13 @@ enum ClaimFailure
     case InvalidCode;
     case InvalidPassphrase;
     case LockedOut;
+
+    /**
+     * An invitation that was withdrawn before anybody used it -- through revoke(), or
+     * by a newer invitation for the same address and guard superseding it.
+     * Distinct from AlreadyConsumed on purpose: a click on a revoked link is the
+     * one refusal that is a signal rather than noise, and a host that alerts on
+     * it must be able to tell it from a re-click on an accepted one.
+     */
+    case Revoked;
 }

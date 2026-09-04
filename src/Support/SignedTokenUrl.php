@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace EmailMagicLink\Support;
 
 use Carbon\CarbonInterface;
+use Illuminate\Routing\UrlGenerator;
 use Illuminate\Support\Facades\URL;
 
 /**
@@ -12,10 +13,11 @@ use Illuminate\Support\Facades\URL;
  * another host.
  *
  * Extracted so the sign-in confirmation link and the invitation link are built by
- * the SAME code. The host override is the part worth centralising: it forces the
- * root URL and the scheme for one signing call and restores both in a `finally`,
- * and a second copy of that would be a second chance to forget the restore -- at
- * which point every later URL in the request silently inherits a tenant host.
+ * the SAME code. The host override is the part worth centralizing: it signs on a
+ * generator of its own that carries the tenant origin, so the shared `url` singleton
+ * is never written to. An earlier version forced the origin on the singleton and
+ * "restored" it with `forceRootUrl(null)` -- a reset, not a restore, which wiped
+ * whatever origin or scheme the host itself had forced, for the rest of the process.
  */
 final class SignedTokenUrl
 {
@@ -46,19 +48,43 @@ final class SignedTokenUrl
 
         [$baseUrl, $scheme] = self::absolute($baseUrl);
 
-        // Force the host AND scheme from the base URL for this one signing call,
-        // then restore both so no later URL generation in the request inherits
-        // the tenant host. Forcing the scheme too makes an https base URL sign as
-        // https even when the app itself is served over http.
-        URL::forceRootUrl($baseUrl);
-        URL::forceScheme($scheme);
+        // A generator of its own carries the tenant origin, so the shared `url`
+        // singleton is never touched: nothing to restore, nothing to wipe. The
+        // framework has no getter for a forced origin or scheme, so "put back what
+        // the host had" is not expressible -- not touching it is. The scheme is
+        // still forced on the copy: formatRoot() rewrites the root's scheme through
+        // formatScheme(), so an https tenant on an http app would otherwise sign
+        // as http, and the signature would fail where the link is opened.
+        return self::detached($baseUrl, $scheme)
+            ->temporarySignedRoute($routeName, $expiresAt, ['token' => $plaintext]);
+    }
 
-        try {
-            return self::sign($routeName, $expiresAt, $plaintext);
-        } finally {
-            URL::forceRootUrl(null);
-            URL::forceScheme('');
-        }
+    /**
+     * A generator for one signing call, bound to another origin.
+     *
+     * Constructed rather than cloned: UrlGenerator::withKeyResolver() clones, but a
+     * clone keeps its RouteUrlGenerator pointing at the ORIGINAL instance, so an
+     * origin forced on the clone is ignored by route(). A fresh instance builds its
+     * own RouteUrlGenerator against itself. The key resolver is the one the framework
+     * installs on the live generator, so the signature verifies with the same keys.
+     */
+    private static function detached(string $baseUrl, string $scheme): UrlGenerator
+    {
+        /** @var UrlGenerator $live */
+        $live = URL::getFacadeRoot();
+
+        $generator = new UrlGenerator(app('router')->getRoutes(), $live->getRequest());
+
+        $generator->setKeyResolver(static function (): array {
+            $previous = config('app.previous_keys');
+
+            return [config('app.key'), ...(is_array($previous) ? $previous : [])];
+        });
+        $generator->defaults($live->getDefaultParameters());
+        $generator->useOrigin($baseUrl);
+        $generator->forceScheme($scheme);
+
+        return $generator;
     }
 
     /**
@@ -86,7 +112,7 @@ final class SignedTokenUrl
         }
 
         // `formatScheme()` rather than parsing `url('/')`: it is typed to return a
-        // string, it honours a host that has called `forceScheme()` behind a proxy,
+        // string, it honors a host that has called `forceScheme()` behind a proxy,
         // and in the console it reads the request Laravel builds from `app.url`. It
         // yields the scheme with its separator, e.g. `https://`.
         $scheme = rtrim(URL::formatScheme(), ':/');

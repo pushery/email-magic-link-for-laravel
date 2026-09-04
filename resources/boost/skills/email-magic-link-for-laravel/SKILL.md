@@ -77,7 +77,9 @@ decide the shape of the integration:
 | `invalid_response.via` | What an expired or invalid link renders: `redirect`, `view`, `abort`, `json`, or your own `InvalidLinkResponder` class-string |
 | `fortify.mode` | `auto` (bridge on when Fortify is installed), plus `respect_two_factor` |
 | `prune.schedule` | Register the daily token purge in the scheduler. Off by default — see Housekeeping |
-| `ui.script_nonce` | A `ScriptNonce` class supplying the CSP nonce for the countdown script; `null` auto-detects `csp_nonce()` |
+| `ui.script_nonce` | A `ScriptNonce` class supplying the CSP nonce for every tag the bundled screens emit (countdown script, inline stylesheet, WireKit's tags); `null` reads the `csp-nonce` container binding spatie/laravel-csp registers, then a global `csp_nonce()` |
+| `invitations.enabled` | Turn on the invitation channel; needs `invitations.handler` and `invitations.view` — see Invitations |
+| `prune.chunk` | Rows one purge `DELETE` removes (default 1000) |
 
 ### 3. Apply the package
 
@@ -92,6 +94,7 @@ browser flow under the `web` middleware group:
 | `POST` | `/magic-link/verify/{token}` | `email-magic-link.consume` |
 | `GET` | `/magic-link/code` | `email-magic-link.code.form` |
 | `POST` | `/magic-link/code` | `email-magic-link.code.consume` |
+| `GET` | `/magic-link/resend-countdown.js` | `email-magic-link.resend-countdown-script` |
 
 ```blade
 <a href="{{ route('email-magic-link.request.form') }}">Sign in without a password</a>
@@ -196,12 +199,45 @@ deletes, custom columns) by binding the contract:
 
 The same pattern applies to `token_store`, `captcha` and `invalid_response.via`
 — each takes the class-string of a published contract under
-`EmailMagicLink\\Contracts` and falls back to a bundled default.
+`EmailMagicLink\Contracts` and falls back to a bundled default.
 
 `notification` is the odd one out and is **not** a contract: it takes a class that
 **extends `MagicLinkNotification`**. Anything else is ignored — the package falls
 back to the bundled notification without raising, so a wrong class-string looks
 like it worked.
+
+### Invitations — for somebody who has no account yet
+
+A magic link signs in a user who exists. To onboard an address that has no account, use
+the invitation channel, never the sign-in flow (which would sign a non-member in):
+
+```php
+// config/email-magic-link.php
+'invitations' => [
+    'enabled' => true,
+    'handler' => App\Auth\AcceptInvitation::class,   // implements InvitationHandler
+    'view' => 'auth.accept-invitation',               // your screen; the package ships none
+],
+```
+
+```php
+$invitation = app(EmailMagicLink\Contracts\InvitationIssuer::class)
+    ->invite('newcomer@example.com', context: ['roles' => ['editor']]);
+
+Mail::to('newcomer@example.com')->send(new YouAreInvited($invitation->url));
+```
+
+The handler's `accept()` runs inside the transaction that spends the token: create the
+account, set the password, return the user to sign them in (or `null` to accept without a
+session). Two routes register while it is on: `GET|POST /magic-link/invitation/{token}`.
+`revoke($email)` withdraws every open invitation for an address.
+
+### Multi-tenancy
+
+An application that swaps its cache per tenant discards Laravel's rate limiter and every
+named limiter with it. Call `app(EmailMagicLink\Support\RateLimits::class)->define()` after the
+swap, and put the tenancy middleware into `routes.middleware`; leave `prune.schedule` off
+and run `email-magic-link:purge` through the tenancy runner instead.
 
 ## Anti-Patterns
 

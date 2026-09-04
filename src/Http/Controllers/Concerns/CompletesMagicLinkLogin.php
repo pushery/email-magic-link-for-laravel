@@ -10,6 +10,7 @@ use EmailMagicLink\Events\MagicLinkConsumptionFailed;
 use EmailMagicLink\Events\MagicLinkVerified;
 use EmailMagicLink\Models\MagicLinkToken;
 use EmailMagicLink\Support\ClaimFailure;
+use EmailMagicLink\Support\MagicLinkConfig;
 use EmailMagicLink\Support\ResendKey;
 use Illuminate\Auth\AuthManager;
 use Illuminate\Contracts\Auth\Authenticatable;
@@ -29,6 +30,14 @@ trait CompletesMagicLinkLogin
 
     protected function completeLogin(Request $request, MagicLinkToken $token, string $failureRoute): Response
     {
+        // The guard was validated when the token was issued; re-checked here so an
+        // operator who removes a guard from the allowlist closes the door for links
+        // already in flight too. The row is spent either way, which is the fail-closed
+        // direction.
+        if (! in_array($token->guard, app(MagicLinkConfig::class)->allowedGuards(), true)) {
+            return $this->failedConsumption($request, $failureRoute, ClaimFailure::NotFound);
+        }
+
         $user = $this->resolveUser($token);
 
         if ($user === null) {
@@ -47,10 +56,8 @@ trait CompletesMagicLinkLogin
 
     protected function resolveUser(MagicLinkToken $token): ?Authenticatable
     {
-        $providerName = config("auth.guards.{$token->guard}.provider");
-
         return app(AuthManager::class)
-            ->createUserProvider(is_string($providerName) ? $providerName : null)
+            ->createUserProvider(app(MagicLinkConfig::class)->providerForGuard($token->guard))
             ?->retrieveById($token->user_id);
     }
 

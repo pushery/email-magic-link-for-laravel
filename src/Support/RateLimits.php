@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace EmailMagicLink\Support;
 
+use Illuminate\Cache\RateLimiter;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Contracts\Container\Container;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\RateLimiter;
 
 /**
  * Builds the named rate limiters for the package's throttled endpoints.
@@ -22,7 +23,10 @@ use Illuminate\Support\Facades\RateLimiter;
  */
 final readonly class RateLimits
 {
-    public function __construct(private MagicLinkConfig $config) {}
+    public function __construct(
+        private MagicLinkConfig $config,
+        private Container $app,
+    ) {}
 
     /**
      * Register every limiter this package names, and do it again on demand.
@@ -37,12 +41,22 @@ final readonly class RateLimits
      * It is also the reason the pairing lives here rather than in the service
      * provider: a consumer copying three RateLimiter::for() lines by hand silently
      * loses a fourth limiter added later, and finds out as a 500 in production.
+     *
+     * The limiter is resolved from the CONTAINER at call time, never through the
+     * facade. The facade caches the first instance it resolved, so after the
+     * `forgetInstance()` above it would register these limiters on the discarded
+     * object -- while the throttle middleware, container-constructed, receives the
+     * new and empty one, and every throttled route answers 500. Measured: the
+     * repair the docblock describes only worked when the host ALSO cleared the
+     * facade, which nothing told it to do.
      */
     public function define(): void
     {
-        RateLimiter::for($this->config->requestLimiter(), fn (Request $http): array => $this->forRequest($http));
-        RateLimiter::for($this->config->consumeLimiter(), fn (Request $http): array => $this->forConsume($http));
-        RateLimiter::for($this->config->invitationViewLimiter(), fn (Request $http): array => $this->forInvitationView($http));
+        $limiter = $this->app->make(RateLimiter::class);
+
+        $limiter->for($this->config->requestLimiter(), fn (Request $http): array => $this->forRequest($http));
+        $limiter->for($this->config->consumeLimiter(), fn (Request $http): array => $this->forConsume($http));
+        $limiter->for($this->config->invitationViewLimiter(), fn (Request $http): array => $this->forInvitationView($http));
     }
 
     /**
@@ -52,7 +66,7 @@ final readonly class RateLimits
     {
         $limit = $this->config->requestLimit();
         $email = $request->input('email');
-        $email = is_string($email) ? mb_strtolower(trim($email)) : '';
+        $email = is_string($email) ? NormalizedEmail::from($email) : '';
 
         return [
             Limit::perMinutes($limit['per_minutes'], $limit['max'])->by('eml:req:email:'.$email),
@@ -103,6 +117,6 @@ final readonly class RateLimits
 
         $email = $request->input('email');
 
-        return is_string($email) ? mb_strtolower(trim($email)) : '';
+        return is_string($email) ? NormalizedEmail::from($email) : '';
     }
 }

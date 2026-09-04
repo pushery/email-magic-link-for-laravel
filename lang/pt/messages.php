@@ -55,5 +55,7 @@ return [
     'mail_code_expiry' => 'Este código expira em :minutes minutos.',
 
     // Notification — shared.
+    'mail_greeting' => 'Olá!',
+    'mail_salutation' => 'Atenciosamente, :app',
     'mail_ignore' => 'Se não solicitou isto, pode ignorar este e-mail em segurança.',
 ];

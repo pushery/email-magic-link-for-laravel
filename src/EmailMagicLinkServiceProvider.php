@@ -21,6 +21,7 @@ use EmailMagicLink\Contracts\ScriptNonce;
 use EmailMagicLink\Contracts\TokenStore;
 use EmailMagicLink\Contracts\UserLookup;
 use EmailMagicLink\Exceptions\InvitationsMisconfiguredException;
+use EmailMagicLink\Http\Middleware\NoIndex;
 use EmailMagicLink\Http\Responses\DefaultInvalidLinkResponder;
 use EmailMagicLink\Lookups\DefaultUserLookup;
 use EmailMagicLink\Stores\DefaultInvitationStore;
@@ -41,6 +42,7 @@ use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\Foundation\CachesConfiguration;
+use Illuminate\Foundation\Console\AboutCommand;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
@@ -170,13 +172,26 @@ final class EmailMagicLinkServiceProvider extends ServiceProvider
         $this->loadViewsFrom(__DIR__.'/../resources/views', 'email-magic-link');
         $this->loadTranslationsFrom(__DIR__.'/../lang', 'email-magic-link');
 
-        if (self::$runsMigrations) {
+        if (self::$runsMigrations && ! $this->migrationsArePublished()) {
             $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
         }
 
         // Decided at boot so published config is in force (the authenticator is
         // only resolved at request time, after this wrapping is applied).
         $this->registerFortifyBridge($config);
+
+        // Registered before the master switch so `php artisan about` shows a
+        // disabled package as disabled instead of not at all.
+        AboutCommand::add('Email Magic Link', fn (): array => [
+            'Enabled' => $config->enabled() ? 'yes' : 'no',
+            'Mode' => $config->mode(),
+            'Fortify bridge' => match ($config->fortifyMode()) {
+                true => 'forced',
+                false => 'off',
+                default => 'auto',
+            },
+            'Invitations' => $config->invitationsEnabled() ? 'on' : 'off',
+        ]);
 
         if (! $config->enabled()) {
             return;
@@ -234,7 +249,9 @@ final class EmailMagicLinkServiceProvider extends ServiceProvider
                 default => $event->daily(),
             };
 
-            $event->withoutOverlapping();
+            $event->withoutOverlapping()
+                ->name('email-magic-link:purge')
+                ->description('Delete expired and consumed magic-link tokens, and settled invitations past their retention window.');
         });
     }
 
@@ -313,10 +330,28 @@ final class EmailMagicLinkServiceProvider extends ServiceProvider
         throw new InvalidArgumentException("[{$concrete}] must implement [{$contract}].");
     }
 
+    /**
+     * Whether the application already holds a published copy of the bundled migrations.
+     *
+     * publishesMigrations() gives each copy a fresh date prefix, so the copy and the
+     * bundled file are two migrations by name for one table, and `migrate` on a fresh
+     * database fails on the second CREATE with a message that names the table, not
+     * the cause. A host that publishes is expected to call ignoreMigrations(); this is
+     * the belt for the one that did not read that sentence. One readdir at boot.
+     */
+    private function migrationsArePublished(): bool
+    {
+        $copies = glob($this->app->databasePath('migrations/*_create_magic_link_tokens_table.php'));
+
+        return is_array($copies) && $copies !== [];
+    }
+
     private function registerRoutes(MagicLinkConfig $config): void
     {
         if (! $this->app->routesAreCached()) {
-            Route::middleware($config->routeMiddleware())
+            // NoIndex is appended here rather than listed in `routes.middleware`, so a
+            // host that overrides that key cannot drop it by accident.
+            Route::middleware([...$config->routeMiddleware(), NoIndex::class])
                 ->prefix($config->routePrefix())
                 ->group(__DIR__.'/../routes/email-magic-link.php');
         }
@@ -354,14 +389,18 @@ final class EmailMagicLinkServiceProvider extends ServiceProvider
                 __DIR__.'/../config/email-magic-link.php' => config_path('email-magic-link.php'),
             ], ['email-magic-link-config', 'email-magic-link']);
 
-            // publishesMigrations(), not publishes(): it rewrites the bundled
-            // 0001_01_01_00000N ordering prefix to the publish date. With a plain
-            // copy the published migrations keep that prefix and sort BEFORE the
-            // application's own create_users_table, so `migrate` on a fresh app
-            // tries to create a table with a foreign key to users that does not
-            // exist yet. The bundled prefix is correct for auto-loading (it must
-            // sort deterministically among the package's own) and wrong the
-            // moment the files land in the app's migrations directory.
+            // publishesMigrations(), not publishes(): when the framework's
+            // `database.migrations.update_date_on_publish` is on (its default), it
+            // rewrites the bundled 0001_01_01_00000N ordering prefix to the publish
+            // date. That prefix is right for auto-loading -- the four files only have
+            // to sort among themselves -- and wrong in the application's migrations
+            // directory, where it would sort them ahead of everything the host has and
+            // give every host the same file names. There is no foreign key at stake:
+            // user_id is a plain string column, on purpose.
+            //
+            // The rewrite has a cost, and boot() pays it: a copy with a fresh prefix is
+            // a DIFFERENT migration by name, so the bundled file and its copy would both
+            // be pending for one table. See migrationsArePublished().
             $this->publishesMigrations([
                 __DIR__.'/../database/migrations' => database_path('migrations'),
             ], ['email-magic-link-migrations', 'email-magic-link']);

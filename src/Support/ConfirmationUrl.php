@@ -9,7 +9,7 @@ use EmailMagicLink\Models\MagicLinkToken;
 /**
  * Builds the signed, single-use confirmation URL for an issued link token.
  *
- * Centralised so the bundled email flow and the Mint-API emit the byte-for-byte
+ * Centralized so the bundled email flow and the Mint-API emit the byte-for-byte
  * same signed GET URL: the inert confirmation page. Only the POST consume route
  * mutates state, so this URL is safe for link-following scanners and prefetch.
  *

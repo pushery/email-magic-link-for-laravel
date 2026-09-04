@@ -11,6 +11,7 @@ use EmailMagicLink\Support\ClaimFailure;
 use EmailMagicLink\Support\InvitationClaimResult;
 use EmailMagicLink\Support\IssuedInvitationToken;
 use EmailMagicLink\Support\MagicLinkConfig;
+use EmailMagicLink\Support\NormalizedEmail;
 use EmailMagicLink\Support\TokenHasher;
 use Illuminate\Contracts\Database\Query\Builder;
 use Illuminate\Database\Connection;
@@ -52,8 +53,8 @@ final readonly class DefaultInvitationStore implements InvitationStore
             //
             // Revoking first and inserting after is the obvious order and the wrong one --
             // two concurrent invites would each revoke what they saw and then both insert,
-            // leaving two live links for one address. That is the failure the ticket calls
-            // out by name.
+            // leaving two live links for one address -- the race this ordering exists to
+            // prevent.
             //
             // Already ACCEPTED rows are left alone: they are a record of something that
             // happened, not an open door.
@@ -74,7 +75,11 @@ final readonly class DefaultInvitationStore implements InvitationStore
         $now = Carbon::now();
         $hash = $this->hasher->hash($token);
 
+        // Pinned to the write connection, like every other read of a row the previous
+        // request may just have written: on a lagging replica the acceptance page
+        // otherwise refuses a fresh, valid invitation.
         $live = Invitation::query()
+            ->useWritePdo()
             ->where('token_hash', $hash)
             ->whereNull('accepted_at')
             ->whereNull('revoked_at')
@@ -119,25 +124,34 @@ final readonly class DefaultInvitationStore implements InvitationStore
         $now = Carbon::now();
         $retainUntil = $now->copy()->subDays($this->config->invitationRetainAcceptedDays());
 
-        $deleted = Invitation::query()
-            ->where(function (Builder $query) use ($now): void {
-                // Never accepted and past its lifetime: nothing to learn from it.
-                $query->where('expires_at', '<=', $now)
-                    ->whereNull('accepted_at')
-                    ->whereNull('revoked_at');
-            })
-            ->orWhere(function (Builder $query) use ($retainUntil): void {
-                // Settled rows carry the invited address in the clear, so they are kept
-                // only as long as the configured retention window -- an audit decision,
-                // which is why it is a config key rather than a constant.
-                $query->whereNotNull('accepted_at')->where('accepted_at', '<=', $retainUntil);
-            })
-            ->orWhere(function (Builder $query) use ($retainUntil): void {
-                $query->whereNotNull('revoked_at')->where('revoked_at', '<=', $retainUntil);
-            })
-            ->delete();
+        $chunk = $this->config->pruneChunk();
+        $deleted = 0;
 
-        return is_int($deleted) ? $deleted : 0;
+        // Chunked for the same reason as the sign-in store's purge: bounded lock time.
+        do {
+            $removed = Invitation::query()
+                ->where(function (Builder $query) use ($now): void {
+                    // Never accepted and past its lifetime: nothing to learn from it.
+                    $query->where('expires_at', '<=', $now)
+                        ->whereNull('accepted_at')
+                        ->whereNull('revoked_at');
+                })
+                ->orWhere(function (Builder $query) use ($retainUntil): void {
+                    // Settled rows carry the invited address in the clear, so they are kept
+                    // only as long as the configured retention window -- an audit decision,
+                    // which is why it is a config key rather than a constant.
+                    $query->whereNotNull('accepted_at')->where('accepted_at', '<=', $retainUntil);
+                })
+                ->orWhere(function (Builder $query) use ($retainUntil): void {
+                    $query->whereNotNull('revoked_at')->where('revoked_at', '<=', $retainUntil);
+                })
+                ->limit($chunk)
+                ->delete();
+            $removed = is_int($removed) ? $removed : 0;
+            $deleted += $removed;
+        } while ($removed === $chunk);
+
+        return $deleted;
     }
 
     /**
@@ -153,7 +167,10 @@ final readonly class DefaultInvitationStore implements InvitationStore
     {
         $connection = $this->connection();
 
-        $sql = 'update email_magic_link_invitations set accepted_at = ?, updated_at = ? '
+        // Same reason as the sign-in store: the prefix lives on the connection, not in a literal.
+        $table = $connection->getQueryGrammar()->wrapTable((new Invitation)->getTable());
+
+        $sql = "update {$table} set accepted_at = ?, updated_at = ? "
             .'where token_hash = ? and accepted_at is null and revoked_at is null and expires_at > ?';
         $bindings = [$now, $now, $hash, $now];
 
@@ -193,18 +210,22 @@ final readonly class DefaultInvitationStore implements InvitationStore
 
     /**
      * Why a claim or a peek found nothing. Reuses the sign-in failure enum: an
-     * invitation fails for the same three reasons a link does.
+     * invitation fails for the same three reasons a link does, plus revocation.
      */
     private function classify(string $hash, CarbonInterface $now): ClaimFailure
     {
-        $record = Invitation::query()->where('token_hash', $hash)->first();
+        $record = Invitation::query()->useWritePdo()->where('token_hash', $hash)->first();
 
         if (! $record instanceof Invitation) {
             return ClaimFailure::NotFound;
         }
 
-        if ($record->isAccepted() || $record->isRevoked()) {
+        if ($record->isAccepted()) {
             return ClaimFailure::AlreadyConsumed;
+        }
+
+        if ($record->isRevoked()) {
+            return ClaimFailure::Revoked;
         }
 
         return $record->isExpired($now) ? ClaimFailure::Expired : ClaimFailure::NotFound;
@@ -216,7 +237,7 @@ final readonly class DefaultInvitationStore implements InvitationStore
      */
     private function normalize(string $email): string
     {
-        return mb_strtolower(trim($email));
+        return NormalizedEmail::from($email);
     }
 
     /**

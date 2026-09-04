@@ -21,8 +21,10 @@ final readonly class ShowCodeFormController
 
     public function __invoke(Request $request): View
     {
-        $email = $request->query('email');
-        $guard = $request->query('guard');
+        // Flashed by the request endpoint (and by a refused code) -- the address is
+        // never read from the query string, so it never has to be put there.
+        $email = $request->old('email');
+        $guard = $request->old('guard');
 
         return $this->views->make($this->config->view('code'), [
             'email' => is_string($email) ? $email : '',

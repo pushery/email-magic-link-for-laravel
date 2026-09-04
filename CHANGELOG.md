@@ -4,6 +4,251 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.24.0] - 2026-09-04
+
+### Added
+
+- **`email-magic-link:doctor` reports where the host of an emailed link comes from.** Laravel
+  builds every URL from a forced origin when one is set and from the request's `Host` header
+  otherwise, and on a server that answers any host a forged header lands in the email. The
+  command names which of the three the application is on: a forced origin, hosts restricted by
+  the `TrustHosts` middleware, or the request as it came in -- and only the last needs
+  attention. The security model page explains the two remedies.
+
+- **Every response on the package's routes carries `X-Robots-Tag: noindex, nofollow`.** The
+  bundled layouts have said so in a meta tag all along, but the host's invitation acceptance
+  view, a host-supplied invalid view, a custom responder and the countdown script never render
+  those layouts. The header covers what the body cannot, and it is attached outside the
+  `routes.middleware` key so an override cannot drop it.
+
+- **`MagicLinkRequestRefused` fires when the request endpoint refuses to issue anything:**
+  the captcha failed, or the resend guard held the address back (cooldown or rolling cap,
+  with the decision that says how long). The consume side always reported its failures
+  through `MagicLinkConsumptionFailed`; the request side had no counterpart, so a flood
+  against the request form — unknown addresses included — was invisible to a host's
+  alerting. The response stays generic. The framework's own `throttle:` limiter answers
+  429 before the controller runs and carries no event; the events page says what to
+  listen to for that one.
+
+- **`php artisan about` shows an `Email Magic Link` section:** whether the package is
+  enabled, the delivery mode, the state of the Fortify bridge and whether invitations are on.
+  Registered before the master switch, so a disabled package shows as disabled rather than
+  not at all.
+
+### Changed
+
+- **An invalid or expired link rendered as a view now answers with `abort_status` (403 by
+  default) instead of 200.** Every other strategy already answered with an error status; the
+  `view` strategy alone rendered the refusal as a success, which a link checker, an HTTP cache
+  and a crawler all read as one -- on the invitation page, at a URL that carries the token.
+  The same key governs both the `abort` and the `view` strategy now.
+
+- **The page title separator is `»` rather than `·`**, so the sign-in tab reads like the rest
+  of an application that follows the same convention: `Sign in » Acme`.
+
+- **On the code screen a wrong code is reported on the code field.** The generic failure was
+  keyed on `email` for every form, so the code screen marked the (correct, prefilled) email
+  address as invalid and left the code boxes untouched; screen readers were told the wrong
+  field was wrong. The response stays byte-identical for an unknown address and a wrong code.
+
+- **The purge deletes in chunks (`prune.chunk`, 1000 rows by default), and the command is
+  `Isolatable`.** One unbounded `DELETE` over months of rows held every row lock until commit
+  and stalled the sign-ins running beside it; `--isolated` now refuses a second copy while
+  one runs, for hosts that schedule the command themselves. The self-registered schedule
+  entry carries a name and a description, so `schedule:list` reads.
+
+- **The token models hide their hashes when serialized.** `passphrase_hash` is a bcrypt of a
+  human-chosen secret, and the models are exposed on public value objects.
+
+- **The package requires `laravel/framework ^13.23`.** The previous floor, `^13.0`, was a
+  promise no test could keep: the development toolchain cannot install anything below
+  13.23, so versions 13.0 to 13.22 were declared and never exercised. The new floor is the
+  lowest version the suite actually runs on.
+
+- **A click on a revoked or superseded invitation is reported as `ClaimFailure::Revoked`, not as
+  `AlreadyConsumed`.** The two were folded together, so a host alerting on "somebody used a
+  link an administrator withdrew" -- the one refusal that is a signal rather than noise --
+  could not tell it from a re-click on an accepted one. The visitor still sees the generic
+  refusal. A `match` over `ClaimFailure` without a default arm now has one more case to name.
+
+- **After requesting a code, the address reaches the code screen through the session, not
+  the query string.** `/magic-link/code?email=…` put every address into access logs, proxy
+  logs, browser history and the `Referer` of every asset the screen loads; the retry path
+  already avoided that. The code form no longer reads `?email=` at all, so a crafted link
+  cannot prefill a stranger's address either.
+
+### Fixed
+
+- **A table prefix on the database connection broke every claim.** The migrations, the
+  models and the query builder all honor a connection's `prefix`, so on a prefixed
+  connection the tables were created and written as `app_magic_link_tokens`. The one
+  statement that spends a link, a code or an invitation spelled the table name as a
+  literal in raw SQL and ran against a table that did not exist: links and codes were sent,
+  and every click and every code entry ended in a database error. The table name is now
+  built through the connection's grammar, prefix and quoting included.
+
+- **Building a link for another host erased the origin and scheme the application had
+  forced.** `issueLink()` and `invite()` accept a `baseUrl` for a tenant domain. To sign
+  against it, the generator forced that origin on the application's shared URL generator
+  and then "restored" it by forcing null -- which is a reset, not a restore. An application
+  that forces `https` behind a TLS-terminating proxy, or pins its origin, lost both the
+  moment one tenant link was minted, and every URL generated afterwards in that process
+  came out against the raw request: `http://` on an https host, signed URLs that fail on
+  arrival, and under a queue worker or Octane for every later request too. Tenant links
+  are now signed on a generator of their own, and the shared one is never written to.
+
+- **The sign-in mail was rendered in the queue worker's language, not the requester's.** The
+  notification is queued, and a worker renders it later under its own locale unless the
+  request's travels with it; nothing set it. Every application that switches the locale per
+  request and runs a queue worker sent the magic-link and code mails in the default language
+  -- and a synchronous queue, the usual development setup, never showed it. The request's
+  locale is now carried on the notification, which is the first place the sender looks.
+
+- **Two pages ahead of a claim still read from the replica.** On a deployment with separate
+  read and write connections, the confirm page asks whether a link wants a passphrase and the
+  invitation page asks whether the invitation is live -- each in a request of its own, after
+  the one that wrote the row. Both lookups went to the read connection, so while the replica
+  lagged, a passphrase-gated link rendered without its passphrase field and then failed on
+  submit, and a fresh, valid invitation was refused. The earlier fix that pinned the claim
+  itself to the primary did not cover these two readers; they are pinned now.
+
+- **A user with two-factor authentication enabled could sign in with a magic link and no
+  second factor, on any application where Fortify's `confirm` option is off.** Fortify's
+  shipped configuration registers the feature without that option, and then its own verdict
+  for "has two-factor enabled" is a stored secret alone; `two_factor_confirmed_at` is never
+  written. The handoff re-derived the verdict from that column, so it challenged nobody on
+  those applications while Fortify's password login challenged everyone. The handoff now
+  asks Fortify's own `hasEnabledTwoFactorAuthentication()`, so the magic link challenges
+  exactly the users the password form challenges: with `confirm` on, a secret and a
+  confirmation, which still keeps a user mid-setup out of the challenge; with `confirm`
+  off, a secret alone.
+
+- **Publishing the migrations and running `migrate` failed on a fresh database.** The
+  published copies get a fresh date prefix, so by name they were four other migrations for
+  the same tables, and the bundled files were still loaded beside them: the first `CREATE`
+  succeeded and the second died with "table already exists", a message that names the table
+  and not the cause. Once a published `*_create_magic_link_tokens_table.php` exists the
+  package no longer loads its bundled copies. A host that renames the published file says so
+  with `EmailMagicLinkServiceProvider::ignoreMigrations()`, which the installer and the
+  documentation now name.
+
+- **The WireKit screens had no level-one heading.** The kit's heading component defaults to
+  level two, and the three views passed no level, so a person navigating by headings landed
+  on nothing at level one -- on the sign-in pages, where nobody knows the layout yet. The
+  plain Blade screens always had an `h1`; the WireKit ones now do too.
+
+- **The document's `lang` attribute named the requested locale even when the page spoke the
+  fallback language.** On a locale the package has no bundle for, the strings fall back to
+  English while `lang` still said, say, `ja`, which sends a screen reader to the wrong voice.
+  The attribute now names the language the page actually renders in.
+
+- **A refused sign-in no longer writes the passphrase, or the acceptance form's password
+  fields, into the session.** The redirect after a refusal flashes the input so the form can
+  re-prefill; it excluded the one-time code and kept everything else, so a wrong passphrase
+  and, on the invitation form, `password` and `password_confirmation` landed in the session
+  store in the clear. Only the email and the guard are flashed now, as an allowlist.
+- **An array where the passphrase should be is treated as no passphrase.** `passphrase[]=a`
+  used to be a server error before the claim ran.
+
+- **The plain Blade button was 4.2:1 on the browser's default accent color and the error
+  text 2.55:1 in the dark scheme.** The button now paints `CanvasText` on `Canvas` (21:1
+  light, 17:1 dark) and the error color switches with the scheme (8.1:1 on the dark canvas).
+- **Plain Blade errors are associated with their field.** The field carries `aria-invalid`
+  and `aria-describedby` pointing at the message, so a screen reader that lands in the
+  autofocused field after a failed submit hears why. The code field also gets a numeric
+  keyboard for a digit-only alphabet, and capitals without spell-check for a letter one.
+- **The resend hold-back is one message, not two, and the button stays reachable.** The
+  request form showed a static "Please wait 30 seconds" beside a timer counting down, and
+  the static copy outlived the timer. Only the countdown renders now, inside the form and
+  before the button; the button is `aria-disabled` with the countdown as its description
+  rather than removed from the tab order, and it is released when the wait ends.
+
+- **The delivery-channel choice survives a failed submit.** A person who picked the one-time
+  code, mistyped the address and corrected it received a magic link: the radios never read
+  the previous choice back. Both render paths keep it now.
+- **The WireKit layout no longer overrides the kit's `color-scheme`.** WireKit declares its
+  own since 2.29.0; the layout's `light dark` won and painted native widgets dark on a page
+  whose tokens stayed light.
+
+- **`invalid_response.abort_status` is bounded to an error status.** A value outside 400
+  to 599 falls back to 403; before, 200 made the refusal a success and 0 or 999 a server
+  error the moment it was rendered.
+- **`link_ttl` and `code_ttl` follow the same integer rule as `ttl`.** A float was truncated
+  by the one and rejected by the other; both now accept an integer or a numeric string and
+  nothing else.
+- **`fortify.mode` accepts every boolean spelling the other switches accept.** `0`, `off`
+  and `no` disable the bridge; they used to leave it in `auto`, the one value the setting was
+  written to leave.
+
+- **A link or code whose guard has since been removed from `guards` no longer signs in.** The
+  guard was validated only when the token was issued, so an operator closing magic-link
+  sign-in on a guard still had every outstanding link honored for its lifetime.
+
+- **The regional bundles answer to the ISO 15897 spelling too.** Laravel's documentation
+  prescribes `pt_BR`, `pt_PT`, `en_GB` and `en_US`; the package shipped the hyphenated
+  directories only, and an application on the documented spelling silently fell back to
+  its fallback locale. Both spellings resolve now.
+
+- **A cache store that cannot hand out the resend lock in time now holds the request back
+  instead of answering with a server error.** The guard's lock timeout was never handled, so
+  a stalled Redis or a database under contention turned the request endpoint into a 500.
+
+- **The plain Blade passphrase field was unstyled** — the browser default, 153×21 px at
+  13 px, beside a 16 px email field, and small enough that iOS zooms on focus. It now
+  shares the input rule. On touch pointers the plain screens gain the same 44 px floors
+  the WireKit path has (inputs, button, radio rows), the sign-in link on the invalid page
+  is a button rather than an 18 px text link, and both layouts size the body with `dvh`
+  so iOS Safari centers the card in the visible viewport.
+
+- **`RateLimits::define()` registers the named limiters on the container's `RateLimiter`, not
+  on the facade's cached copy.** The documented repair for a per-tenant cache swap --
+  `forgetInstance()` then `define()` -- only worked when the host also cleared the facade,
+  which nothing said. Without that, the limiters landed on the discarded object while the
+  throttle middleware received the new, empty one, and every throttled route answered
+  `500 Rate limiter [email-magic-link:request] is not defined.`
+
+- **Every address is normalized the same way, and the normalization strips what `trim()`
+  leaves in place.** Lookups, limiter keys and resend keys all lowercased and trimmed by hand
+  in five places; they now share one helper built on `Str::trim()`, so a pasted address
+  carrying a no-break space, a zero-width space or a byte-order mark keys the same bucket
+  as the address typed by hand.
+
+- **A link token that matches nothing costs one statement, not three.** The claim ran its
+  atomic `UPDATE` and a third `SELECT` for a hash the first `SELECT` had already proved
+  absent -- the path every scanner takes.
+
+- **`InvitationAccepted` implements `ShouldDispatchAfterCommit`.** Its docblock promised
+  "after the transaction commits", and the dispatch site kept that promise for the package's
+  own transaction only; under a transaction the host opened around the request -- a
+  transactional middleware, a test -- listeners ran before the commit. The interface makes the
+  promise hold in both cases and costs nothing when no transaction is open.
+
+- **The sign-in mail greets and signs off from the package's own catalog** (`mail_greeting`,
+  `mail_salutation`, shipped in every bundled locale). The frame around the body -- `Hello!`,
+  `Regards,` -- came from the host's JSON catalog, which most non-English hosts never
+  translated, so a German body sat between English lines in a document that declared itself
+  German.
+
+### Documentation
+
+- The translations page said WireKit ships only German and used French as its example of a
+  locale to copy the English catalog for; WireKit has shipped French, Spanish, Italian, Dutch
+  and Portuguese since 2.27.0, and following the page overwrote them with English. The page now
+  lists the shipped set and uses a locale neither package ships as its example.
+- The response strategies for an invalid link carry their HTTP status in the configuration
+  guide, and the security model page explains where the host in an emailed link comes from.
+
+- The Boost skill now covers invitations, the multi-tenancy limiter re-definition and the
+  countdown route; the route tables list the countdown script; the contract reference has
+  the three invitation contracts and says how the shipped lookup compares addresses; the
+  configuration reference has an Invitations section and the deep-merge rule is on the
+  configuration guide; the events page's example runs as pasted and warns against logging a
+  request URL that is a token; the token-cleanup and multi-tenancy guides say what the
+  scheduled purge cannot do under tenancy and how to give it a heartbeat; the WireKit page
+  names Livewire's CSP build as the lever; the resend-guard page says the state is a cache
+  entry; the landing page states the browser support; CONTRIBUTING names Pest 5, the MySQL
+  suite and what CI really runs; and the changelog carries compare links for every version.
+
 ## [0.23.0] - 2026-08-27
 
 ### Added
@@ -225,17 +470,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 
 - **Development only — nothing changes for an application that installs this package.**
-  The `test:coverage`, `mutate` and `mutate:detect` composer scripts now run through
-  `@php -d pcov.directory=.`.
-
-  pcov collects coverage only within its own directory scope, and with that scope unset it
-  reaches neither `config/` nor `database/`. Both therefore reported 0.0% while the suite
-  had been widened to certify everything the package ships; with the scope set they report
-  100%. The two halves only work together, which is why the scripts moved with it.
-
-  These scripts are run by this package's own contributors, never by the applications that
-  require it, so upgrading from 0.20.1 is a no-op at runtime. Everything else on this
-  release line is tests, continuous-integration lanes and tooling, none of which ship.
+  The `test:coverage`, `mutate` and `mutate:detect` composer scripts now pass
+  `-d pcov.directory=.`, so `config/` and `database/` are measured when contributors run them.
 
 ## [0.20.1] - 2026-08-04
 
@@ -350,7 +586,7 @@ public repository sees the difference.
   8.1, which requires it. `CONTRIBUTING.md` says so, and names the confusing symptom: on
   exactly 8.4.0 `composer install` fails citing `symfony/process`, never Pest.
 - `composer.json` gains a `test:evals` script and drops the finite `process-timeout` in
-  favour of `0`. Both are development-side only; no runtime dependency, autoload entry or
+  favor of `0`. Both are development-side only; no runtime dependency, autoload entry or
   published default moved.
 
 ## [0.19.0] - 2026-07-26
@@ -815,3 +1051,39 @@ public repository sees the difference.
   observability events (`MagicLinkRequested`, `MagicLinkVerified`,
   `TwoFactorChallengeRequired`).
 - Publishable configuration, migration, and views.
+
+[Unreleased]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.24.0...HEAD
+[0.24.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.23.0...v0.24.0
+[0.23.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.22.0...v0.23.0
+[0.22.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.21.0...v0.22.0
+[0.21.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.20.2...v0.21.0
+[0.20.2]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.20.1...v0.20.2
+[0.20.1]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.20.0...v0.20.1
+[0.20.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.19.0...v0.20.0
+[0.19.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.18.0...v0.19.0
+[0.18.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.17.1...v0.18.0
+[0.17.1]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.17.0...v0.17.1
+[0.17.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.16.1...v0.17.0
+[0.16.1]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.16.0...v0.16.1
+[0.16.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.15.2...v0.16.0
+[0.15.2]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.15.1...v0.15.2
+[0.15.1]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.15.0...v0.15.1
+[0.15.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.14.0...v0.15.0
+[0.14.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.13.3...v0.14.0
+[0.13.3]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.13.2...v0.13.3
+[0.13.2]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.13.1...v0.13.2
+[0.13.1]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.13.0...v0.13.1
+[0.13.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.12.0...v0.13.0
+[0.12.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.11.0...v0.12.0
+[0.11.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.10.0...v0.11.0
+[0.10.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.9.0...v0.10.0
+[0.9.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.8.0...v0.9.0
+[0.8.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.7.0...v0.8.0
+[0.7.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.6.0...v0.7.0
+[0.6.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.5.0...v0.6.0
+[0.5.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.4.0...v0.5.0
+[0.4.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.3.1...v0.4.0
+[0.3.1]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.3.0...v0.3.1
+[0.3.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.1.1...v0.2.0
+[0.1.1]: https://github.com/pushery/email-magic-link-for-laravel/releases/tag/v0.1.1

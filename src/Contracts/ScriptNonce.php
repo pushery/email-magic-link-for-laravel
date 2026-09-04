@@ -15,8 +15,10 @@ namespace EmailMagicLink\Contracts;
  * click too early. The apps most likely to run a strict CSP are exactly the ones
  * that care about the rest of this package.
  *
- * The default implementation detects the fleet-standard `csp_nonce()` helper, so
- * spatie/laravel-csp works with no configuration. Point `ui.script_nonce` at your
+ * The default implementation reads the `csp-nonce` container binding spatie/laravel-csp
+ * registers and falls back to a global `csp_nonce()` for hosts that define one, so
+ * spatie/laravel-csp works with no configuration; see `AutoScriptNonce`. Point
+ * `ui.script_nonce` at your
  * own implementation when the nonce lives somewhere else — a request attribute, a
  * middleware-set container binding, your own helper.
  *

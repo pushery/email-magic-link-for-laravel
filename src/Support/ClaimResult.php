@@ -33,8 +33,8 @@ final readonly class ClaimResult
      * The constructor is private and there are exactly two ways in, so `successful` and
      * `token` are two views of one fact: success always carries a token, failure never
      * does and always carries a reason. Callers could not express that, and so wrote it
-     * out again as a second check on every branch -- a condition no input can reach, which
-     * is exactly the shape that leaves a mutant alive with no test able to kill it.
+     * out again as a second check on every branch -- a condition no input can reach and
+     * no test can exercise.
      *
      * @phpstan-assert-if-true !null $this->token
      *

@@ -56,9 +56,11 @@ final class InstallCommand extends Command
         $this->line('     does not know about yet:');
         $this->line('       php artisan email-magic-link:doctor');
         $this->newLine();
-        $this->line('The migration is loaded automatically; publish it with');
+        $this->line('The migrations are loaded automatically; publish them with');
         $this->line('  php artisan vendor:publish --tag=email-magic-link-migrations');
-        $this->line('only if you need to customize it.');
+        $this->line('only if you need to customize them. Once a published copy exists the bundled');
+        $this->line('files are no longer loaded, so nothing runs twice. If you rename the copy, call');
+        $this->line('EmailMagicLinkServiceProvider::ignoreMigrations() in a service provider.');
 
         return self::SUCCESS;
     }

@@ -24,7 +24,7 @@ use Symfony\Component\HttpFoundation\Response;
  * link-following scanner or a browser prefetch cannot burn the invitation before the
  * invited person ever sees it. Only the POST spends it.
  *
- * The order of the three steps is the ticket's fourth promise made structural. The
+ * The order of the three steps is a structural guarantee rather than a convention. The
  * refusal happens BEFORE the host's view is rendered, so a dead invitation can never
  * reach a screen that asks for a password -- and it is a promise rather than consumer
  * discipline only because this package owns the GET.

@@ -55,7 +55,7 @@ class MagicLinkNotification extends Notification implements ShouldQueue
             ->greeting(__('email-magic-link::messages.mail_greeting'))
             ->line(__('email-magic-link::messages.mail_link_intro', ['app' => $application]))
             ->action(__('email-magic-link::messages.mail_link_action'), (string) $this->actionUrl)
-            ->line(__('email-magic-link::messages.mail_link_expiry', ['minutes' => $this->expiresInMinutes]))
+            ->line(trans_choice('email-magic-link::messages.mail_link_expiry', $this->expiresInMinutes, ['minutes' => $this->expiresInMinutes]))
             ->line(__('email-magic-link::messages.mail_ignore'))
             ->salutation(__('email-magic-link::messages.mail_salutation', ['app' => $application]));
     }
@@ -67,7 +67,7 @@ class MagicLinkNotification extends Notification implements ShouldQueue
             ->greeting(__('email-magic-link::messages.mail_greeting'))
             ->line(__('email-magic-link::messages.mail_code_intro', ['app' => $application]))
             ->line((string) $this->code)
-            ->line(__('email-magic-link::messages.mail_code_expiry', ['minutes' => $this->expiresInMinutes]))
+            ->line(trans_choice('email-magic-link::messages.mail_code_expiry', $this->expiresInMinutes, ['minutes' => $this->expiresInMinutes]))
             ->line(__('email-magic-link::messages.mail_ignore'))
             ->salutation(__('email-magic-link::messages.mail_salutation', ['app' => $application]));
     }

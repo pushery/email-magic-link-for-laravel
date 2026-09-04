@@ -67,7 +67,10 @@ final readonly class ShowInvitationController
 
         return $this->views->make($view, [
             'token' => $token,
-            'action' => route('email-magic-link.invitation.accept', ['token' => $token]),
+            // The URL this request arrived at, signature and all: the accept POST shares
+            // this URI and re-checks that signature, so spending the invitation is bound
+            // to the host it was minted for.
+            'action' => $request->fullUrl(),
             'email' => $result->invitation->email,
             'context' => $result->invitation->context,
             'expiresAt' => $result->invitation->expires_at,

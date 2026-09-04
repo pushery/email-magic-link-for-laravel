@@ -40,19 +40,19 @@ return [
     'consume_failed' => 'Cette demande de connexion est invalide ou a expiré. Veuillez en demander une nouvelle.',
     'invitation_failed' => 'Cette invitation n\'est pas valide ou a expiré. Demandez-en une nouvelle à la personne qui vous a invité.',
     'captcha_failed' => 'La vérification a échoué. Veuillez réessayer.',
-    'resend_throttled' => 'Veuillez patienter :seconds secondes avant de demander un nouvel e-mail de connexion.',
+    'resend_throttled' => '[0,1] Veuillez patienter :seconds seconde avant de demander un nouvel e-mail de connexion.|[2,*] Veuillez patienter :seconds secondes avant de demander un nouvel e-mail de connexion.',
     'resend_countdown_label' => 'Temps d’attente avant de pouvoir demander un nouvel e-mail',
 
     // Notification — magic link.
     'mail_link_subject' => 'Connexion à :app',
     'mail_link_intro' => 'Utilisez le bouton ci-dessous pour vous connecter à :app.',
     'mail_link_action' => 'Se connecter',
-    'mail_link_expiry' => 'Ce lien expire dans :minutes minutes et ne peut être utilisé qu’une seule fois.',
+    'mail_link_expiry' => '[0,1] Ce lien expire dans :minutes minute et ne peut être utilisé qu’une seule fois.|[2,*] Ce lien expire dans :minutes minutes et ne peut être utilisé qu’une seule fois.',
 
     // Notification — one-time code.
     'mail_code_subject' => 'Votre code de connexion :app',
     'mail_code_intro' => 'Votre code de connexion pour :app est :',
-    'mail_code_expiry' => 'Ce code expire dans :minutes minutes.',
+    'mail_code_expiry' => '[0,1] Ce code expire dans :minutes minute.|[2,*] Ce code expire dans :minutes minutes.',
 
     // Notification — shared.
     'mail_greeting' => 'Bonjour !',

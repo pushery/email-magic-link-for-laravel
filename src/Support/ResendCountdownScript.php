@@ -43,7 +43,11 @@ final class ResendCountdownScript
 
             var form = (el.closest('main') || document).querySelector('form');
             var button = form ? form.querySelector('button[type="submit"], button:not([type])') : null;
-            var template = el.getAttribute('data-template') || '';
+            // Two templates, not one: the countdown passes THROUGH one on its way down,
+            // and a baked-in plural would read "1 seconds" for a whole second in every
+            // language. The server renders both forms; this picks between them.
+            var one = el.getAttribute('data-template-one') || '';
+            var other = el.getAttribute('data-template-other') || '';
             var remaining = parseInt(el.getAttribute('data-seconds'), 10) || 0;
 
             // aria-disabled, not disabled: the button stays in the tab order and announces
@@ -68,7 +72,7 @@ final class ResendCountdownScript
                     return;
                 }
 
-                el.textContent = template.replace('__seconds__', remaining);
+                el.textContent = (remaining === 1 ? one : other).replace('__seconds__', remaining);
                 remaining -= 1;
                 window.setTimeout(tick, 1000);
             })();

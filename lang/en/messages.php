@@ -40,19 +40,19 @@ return [
     'consume_failed' => 'This sign-in request is invalid or has expired. Please request a new one.',
     'invitation_failed' => 'This invitation is invalid or has expired. Ask whoever invited you for a new one.',
     'captcha_failed' => 'The verification challenge failed. Please try again.',
-    'resend_throttled' => 'Please wait :seconds seconds before requesting another sign-in email.',
+    'resend_throttled' => '{1} Please wait :seconds second before requesting another sign-in email.|[0,*] Please wait :seconds seconds before requesting another sign-in email.',
     'resend_countdown_label' => 'Wait time before you can request another email',
 
     // Notification — magic link.
     'mail_link_subject' => 'Sign in to :app',
     'mail_link_intro' => 'Use the button below to sign in to :app.',
     'mail_link_action' => 'Sign in',
-    'mail_link_expiry' => 'This link expires in :minutes minutes and can be used once.',
+    'mail_link_expiry' => '{1} This link expires in :minutes minute and can be used once.|[0,*] This link expires in :minutes minutes and can be used once.',
 
     // Notification — one-time code.
     'mail_code_subject' => 'Your :app sign-in code',
     'mail_code_intro' => 'Your sign-in code for :app is:',
-    'mail_code_expiry' => 'This code expires in :minutes minutes.',
+    'mail_code_expiry' => '{1} This code expires in :minutes minute.|[0,*] This code expires in :minutes minutes.',
 
     // Notification — shared.
     'mail_greeting' => 'Hello!',

@@ -40,8 +40,14 @@ Route::get('magic-link/verify/{token}', ConfirmMagicLinkController::class)
     ->middleware('signed')
     ->name('email-magic-link.confirm');
 
+// The POST is signed too, and that is the arm that matters. The token is the whole
+// credential, so a consume step that accepts a bare token undoes what signing the GET
+// bought: an application that answers a forged `Host` mails a link pointing at the
+// attacker, the victim opens it, and the attacker replays the bare token here. Both
+// routes share this URI, so the signature the GET arrived with verifies the POST
+// unchanged -- the confirmation form simply posts back to the URL it was reached at.
 Route::post('magic-link/verify/{token}', ConsumeMagicLinkController::class)
-    ->middleware("throttle:{$consumeLimiter}")
+    ->middleware(["throttle:{$consumeLimiter}", 'signed'])
     ->name('email-magic-link.consume');
 
 Route::get('magic-link/code', ShowCodeFormController::class)

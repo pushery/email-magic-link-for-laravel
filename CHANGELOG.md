@@ -4,6 +4,89 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.25.0] - 2026-09-04
+
+### Added
+
+- **A migration that indexes the columns the purge filters on.** Both purges are a
+  disjunction, and PostgreSQL will only reach for an index on one when every arm is
+  covered. The `expires_at` index alone left the other arms bare, so the purge always
+  planned a full scan. Measured on PostgreSQL 18 over 200,000 rows: with a small slice of
+  the table expiring — a seven-day invitation lifetime and a daily purge — the plan drops
+  from a sequential scan at 35.8 ms to a bitmap scan over both indexes at 0.62 ms. With
+  almost everything expiring, which is what fifteen-minute sign-in links produce, the
+  planner ignores the indexes and is right to.
+
+  It runs by itself if you use the bundled migrations. If you published them, publish
+  again to pick this one up. The invitations table is optional and the migration skips it
+  when it isn't there.
+
+### Fixed
+
+- **Durations read correctly at one: "Please wait 1 second", not "1 seconds".** The resend
+  wait and the two expiry lines in the sign-in mail interpolated a number into a fixed
+  plural, in every bundled language. The countdown made it visible for a whole second on
+  its way down, every time somebody hit the resend hold-back.
+
+  The three strings are pipe-form now and go through `trans_choice`; the countdown's markup
+  carries both forms so the client tick chooses as it renders. French counts zero with the
+  singular and every other bundled language counts it with the plural, and the strings say
+  so rather than sharing one range that would be wrong somewhere.
+
+  A published copy of the language files keeps working: a string with no pipe in it is
+  returned as-is, so nothing breaks before you adopt the new wording.
+
+- **Rotating `APP_KEY` no longer invalidates links and invitations that are already out.**
+  Laravel supports retiring a key gently: the new one signs, the ones listed in
+  `app.previous_keys` still verify. This package honored that list for its link signatures
+  and not for its token hashes — and the hash is what finds the row. A fifteen-minute
+  sign-in link barely noticed. An invitation lives seven days by default, so a rotation
+  silently killed every open one, each answered with the same generic refusal an unknown
+  token gets, with nothing to tell the operator or the invited person why.
+
+  Retired keys are now tried when looking a token up. They are never used to write one, so
+  rows created after a rotation depend on the new key alone and dropping the old key from
+  the list is what finally retires it. An application with no `previous_keys` — nearly all
+  of them — behaves exactly as before and pays for no extra query.
+
+- **Two invitations issued for one address at the same moment could both stay live on
+  PostgreSQL, and so could two sign-in codes for one user.** Issuing supersedes: one live
+  invitation per address and guard, one live code per user and guard. Both were written as
+  an insert and a supersede, in the order that is safe on MySQL — the second writer waits on
+  the first writer's uncommitted row. PostgreSQL gives no such wait. Under its default
+  isolation the second writer simply cannot see the first writer's uncommitted row and has
+  nothing to block on, so it supersedes nothing and both survive. The address is then holding
+  two working credentials where the package promises one, and revoking by reissuing does not
+  revoke.
+
+  Issuing is now serialized per address (or user) and guard with a short cache lock, which
+  works the same on every engine. It is the same mechanism the resend guard already uses, so
+  the requirement is not new: the cache store must support atomic locks, as it already had to
+  for resend throttling. Links are unaffected and take no lock — several live links for one
+  user are allowed by design, so there is nothing to serialize.
+
+### Changed
+
+- **Redeeming a magic link or an invitation now requires the signature the emailed link
+  carries.** The `POST` that consumes a token and the `POST` that accepts an invitation
+  verify the same signature as the `GET` that leads to them; both share a URI, so the
+  confirmation page simply posts back to the URL it was reached at. Until now the signature
+  bound only the page you looked at, while the step that actually spent the credential
+  accepted a bare token from anywhere.
+
+  It matters on a deployment whose web server answers any host. A request carrying a forged
+  `Host` header makes the application mail a link pointing at the attacker; the victim opens
+  it, and the attacker reads the token out of the path. The `GET` was already refused at the
+  real application, because the signature named the forged host — but the `POST` was not
+  asked, so the bare token signed the attacker in as the victim. Now it is refused there too.
+
+  **If you publish the views, render `$action` as the package hands it to you.** A form that
+  rebuilds its target with `route('email-magic-link.consume', ['token' => $token])` drops the
+  signature and the request is answered with 403. The same applies to anything that posts the
+  flow programmatically: use the signed URL — `IssuedLink::$url` when you mint links yourself
+  — instead of assembling one from the bare token. Nothing else changes, and an application
+  using the bundled views needs no edit at all.
+
 ## [0.24.1] - 2026-09-04
 
 ### Fixed
@@ -1063,6 +1146,7 @@ public repository sees the difference.
 - Publishable configuration, migration, and views.
 
 [Unreleased]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.24.1...HEAD
+[0.25.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.24.1...v0.25.0
 [0.24.1]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.24.0...v0.24.1
 [0.24.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.23.0...v0.24.0
 [0.23.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.22.0...v0.23.0

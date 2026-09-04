@@ -40,19 +40,19 @@ return [
     'consume_failed' => 'Esta solicitud de acceso no es válida o ha caducado. Solicita una nueva.',
     'invitation_failed' => 'Esta invitación no es válida o ha caducado. Pide una nueva a quien te invitó.',
     'captcha_failed' => 'La verificación ha fallado. Inténtalo de nuevo.',
-    'resend_throttled' => 'Espera :seconds segundos antes de solicitar otro correo de acceso.',
+    'resend_throttled' => '{1} Espera :seconds segundo antes de solicitar otro correo de acceso.|[0,*] Espera :seconds segundos antes de solicitar otro correo de acceso.',
     'resend_countdown_label' => 'Tiempo de espera antes de poder solicitar otro correo',
 
     // Notification — magic link.
     'mail_link_subject' => 'Inicia sesión en :app',
     'mail_link_intro' => 'Usa el botón de abajo para iniciar sesión en :app.',
     'mail_link_action' => 'Iniciar sesión',
-    'mail_link_expiry' => 'Este enlace caduca en :minutes minutos y solo se puede usar una vez.',
+    'mail_link_expiry' => '{1} Este enlace caduca en :minutes minuto y solo se puede usar una vez.|[0,*] Este enlace caduca en :minutes minutos y solo se puede usar una vez.',
 
     // Notification — one-time code.
     'mail_code_subject' => 'Tu código de acceso de :app',
     'mail_code_intro' => 'Tu código de acceso para :app es:',
-    'mail_code_expiry' => 'Este código caduca en :minutes minutos.',
+    'mail_code_expiry' => '{1} Este código caduca en :minutes minuto.|[0,*] Este código caduca en :minutes minutos.',
 
     // Notification — shared.
     'mail_greeting' => '¡Hola!',

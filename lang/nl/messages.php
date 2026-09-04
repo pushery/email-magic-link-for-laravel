@@ -40,19 +40,19 @@ return [
     'consume_failed' => 'Deze inlogaanvraag is ongeldig of verlopen. Vraag een nieuwe aan.',
     'invitation_failed' => 'Deze uitnodiging is ongeldig of verlopen. Vraag degene die je uitnodigde om een nieuwe.',
     'captcha_failed' => 'De verificatie is mislukt. Probeer het opnieuw.',
-    'resend_throttled' => 'Wacht :seconds seconden voordat je een nieuwe inlogmail aanvraagt.',
+    'resend_throttled' => '{1} Wacht :seconds seconde voordat je een nieuwe inlogmail aanvraagt.|[0,*] Wacht :seconds seconden voordat je een nieuwe inlogmail aanvraagt.',
     'resend_countdown_label' => 'Wachttijd voordat je een nieuwe e-mail kunt aanvragen',
 
     // Notification — magic link.
     'mail_link_subject' => 'Inloggen bij :app',
     'mail_link_intro' => 'Gebruik de knop hieronder om in te loggen bij :app.',
     'mail_link_action' => 'Inloggen',
-    'mail_link_expiry' => 'Deze link verloopt over :minutes minuten en kan maar één keer worden gebruikt.',
+    'mail_link_expiry' => '{1} Deze link verloopt over :minutes minuut en kan maar één keer worden gebruikt.|[0,*] Deze link verloopt over :minutes minuten en kan maar één keer worden gebruikt.',
 
     // Notification — one-time code.
     'mail_code_subject' => 'Je inlogcode voor :app',
     'mail_code_intro' => 'Je inlogcode voor :app is:',
-    'mail_code_expiry' => 'Deze code verloopt over :minutes minuten.',
+    'mail_code_expiry' => '{1} Deze code verloopt over :minutes minuut.|[0,*] Deze code verloopt over :minutes minuten.',
 
     // Notification — shared.
     'mail_greeting' => 'Hallo!',

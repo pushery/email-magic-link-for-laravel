@@ -35,8 +35,12 @@
         aria-label="{{ __('email-magic-link::messages.resend_countdown_label') }}"
         data-eml-resend
         data-seconds="{{ $resendSeconds }}"
-        data-template="{{ __('email-magic-link::messages.resend_throttled', ['seconds' => '__seconds__']) }}"
-    >{{ __('email-magic-link::messages.resend_throttled', ['seconds' => $resendSeconds]) }}</p>
+        {{-- Both forms, because the tick counts down THROUGH one: a single template
+             would have to bake a plural in and say "1 seconds" for a whole second, in
+             every language. The script picks by the number it is about to render. --}}
+        data-template-one="{{ trans_choice('email-magic-link::messages.resend_throttled', 1, ['seconds' => '__seconds__']) }}"
+        data-template-other="{{ trans_choice('email-magic-link::messages.resend_throttled', 2, ['seconds' => '__seconds__']) }}"
+    >{{ trans_choice('email-magic-link::messages.resend_throttled', $resendSeconds, ['seconds' => $resendSeconds]) }}</p>
 
     {{-- An expression rather than @if: a Blade conditional inside a tag leaves its
          whitespace behind, so the tag renders as `<script >`. The nonce is escaped

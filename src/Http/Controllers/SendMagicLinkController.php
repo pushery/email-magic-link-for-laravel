@@ -119,7 +119,9 @@ final class SendMagicLinkController
         }
 
         $seconds = $decision->retryAfterSeconds;
-        $message = __('email-magic-link::messages.resend_throttled', ['seconds' => $seconds]);
+        // trans_choice, not __(): the string is pipe-form so "1 second" reads correctly
+        // on the last second of the wait, in every bundled language.
+        $message = trans_choice('email-magic-link::messages.resend_throttled', $seconds, ['seconds' => $seconds]);
 
         if ($this->wantsJson($request)) {
             return $this->apiError($message, 'resend_throttled', 429)

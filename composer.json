@@ -22,7 +22,7 @@
     "require": {
         "php": "^8.4",
         "ext-json": "*",
-        "laravel/framework": "^13.0"
+        "laravel/framework": "^13.23"
     },
     "require-dev": {
         "cweagans/composer-patches": "^1.7",
@@ -37,7 +37,8 @@
         "pestphp/pest-plugin-evals": "^5.0",
         "pestphp/pest-plugin-laravel": "^5.0",
         "pestphp/pest-plugin-phpstan": "5.2.0",
-        "pestphp/pest-plugin-rector": "^5.0",
+        "phpstan/phpstan": "2.2.13",
+        "pestphp/pest-plugin-rector": "5.0.4",
         "pestphp/pest-plugin-type-coverage": "^5.0",
         "pushery/wirekit": "^2.26",
         "rector/rector": "2.6.3",

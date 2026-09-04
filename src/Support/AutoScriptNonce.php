@@ -19,8 +19,8 @@ use Throwable;
  * 2. A global `csp_nonce()` function, kept for hosts that define one themselves.
  *
  * The order is not arbitrary, and the second probe used to be the ONLY one. That was
- * wrong for every current consumer: `csp_nonce()` arrived in spatie/laravel-csp 2.10.3
- * and exists nowhere in 3.x — measured against the package's own metadata, where every
+ * wrong for every current consumer: `csp_nonce()` existed in spatie/laravel-csp from
+ * 1.2.0 through 2.10.3, the last 2.x release, and exists nowhere in 3.x — measured against the package's own metadata, where every
  * 3.x release publishes `autoload.psr-4` and no `autoload.files`, so it cannot register
  * a global function at all. `function_exists('csp_nonce')` was therefore false for every
  * v3 host, this class returned null, and the countdown script shipped with no nonce

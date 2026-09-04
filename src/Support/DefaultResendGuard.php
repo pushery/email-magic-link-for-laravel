@@ -7,6 +7,7 @@ namespace EmailMagicLink\Support;
 use EmailMagicLink\Contracts\ResendGuard;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Cache\LockProvider;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Support\Carbon;
 use RuntimeException;
@@ -57,10 +58,17 @@ final readonly class DefaultResendGuard implements ResendGuard
 
         $decision = ResendDecision::allowed();
 
-        $store->lock(self::LOCK_PREFIX.$this->digest($key), self::LOCK_SECONDS)
-            ->block(self::LOCK_SECONDS, function () use ($key, &$decision): void {
-                $decision = $this->evaluate($key, true);
-            });
+        try {
+            $store->lock(self::LOCK_PREFIX.$this->digest($key), self::LOCK_SECONDS)
+                ->block(self::LOCK_SECONDS, function () use ($key, &$decision): void {
+                    $decision = $this->evaluate($key, true);
+                });
+        } catch (LockTimeoutException) {
+            // A store that cannot hand out the lock in time is a store that cannot say
+            // whether the cap is reached. Fail closed with a short hold-back rather than
+            // let the exception become a 500 on the request endpoint.
+            return ResendDecision::denied(ResendDenialReason::Cooldown, self::LOCK_SECONDS);
+        }
 
         return $decision;
     }

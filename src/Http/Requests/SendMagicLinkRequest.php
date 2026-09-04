@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace EmailMagicLink\Http\Requests;
 
+use EmailMagicLink\Support\NormalizedEmail;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Override;
@@ -41,7 +42,7 @@ final class SendMagicLinkRequest extends FormRequest
         $email = $this->input('email');
 
         if (is_string($email)) {
-            $this->merge(['email' => mb_strtolower(trim($email))]);
+            $this->merge(['email' => NormalizedEmail::from($email)]);
         }
     }
 

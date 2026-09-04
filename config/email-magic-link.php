@@ -317,8 +317,9 @@ return [
     |   true    same, and warn at boot if Fortify is missing
     |   false   never activate, even when Fortify is installed
     |
-    | "respect_two_factor" governs whether a magic-link user with confirmed TOTP
-    | is routed through Fortify's challenge. Setting it false is a deliberate
+    | "respect_two_factor" governs whether a magic-link user with two-factor
+    | authentication enabled (by Fortify's own verdict) is routed through
+    | Fortify's challenge. Setting it false is a deliberate
     | security downgrade that disables 2FA for magic-link logins; it emits a
     | boot-time warning.
     |
@@ -354,8 +355,9 @@ return [
     | their sign-in. Its default is correspondingly higher: a page load is cheap and
     | a person may open the link more than once.
     |
-    | The three other GET routes carry no limiter at all: they are forms, they carry
-    | no credential, and they spend nothing.
+    | The other GET routes -- the two forms, the signed confirmation page and the
+    | static countdown script -- carry no limiter at all: none carries a credential,
+    | and none spends anything.
     |
     */
 
@@ -389,12 +391,33 @@ return [
     | atomic locks (the array, file, database, redis, and memcached stores all
     | do); leave "store" null to use the default cache store.
     |
+    | The state IS a cache entry: `cache:clear` resets every cooldown and every
+    | rolling window at once, and the array store holds it for one process only,
+    | so on that store the guard throttles nothing outside a test.
+    |
     | "enabled" turns off throttling on THIS package's request endpoint and
     | nothing else. Keys you own stay guarded — the switch is checked by the
     | endpoint, not by the guard, so disabling magic-link throttling can never
     | disarm your own flood protection.
     |
     */
+
+    'resend' => [
+        'enabled' => env('EMAIL_MAGIC_LINK_RESEND', true),
+
+        'cooldown' => [
+            'base' => 30,
+            'factor' => 2,
+            'max' => 900,
+        ],
+
+        'window' => [
+            'minutes' => 60,
+            'max_sends' => 5,
+        ],
+
+        'store' => null,
+    ],
 
     /*
     |--------------------------------------------------------------------------
@@ -414,11 +437,20 @@ return [
     | "frequency" accepts: hourly, daily, weekly, monthly. Anything else falls
     | back to daily rather than failing a boot over a typo in a cleanup cadence.
     |
+    | "chunk" is how many rows one DELETE removes. The purge loops until nothing is
+    | left, so the total is the same; what changes is how long any one statement
+    | holds its row locks against the sign-ins happening at the same time.
+    |
+    | Under multi-tenancy the scheduled entry runs on the central connection with no
+    | tenant context. Leave "schedule" off there and run the command through your
+    | tenancy runner instead; see "Running under multi-tenancy" in the documentation.
+    |
     */
 
     'prune' => [
         'schedule' => false,
         'frequency' => 'daily',
+        'chunk' => 1000,
     ],
 
     /*
@@ -463,23 +495,6 @@ return [
         'view' => null,
         'redirect_to' => '/',
         'retain_accepted_days' => 30,
-    ],
-
-    'resend' => [
-        'enabled' => env('EMAIL_MAGIC_LINK_RESEND', true),
-
-        'cooldown' => [
-            'base' => 30,
-            'factor' => 2,
-            'max' => 900,
-        ],
-
-        'window' => [
-            'minutes' => 60,
-            'max_sends' => 5,
-        ],
-
-        'store' => null,
     ],
 
 ];

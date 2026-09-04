@@ -18,6 +18,6 @@ final class ResendKey
 
     public static function forRequest(string $email): string
     {
-        return self::REQUEST_PREFIX.mb_strtolower(trim($email));
+        return self::REQUEST_PREFIX.NormalizedEmail::from($email);
     }
 }

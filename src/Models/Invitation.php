@@ -35,6 +35,11 @@ class Invitation extends Model
     /**
      * @var list<string>
      */
+    protected $hidden = ['token_hash'];
+
+    /**
+     * @var list<string>
+     */
     protected $fillable = [
         'email',
         'guard',

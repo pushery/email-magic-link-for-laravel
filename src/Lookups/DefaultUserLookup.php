@@ -12,7 +12,7 @@ use Illuminate\Contracts\Config\Repository;
 /**
  * Resolves a user through the guard's configured user provider.
  *
- * Uses retrieveByCredentials so the lookup honours the application's provider
+ * Uses retrieveByCredentials so the lookup honors the application's provider
  * (Eloquent or database), model, and connection. A miss returns null with the
  * same single-query shape as a hit, keeping the request endpoint
  * enumeration-resistant.

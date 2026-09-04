@@ -21,9 +21,13 @@ final class ConsumeMagicLinkController
 
     public function __invoke(Request $request, string $token, TokenStore $store): Response
     {
-        $passphrase = $request->string('passphrase')->toString();
+        // Read as raw input, not through string(): that helper casts, and an array
+        // value ("passphrase[]=a") was a 500 before the claim ran. Anything but a
+        // non-empty string is "no passphrase", which the claim then refuses.
+        $raw = $request->input('passphrase');
+        $passphrase = is_string($raw) && $raw !== '' ? $raw : null;
 
-        $result = $store->claimLink($token, $passphrase !== '' ? $passphrase : null);
+        $result = $store->claimLink($token, $passphrase);
         if (! $result->succeeded()) {
             return $this->failedConsumption($request, 'email-magic-link.request.form', $result->failure);
         }

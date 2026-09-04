@@ -46,14 +46,21 @@ final class ResendCountdownScript
             var template = el.getAttribute('data-template') || '';
             var remaining = parseInt(el.getAttribute('data-seconds'), 10) || 0;
 
+            // aria-disabled, not disabled: the button stays in the tab order and announces
+            // as dimmed, and aria-describedby on it names the countdown as the reason.
+            var block = function (e) { e.preventDefault(); };
+
             if (button) {
-                button.disabled = true;
+                button.setAttribute('aria-disabled', 'true');
+                form.addEventListener('submit', block);
             }
 
             (function tick() {
                 if (remaining <= 0) {
                     if (button) {
-                        button.disabled = false;
+                        button.removeAttribute('aria-disabled');
+                        button.removeAttribute('aria-describedby');
+                        form.removeEventListener('submit', block);
                     }
 
                     el.textContent = '';
@@ -82,7 +89,7 @@ final class ResendCountdownScript
      * holding the old one. Not a security boundary -- a cache key -- which is why a
      * truncated digest is enough.
      *
-     * Memoised because the input is a compile-time constant: the answer cannot change
+     * Memoized because the input is a compile-time constant: the answer cannot change
      * within a process, and this is called from a view.
      */
     public static function version(): string

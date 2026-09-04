@@ -9,6 +9,11 @@ use EmailMagicLink\Support\AutoScriptNonce;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Contracts\Http\Kernel as KernelContract;
+use Illuminate\Foundation\Http\Kernel as HttpKernel;
+use Illuminate\Http\Middleware\TrustHosts;
+use Illuminate\Routing\UrlGenerator;
+use ReflectionProperty;
 
 /**
  * Reports what a published config file does not know about.
@@ -44,6 +49,7 @@ final class DoctorCommand extends Command
             // Also on this path: a host with no published config has the same CSP
             // question, and this branch returns before the report below.
             $this->reportScriptNonce($config);
+            $this->reportLinkOrigin($app);
 
             return self::SUCCESS;
         }
@@ -89,6 +95,7 @@ final class DoctorCommand extends Command
         }
 
         $this->reportScriptNonce($config);
+        $this->reportLinkOrigin($app);
 
         // Reporting, never gating: this runs in a deploy pipeline and a drifted
         // config is a thing to read, not a thing to fail a release on. `unknown`
@@ -111,13 +118,78 @@ final class DoctorCommand extends Command
      * warning with it. This command is already the place someone reads when they
      * have a question.
      *
-     * ⚠️ It reports the SOURCE, not the value, and that is a correctness point
+     * It reports the SOURCE, not the value, and that is a correctness point
      * rather than caution. The nonce is scoped per request; a console command either
      * cannot resolve the binding at all or resolves one that no response will ever
      * carry. Printing it would show a value that is real and useless. Whether the
      * SOURCE exists is the same question in the console as in a request, so that is
      * what gets answered.
      */
+    /**
+     * Report WHERE the host of an emailed link comes from.
+     *
+     * Laravel builds every URL from a forced origin when one is set and from the
+     * request's Host header otherwise. Behind a catch-all virtual host that means a
+     * forged Host lands in the victim's email with a valid token in the path. The
+     * three answers are "forced", "restricted by TrustHosts" and "the request as it
+     * came in" -- and only the third needs the operator's attention.
+     */
+    private function reportLinkOrigin(Application $app): void
+    {
+        $this->newLine();
+
+        if ($this->originIsForced($app)) {
+            $this->line('Link origin forced by the application (URL::useOrigin), so a request cannot choose it.');
+
+            return;
+        }
+
+        if ($this->trustsHosts($app)) {
+            $this->line('Link origin the request host, restricted by the TrustHosts middleware.');
+
+            return;
+        }
+
+        $this->line('Link origin the request\'s Host header, unrestricted.');
+        $this->line('            The host in every emailed link is whatever the request that asked');
+        $this->line('            for it carried. Restrict it with the TrustHosts middleware or force');
+        $this->line('            the origin from app.url. See "The host in the emailed link".');
+    }
+
+    private function originIsForced(Application $app): bool
+    {
+        // The container's generator, not the facade's root: the facade answers `mixed`
+        // and would need a guard branch no application can ever take.
+        $generator = $app->make(UrlGenerator::class);
+
+        // The generator has no getter for a forced origin; the property is the only witness.
+        $property = new ReflectionProperty(UrlGenerator::class, 'forcedRoot');
+
+        return $property->getValue($generator) !== null;
+    }
+
+    private function trustsHosts(Application $app): bool
+    {
+        $kernel = $app->make($this->kernelBinding());
+
+        // The contract does not expose the stack; the framework's kernel does, and every
+        // application kernel extends it.
+        return $kernel instanceof HttpKernel
+            && in_array(TrustHosts::class, $kernel->getGlobalMiddleware(), true);
+    }
+
+    /**
+     * The binding as a value rather than a literal: the analyser otherwise resolves it
+     * to the concrete kernel of whichever application it runs in and reads the
+     * instanceof above as settled.
+     *
+     * @return class-string<KernelContract>
+     */
+    private function kernelBinding(): string
+    {
+        return KernelContract::class;
+    }
+
     private function reportScriptNonce(Repository $config): void
     {
         $this->newLine();

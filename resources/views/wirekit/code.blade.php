@@ -6,7 +6,7 @@
     <x-wirekit::card>
         <x-wirekit::card.body>
             <x-wirekit::stack>
-                <x-wirekit::heading>{{ __('email-magic-link::messages.code_heading') }}</x-wirekit::heading>
+                <x-wirekit::heading :level="1">{{ __('email-magic-link::messages.code_heading') }}</x-wirekit::heading>
                 <x-wirekit::text>{{ __('email-magic-link::messages.code_intro') }}</x-wirekit::text>
 
                 @if (session('status'))
@@ -50,8 +50,8 @@
                          channel never reaches this screen anyway — EntropyGuard refuses to
                          mint from defaults it was not given — so this is the belt for a
                          config that is present but blank. --}}
-                    @php($emlAlphabet = (string) config('email-magic-link.code_alphabet', ''))
-                    @php($emlCodeLength = (int) config('email-magic-link.code_length', 8))
+                    @php($emlAlphabet = app(\EmailMagicLink\Support\MagicLinkConfig::class)->codeAlphabet())
+                    @php($emlCodeLength = app(\EmailMagicLink\Support\MagicLinkConfig::class)->codeLength())
 
                     <x-wirekit::otp-input
                         name="code"

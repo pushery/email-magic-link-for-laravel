@@ -8,6 +8,7 @@ use EmailMagicLink\Contracts\InvitationStore;
 use EmailMagicLink\Contracts\TokenStore;
 use EmailMagicLink\Support\MagicLinkConfig;
 use Illuminate\Console\Command;
+use Illuminate\Contracts\Console\Isolatable;
 
 /**
  * Deletes expired and consumed magic-link tokens — and, when invitations are
@@ -15,8 +16,12 @@ use Illuminate\Console\Command;
  *
  * Schedule it (for example daily) so neither table grows unbounded:
  * Schedule::command('email-magic-link:purge')->daily();
+ *
+ * Isolatable, so `--isolated` refuses a second copy while one runs -- the framework's
+ * own overlap guard, for a host that schedules the command itself. Deletes in chunks
+ * (config `prune.chunk`), so no single statement holds its row locks for long.
  */
-final class PurgeExpiredTokensCommand extends Command
+final class PurgeExpiredTokensCommand extends Command implements Isolatable
 {
     protected $signature = 'email-magic-link:purge';
 

@@ -4,6 +4,16 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.24.1] - 2026-09-04
+
+### Fixed
+
+- **The package requires `laravel/framework ^13.0` again, as it did before 0.24.0.** 0.24.0
+  raised the floor to `^13.23` because the test harness cannot install anything lower; that
+  turned a gap in the test proof into a lockout for every application on Laravel 13.0 to
+  13.22, which was never the intent. Laravel 13 is supported as a whole. Every framework
+  method the package calls exists in 13.0.0; the suite itself runs on 13.23 and up.
+
 ## [0.24.0] - 2026-09-04
 
 ### Added
@@ -1052,7 +1062,8 @@ public repository sees the difference.
   `TwoFactorChallengeRequired`).
 - Publishable configuration, migration, and views.
 
-[Unreleased]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.24.0...HEAD
+[Unreleased]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.24.1...HEAD
+[0.24.1]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.24.0...v0.24.1
 [0.24.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.23.0...v0.24.0
 [0.23.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.22.0...v0.23.0
 [0.22.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.21.0...v0.22.0

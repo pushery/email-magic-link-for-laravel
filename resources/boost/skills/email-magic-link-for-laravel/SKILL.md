@@ -96,6 +96,12 @@ browser flow under the `web` middleware group:
 | `POST` | `/magic-link/code` | `email-magic-link.code.consume` |
 | `GET` | `/magic-link/resend-countdown.js` | `email-magic-link.resend-countdown-script` |
 
+Both routes that spend a credential are signed: the `POST` to `email-magic-link.consume` and
+the `POST` to `email-magic-link.invitation.accept`. They share their URI with the `GET` that
+leads to them, so the signature on the emailed link verifies the `POST` too. A published view
+must render the `$action` it is handed rather than rebuilding it from the route name — a bare
+`route('email-magic-link.consume', ...)` carries no signature and is refused with 403.
+
 ```blade
 <a href="{{ route('email-magic-link.request.form') }}">Sign in without a password</a>
 ```

@@ -40,19 +40,19 @@ return [
     'consume_failed' => 'Diese Anmeldeanfrage ist ungültig oder abgelaufen. Bitte fordere eine neue an.',
     'invitation_failed' => 'Diese Einladung ist ungültig oder abgelaufen. Bitte die Person, die dich eingeladen hat, um eine neue.',
     'captcha_failed' => 'Die Sicherheitsprüfung ist fehlgeschlagen. Bitte versuche es erneut.',
-    'resend_throttled' => 'Bitte warte :seconds Sekunden, bevor du eine weitere Anmelde-E-Mail anforderst.',
+    'resend_throttled' => '{1} Bitte warte :seconds Sekunde, bevor du eine weitere Anmelde-E-Mail anforderst.|[0,*] Bitte warte :seconds Sekunden, bevor du eine weitere Anmelde-E-Mail anforderst.',
     'resend_countdown_label' => 'Wartezeit, bis du eine weitere E-Mail anfordern kannst',
 
     // Notification — magic link.
     'mail_link_subject' => 'Bei :app anmelden',
     'mail_link_intro' => 'Nutze die Schaltfläche unten, um dich bei :app anzumelden.',
     'mail_link_action' => 'Anmelden',
-    'mail_link_expiry' => 'Dieser Link läuft in :minutes Minuten ab und kann nur einmal verwendet werden.',
+    'mail_link_expiry' => '{1} Dieser Link läuft in :minutes Minute ab und kann nur einmal verwendet werden.|[0,*] Dieser Link läuft in :minutes Minuten ab und kann nur einmal verwendet werden.',
 
     // Notification — one-time code.
     'mail_code_subject' => 'Dein Anmeldecode für :app',
     'mail_code_intro' => 'Dein Anmeldecode für :app lautet:',
-    'mail_code_expiry' => 'Dieser Code läuft in :minutes Minuten ab.',
+    'mail_code_expiry' => '{1} Dieser Code läuft in :minutes Minute ab.|[0,*] Dieser Code läuft in :minutes Minuten ab.',
 
     // Notification — shared.
     'mail_greeting' => 'Hallo!',

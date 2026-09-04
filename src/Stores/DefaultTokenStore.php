@@ -9,6 +9,7 @@ use EmailMagicLink\Contracts\TokenStore;
 use EmailMagicLink\Models\MagicLinkToken;
 use EmailMagicLink\Support\ClaimFailure;
 use EmailMagicLink\Support\ClaimResult;
+use EmailMagicLink\Support\IssuanceLock;
 use EmailMagicLink\Support\IssuedToken;
 use EmailMagicLink\Support\MagicLinkConfig;
 use EmailMagicLink\Support\TokenHasher;
@@ -30,12 +31,28 @@ final readonly class DefaultTokenStore implements TokenStore
     public function __construct(
         private MagicLinkConfig $config,
         private TokenHasher $hasher,
+        private IssuanceLock $lock,
     ) {}
 
     public function issue(Authenticatable $user, string $guard, string $channel, ?int $maxUses = null, ?string $passphrase = null): IssuedToken
     {
-        $now = Carbon::now();
         $userId = $this->identifierOf($user);
+
+        // Only the code channel supersedes, so only it can lose the race: two concurrent
+        // issues each invalidate what they can see and then both insert, and PostgreSQL
+        // lets neither see the other. A link is deliberately allowed to coexist with
+        // earlier live links, so there is nothing to serialize and nothing to pay for.
+        return $channel === 'code'
+            ? $this->lock->run('code', $userId, $guard, fn (): IssuedToken => $this->write($userId, $guard, $channel, $maxUses, $passphrase))
+            : $this->write($userId, $guard, $channel, $maxUses, $passphrase);
+    }
+
+    /**
+     * @param  'link'|'code'  $channel
+     */
+    private function write(string $userId, string $guard, string $channel, ?int $maxUses, ?string $passphrase): IssuedToken
+    {
+        $now = Carbon::now();
 
         // Only links may be redeemed more than once; a code is always single-use.
         // A per-call override wins over the configured default, clamped to >= 1.
@@ -93,7 +110,7 @@ final readonly class DefaultTokenStore implements TokenStore
         // already documents below.
         return $this->connection()->transaction(function () use ($token, $passphrase): ClaimResult {
             $now = Carbon::now();
-            $hash = $this->hasher->hash($token);
+            $hash = $this->resolveHash($token);
 
             // Verify the passphrase BEFORE the atomic claim, so a wrong passphrase
             // never spends a use of a multi-use link. A generic failure keeps the
@@ -125,7 +142,7 @@ final readonly class DefaultTokenStore implements TokenStore
 
     public function requiresPassphrase(string $token): bool
     {
-        return $this->findLinkByHash($this->hasher->hash($token))?->requiresPassphrase() ?? false;
+        return $this->findLinkByHash($this->resolveHash($token))?->requiresPassphrase() ?? false;
     }
 
     public function claimCode(Authenticatable $user, string $code, string $guard): ClaimResult
@@ -329,6 +346,29 @@ final readonly class DefaultTokenStore implements TokenStore
         }
 
         return $code;
+    }
+
+    /**
+     * The hash a live row for this plaintext is actually stored under.
+     *
+     * With no retired keys this is hash() and costs nothing extra -- the common case, and
+     * the one that must stay free. With retired keys present it asks once which candidate
+     * exists, and everything downstream keeps working with a single hash: the atomic
+     * claim, the classifier and the passphrase lookup are untouched.
+     */
+    private function resolveHash(string $plaintext): string
+    {
+        $candidates = $this->hasher->candidates($plaintext);
+
+        if (count($candidates) === 1) {
+            return $candidates[0];
+        }
+
+        $stored = MagicLinkToken::query()->useWritePdo()->whereIn('token_hash', $candidates)->value('token_hash');
+
+        // Falling back to the current key keeps a miss a miss: the caller goes on to its
+        // ordinary not-found path rather than branching on a second kind of nothing.
+        return is_string($stored) ? $stored : $candidates[0];
     }
 
     private function connection(): Connection

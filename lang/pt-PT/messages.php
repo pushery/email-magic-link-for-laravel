@@ -50,19 +50,19 @@ return [
     'consume_failed' => 'Este pedido de acesso é inválido ou expirou. Solicita um novo.',
     'invitation_failed' => 'Este convite é inválido ou expirou. Peça um novo a quem o convidou.',
     'captcha_failed' => 'A verificação falhou. Tenta novamente.',
-    'resend_throttled' => 'Aguarda :seconds segundos antes de solicitares outro e-mail de acesso.',
+    'resend_throttled' => '{1} Aguarda :seconds segundo antes de solicitares outro e-mail de acesso.|[0,*] Aguarda :seconds segundos antes de solicitares outro e-mail de acesso.',
     'resend_countdown_label' => 'Tempo de espera antes de poderes solicitar outro e-mail',
 
     // Notification — magic link.
     'mail_link_subject' => 'Iniciar sessão em :app',
     'mail_link_intro' => 'Utiliza o botão abaixo para iniciares sessão em :app.',
     'mail_link_action' => 'Iniciar sessão',
-    'mail_link_expiry' => 'Este link expira em :minutes minutos e só pode ser usado uma vez.',
+    'mail_link_expiry' => '{1} Este link expira em :minutes minuto e só pode ser usado uma vez.|[0,*] Este link expira em :minutes minutos e só pode ser usado uma vez.',
 
     // Notification — one-time code.
     'mail_code_subject' => 'O teu código de acesso de :app',
     'mail_code_intro' => 'O teu código de acesso para :app é:',
-    'mail_code_expiry' => 'Este código expira em :minutes minutos.',
+    'mail_code_expiry' => '{1} Este código expira em :minutes minuto.|[0,*] Este código expira em :minutes minutos.',
 
     // Notification — shared.
     'mail_greeting' => 'Olá!',

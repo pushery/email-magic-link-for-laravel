@@ -16,6 +16,7 @@ use EmailMagicLink\Support\ClaimFailure;
 use EmailMagicLink\Support\MagicLinkConfig;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\URL;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -34,6 +35,11 @@ use Symfony\Component\HttpFoundation\Response;
  * person who already has confirmed two-factor lands in Fortify's challenge instead
  * of being quietly signed in -- which the package gets for free precisely because
  * the host does not call Auth::login() itself.
+ *
+ * The signature is verified HERE rather than by the `signed` middleware, for the same
+ * reason the GET checks it itself: that middleware answers a bad signature with 403
+ * and an unknown token with the generic page, and telling those apart tells a caller
+ * whether the token was ever real. Checking it here folds both into one refusal.
  */
 final readonly class AcceptInvitationController
 {
@@ -46,6 +52,14 @@ final readonly class AcceptInvitationController
 
     public function __invoke(Request $request, string $token): Response
     {
+        // Before anything is spent: the token is the whole credential, so accepting a
+        // bare one would undo the host binding the signature exists for. An application
+        // that answers a forged `Host` mails the invitation to the attacker's origin;
+        // without this the attacker replays the token here and the invitation is gone.
+        if (! URL::hasValidSignature($request)) {
+            return $this->refuse($request, ClaimFailure::NotFound);
+        }
+
         // The closure returns EITHER a failure OR the pair, rather than writing into
         // captured variables and reporting success separately. With by-reference captures
         // nothing can know the pair was set, which forced a third branch that no input can
@@ -70,13 +84,7 @@ final readonly class AcceptInvitationController
         });
 
         if ($outcome instanceof ClaimFailure) {
-            event(new InvitationRejected($outcome, $request));
-
-            return $this->genericRejection(
-                $request,
-                (string) __('email-magic-link::messages.invitation_failed'),
-                'email-magic-link.request.form',
-            );
+            return $this->refuse($request, $outcome);
         }
 
         [$accepted, $user] = $outcome;
@@ -90,5 +98,16 @@ final readonly class AcceptInvitationController
         }
 
         return app(MagicLinkAuthenticator::class)->authenticate($request, $user, $accepted->guard, false);
+    }
+
+    private function refuse(Request $request, ClaimFailure $reason): Response
+    {
+        event(new InvitationRejected($reason, $request));
+
+        return $this->genericRejection(
+            $request,
+            (string) __('email-magic-link::messages.invitation_failed'),
+            'email-magic-link.request.form',
+        );
     }
 }

@@ -79,9 +79,18 @@ final class EmailMagicLinkServiceProvider extends ServiceProvider
         );
 
         $this->app->singleton(TokenHasher::class, function (Application $app): TokenHasher {
-            $key = $app->make(Repository::class)->get('app.key');
+            $config = $app->make(Repository::class);
+            $key = $config->get('app.key');
 
-            return new TokenHasher(is_string($key) ? $key : '');
+            // Retired keys verify but never sign, so a gentle APP_KEY rotation does not
+            // orphan tokens that are still live. Same list the framework hands its
+            // encrypter, and the same one SignedTokenUrl already resolves for signatures.
+            $previous = $config->get('app.previous_keys');
+
+            return new TokenHasher(
+                is_string($key) ? $key : '',
+                is_array($previous) ? array_values(array_filter($previous, is_string(...))) : [],
+            );
         });
 
         $this->app->singleton(TokenStore::class, function (Application $app): TokenStore {

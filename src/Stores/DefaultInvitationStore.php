@@ -9,6 +9,7 @@ use EmailMagicLink\Contracts\InvitationStore;
 use EmailMagicLink\Models\Invitation;
 use EmailMagicLink\Support\ClaimFailure;
 use EmailMagicLink\Support\InvitationClaimResult;
+use EmailMagicLink\Support\IssuanceLock;
 use EmailMagicLink\Support\IssuedInvitationToken;
 use EmailMagicLink\Support\MagicLinkConfig;
 use EmailMagicLink\Support\NormalizedEmail;
@@ -25,13 +26,18 @@ final readonly class DefaultInvitationStore implements InvitationStore
     public function __construct(
         private MagicLinkConfig $config,
         private TokenHasher $hasher,
+        private IssuanceLock $lock,
     ) {}
 
     public function issue(string $email, string $guard, ?array $context = null, ?string $invitedBy = null, ?int $ttl = null): IssuedInvitationToken
     {
         $normalized = $this->normalize($email);
 
-        return $this->connection()->transaction(function () use ($normalized, $guard, $context, $invitedBy, $ttl): IssuedInvitationToken {
+        // Serialized per address and guard, on the NORMALIZED address -- the same value
+        // the row is keyed on, so two spellings of one mailbox cannot slip past each
+        // other. See IssuanceLock for why the statement order below is not enough on its
+        // own.
+        return $this->lock->run('invite', $normalized, $guard, fn (): IssuedInvitationToken => $this->connection()->transaction(function () use ($normalized, $guard, $context, $invitedBy, $ttl): IssuedInvitationToken {
             $now = Carbon::now();
             $plaintext = $this->generateToken();
 
@@ -46,10 +52,11 @@ final readonly class DefaultInvitationStore implements InvitationStore
             $record->revoked_at = null;
             $record->save();
 
-            // INSERT FIRST, then revoke everything below this row's id. That order is
-            // race-free without gap locks, so it is exactly as strong on PostgreSQL as on
-            // MySQL: the writer holding the highest id supersedes every earlier one, and
-            // nobody can supersede IT without holding an id that is higher still.
+            // INSERT FIRST, then revoke everything below this row's id. On InnoDB that
+            // order needs no gap locks: the second writer waits on the first writer's
+            // uncommitted index entry. On PostgreSQL it is NOT sufficient on its own --
+            // the UPDATE's snapshot excludes an uncommitted INSERT and has nothing to
+            // wait on -- which is what the lock around this transaction is for.
             //
             // Revoking first and inserting after is the obvious order and the wrong one --
             // two concurrent invites would each revoke what they saw and then both insert,
@@ -67,13 +74,13 @@ final readonly class DefaultInvitationStore implements InvitationStore
                 ->update(['revoked_at' => $now]);
 
             return new IssuedInvitationToken($plaintext, $record);
-        });
+        }));
     }
 
     public function peek(string $token): InvitationClaimResult
     {
         $now = Carbon::now();
-        $hash = $this->hasher->hash($token);
+        $hash = $this->resolveHash($token);
 
         // Pinned to the write connection, like every other read of a row the previous
         // request may just have written: on a lagging replica the acceptance page
@@ -95,7 +102,7 @@ final readonly class DefaultInvitationStore implements InvitationStore
     {
         return $this->connection()->transaction(function () use ($token): InvitationClaimResult {
             $now = Carbon::now();
-            $hash = $this->hasher->hash($token);
+            $hash = $this->resolveHash($token);
 
             if (! $this->atomicClaim($hash, $now)) {
                 return InvitationClaimResult::failed($this->classify($hash, $now));
@@ -246,6 +253,29 @@ final readonly class DefaultInvitationStore implements InvitationStore
     private function generateToken(): string
     {
         return rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
+    }
+
+    /**
+     * The hash a live row for this plaintext is actually stored under.
+     *
+     * With no retired keys this is hash() and costs nothing extra -- the common case, and
+     * the one that must stay free. With retired keys present it asks once which candidate
+     * exists, and everything downstream keeps working with a single hash: the atomic
+     * claim, the classifier and the passphrase lookup are untouched.
+     */
+    private function resolveHash(string $plaintext): string
+    {
+        $candidates = $this->hasher->candidates($plaintext);
+
+        if (count($candidates) === 1) {
+            return $candidates[0];
+        }
+
+        $stored = Invitation::query()->useWritePdo()->whereIn('token_hash', $candidates)->value('token_hash');
+
+        // Falling back to the current key keeps a miss a miss: the caller goes on to its
+        // ordinary not-found path rather than branching on a second kind of nothing.
+        return is_string($stored) ? $stored : $candidates[0];
     }
 
     private function connection(): Connection

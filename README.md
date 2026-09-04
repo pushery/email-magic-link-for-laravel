@@ -33,7 +33,7 @@ Plenty of packages send a magic link. This one is built around two properties mo
 composer require pushery/email-magic-link-for-laravel
 ```
 
-Requires PHP `^8.4` and Laravel `^13.23`. Laravel Fortify (`^1.0`) is optional and only needed for the two-factor handoff. There are no third-party runtime dependencies.
+Requires PHP `^8.4` and Laravel `^13.0`. Laravel Fortify (`^1.0`) is optional and only needed for the two-factor handoff. There are no third-party runtime dependencies.
 
 ## Documentation
 

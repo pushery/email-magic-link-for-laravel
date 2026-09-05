@@ -69,7 +69,17 @@ final readonly class RateLimits
         $email = is_string($email) ? NormalizedEmail::from($email) : '';
 
         return [
-            Limit::perMinutes($limit['per_minutes'], $limit['max'])->by('eml:req:email:'.$email),
+            // Hashed here rather than left to the framework, and the difference only shows on
+            // a host that has turned the framework's hashing off. `RateLimiter::shouldHashKeys(false)`
+            // is a supported call, and after it the raw key is what reaches the cache -- so the
+            // address would sit in Redis in the clear, under a key that survives as long as the
+            // window. This class already hashes the token and says so in a comment; the address
+            // is the more identifying of the two, and it was going through raw.
+            //
+            // The IP is deliberately NOT hashed: it is not the subject, it is already in every
+            // access log the request touches, and an operator reading a limiter key needs to be
+            // able to recognize a hostile source.
+            Limit::perMinutes($limit['per_minutes'], $limit['max'])->by('eml:req:email:'.hash('sha256', $email)),
             Limit::perMinutes($limit['per_minutes'], $limit['max'])->by('eml:req:ip:'.($request->ip())),
         ];
     }
@@ -105,7 +115,12 @@ final readonly class RateLimits
     /**
      * The token in the path decides the bucket; the submitted email is the fallback
      * only when there is no token, so a caller cannot pick a bucket by shortening the
-     * token in the URL. Never the raw token -- always its hash.
+     * token in the URL. Never the raw subject -- always its hash.
+     *
+     * That sentence said "never the raw TOKEN", and the fallback beneath it returned the
+     * raw address. The asymmetry was invisible because the promise was written about the
+     * branch that kept it. Both branches hash now, and the normalization still decides
+     * the bucket -- it just happens before the hash rather than instead of it.
      */
     private function discriminator(Request $request): string
     {
@@ -117,6 +132,6 @@ final readonly class RateLimits
 
         $email = $request->input('email');
 
-        return is_string($email) ? NormalizedEmail::from($email) : '';
+        return hash('sha256', is_string($email) ? NormalizedEmail::from($email) : '');
     }
 }

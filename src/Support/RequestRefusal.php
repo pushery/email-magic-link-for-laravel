@@ -17,6 +17,15 @@ enum RequestRefusal: string
     case ResendCooldown = 'resend_cooldown';
     case ResendWindowCap = 'resend_window_cap';
 
+    /**
+     * A concurrent issuance for the same address held the lock past the wait budget.
+     *
+     * The response is the endpoint's ordinary one, so this is the only way a host can see
+     * it happening at all -- and it is worth seeing: sustained contention on one address
+     * is either a user hammering the button or somebody hammering it for them.
+     */
+    case IssuanceContended = 'issuance_contended';
+
     public static function fromResendDenial(ResendDenialReason $reason): self
     {
         return match ($reason) {

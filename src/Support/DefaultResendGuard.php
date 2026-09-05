@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace EmailMagicLink\Support;
 
 use EmailMagicLink\Contracts\ResendGuard;
+use Illuminate\Cache\NoLock;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Cache\LockProvider;
 use Illuminate\Contracts\Cache\LockTimeoutException;
@@ -39,7 +40,24 @@ final readonly class DefaultResendGuard implements ResendGuard
 
     private const string LOCK_PREFIX = 'eml:resend:lock:';
 
-    private const int LOCK_SECONDS = 5;
+    /**
+     * How long a second evaluation WAITS for the first, and what a caller is told to wait
+     * when the guard cannot get the lock at all -- the same question from the outside:
+     * come back after roughly as long as the contention should last.
+     */
+    private const int LOCK_BLOCK_SECONDS = 5;
+
+    /**
+     * The lock's TTL, and deliberately not the same number.
+     *
+     * One constant used to serve all three of these, which is the exact shape that stopped
+     * the issuance lock from locking: a TTL equal to the wait budget expires while the work
+     * it protects is still running, and the second caller walks in believing it holds
+     * something. The evaluation below is two cache round-trips and finishes in
+     * milliseconds -- but "the cache is fast" is an assumption about the host's store, and
+     * a stalled store is precisely when this guard matters.
+     */
+    private const int LOCK_HOLD_SECONDS = 30;
 
     public function __construct(
         private CacheFactory $cache,
@@ -58,16 +76,35 @@ final readonly class DefaultResendGuard implements ResendGuard
 
         $decision = ResendDecision::allowed();
 
+        $lock = $store->lock(self::LOCK_PREFIX.$this->digest($key), self::LOCK_HOLD_SECONDS);
+
+        // NullStore IS a LockProvider, so the check above is exactly the condition it
+        // satisfies, and its NoLock::acquire() returns true every time. This guard would
+        // then evaluate the window under a lock that excludes nothing -- and because the
+        // whole point of it is to hold sends back, a lock that never says no makes it
+        // FAIL OPEN: unlimited mail per address, with every arm of the suite green.
+        //
+        // Loud on the first request rather than silent forever. A host reaching this has
+        // CACHE_STORE=null, which no production deployment wants for a flood guard, and
+        // the message names the setting to change.
+        if ($lock instanceof NoLock) {
+            throw new RuntimeException(
+                'The [email-magic-link] resend guard needs a cache store whose locks actually exclude; '
+                .'the configured store hands out a no-op lock (the `null` driver does this). '
+                .'Point [email-magic-link.resend.store] at a real store.',
+            );
+        }
+
         try {
-            $store->lock(self::LOCK_PREFIX.$this->digest($key), self::LOCK_SECONDS)
-                ->block(self::LOCK_SECONDS, function () use ($key, &$decision): void {
+            $lock
+                ->block(self::LOCK_BLOCK_SECONDS, function () use ($key, &$decision): void {
                     $decision = $this->evaluate($key, true);
                 });
         } catch (LockTimeoutException) {
             // A store that cannot hand out the lock in time is a store that cannot say
             // whether the cap is reached. Fail closed with a short hold-back rather than
             // let the exception become a 500 on the request endpoint.
-            return ResendDecision::denied(ResendDenialReason::Cooldown, self::LOCK_SECONDS);
+            return ResendDecision::denied(ResendDenialReason::Cooldown, self::LOCK_BLOCK_SECONDS);
         }
 
         return $decision;
@@ -170,7 +207,12 @@ final readonly class DefaultResendGuard implements ResendGuard
      */
     private function write(string $key, array $sends): void
     {
-        $ttl = max($this->config->resendWindow()['seconds'], $this->config->resendCooldown()['max']) + self::LOCK_SECONDS;
+        // The margin is the LOCK's TTL, not the wait budget, and the difference is the
+        // whole reason these are two constants: the record has to outlive the window it
+        // describes PLUS the longest anyone can be holding the lock over it. Padded with
+        // the wait budget instead, a holder that runs long lets the record expire
+        // mid-evaluation -- and a forgotten record reads as "no sends yet".
+        $ttl = max($this->config->resendWindow()['seconds'], $this->config->resendCooldown()['max']) + self::LOCK_HOLD_SECONDS;
 
         $this->repository()->put(self::CACHE_PREFIX.$this->digest($key), $sends, $ttl);
     }

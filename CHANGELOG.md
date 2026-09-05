@@ -4,6 +4,47 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.26.0] - 2026-09-05
+
+### Security
+
+- **The request endpoint no longer waits out a contended issuance, because the wait was the answer.** The status half of this closed already: a second request for the same address stopped answering `500` and started answering like every other one. The timing half stayed open and was the wider of the two. The issuance lock is taken only for an address that resolves to a user — an unknown one never reaches the issuer — so the time a request spent queueing for it was not merely correlated with account existence, it *was* account existence, read off a stopwatch. Measured on the endpoint with a one-second budget: 827 ms for a known contended address against 12 ms for an unknown one, and five times that at the shipped default of five seconds. Nobody had to wait for contention to happen, either; two simultaneous requests for one address produce it.
+
+The request path gives up at once now instead of queueing. That is safe rather than merely cheaper, and the reason is the one the code beside it already gave: the request holding the lock is the one sending the credential, which is as true at `t=0` as at `t=5s`, so the response was already correct without the wait.
+
+**Programmatic issuers are unchanged.** They keep the configured `lock_block_seconds`, because their caller asked for a credential and wants one, and no response shape of theirs depends on how long it took. The `TokenStore` contract is untouched, so a host that implements it needs no change at all.
+
+### Fixed
+
+- **The WireKit one-time-code screen loads with the caret in the first box.** It was the only sign-in screen in the set loading with focus on `<body>`, and it stayed that way because the component discarded the `autofocus` attribute — writing it at the call site did nothing. Seven screens carrying it correctly are what made the odd one out invisible, so the assertion is now stated over the whole set rather than over the screen that was broken. WireKit 2.45.0 gives the component a prop, and it renders a plain HTML attribute rather than calling `focus()`: that matters here, because these screens exist to work under a policy that never lets Alpine start. The WireKit dev floor moves to `^2.45` with it.
+
+- **A contended sign-in no longer answers differently than a miss.** The lock a second request waits on could time out, and the exception became a `500`. It can only ever be raised for an address that resolves to a user, because an unknown address never reaches the issuer — so sending two requests at once and reading the status code told you whether an account existed, on the one endpoint whose whole design is to answer identically either way. It now falls through to the ordinary response, which stays true rather than becoming a polite fiction: the request holding the lock is the one sending the credential. The new `RequestRefusal::IssuanceContended` is how you see it happening, since the response cannot say.
+
+- **The resend guard failed OPEN on the `null` cache store.** `null` implements the lock contract and hands out a lock that succeeds every time, so the interface check passed and the guard evaluated its window under a lock that excluded nothing — unlimited mail per address, quietly. Two sentences in the documentation said the opposite; both are corrected with what actually happens.
+
+- **A consumer that adopts the invitations tables LATER now gets the indexes the purge needs.** The index migration is recorded while those tables are absent — correctly, it has nothing to do — and never runs again, so a host that declines them and adopts them later got neither `accepted_at` nor `revoked_at` indexed. The create-table migration carries them now, and the index migration guards per index rather than per table. That guard also survives a run killed between two `CREATE INDEX` statements on MySQL, which has no transactional DDL and left the retry dying on a duplicate key name with no migrations row to roll back.
+
+- **The purge never waits on a row lock.** It claims each chunk with `SELECT … FOR UPDATE SKIP LOCKED`, so a row another transaction is holding is skipped and collected next run. A statement that never waits cannot take part in a deadlock — which matters because accepting an invitation runs your handler inside the transaction holding that row, so the other side of the cycle is not the package's to order.
+
+- **The rate limiter no longer puts the raw address in a key.** Visible only on a host calling `RateLimiter::shouldHashKeys(false)`, after which the raw key is what reaches the cache. The same class already hashed the token and said so; the address, which identifies more, went through as typed. The IP deliberately still does not: it is not the subject, it is in every access log already, and an operator reading a limiter key needs to recognize a hostile source.
+
+- **The resend countdown no longer moves the submit button when it ends.** Clearing its own text collapsed the paragraph between the field and the button, moving the button 24px up at the moment the person was reaching for it. Layout-shift scores never saw it — 0.015 and 0.002, both far under the threshold — because the problem is a mis-click, not a metric.
+
+- **The purge command holds no query log.** It is the one place here that issues an unbounded number of statements, one per chunk, and the log is an array that only grows. Off by default, so a stock installation never paid for it; on under Telescope, a debugbar, or any host that enables it in a scheduled context. The command restores whatever it found.
+
+- **The issuance lock now actually locks on every store it accepts, and holds long enough to cover the work it protects.** Three defects, each of which left the lock present and serializing nothing — which is worse than not having it, because it reads as protection.
+
+The lock's lifetime was derived from how long a competitor was willing to wait. A database transaction slower than that wait released the lock underneath itself: a second writer walked in, and the first never learned, because the release is a compare-and-swap whose failure is discarded. Two live credentials for one address, with nothing in the log. Shortening the wait to fail fast under load made it worse, not better. The two are separate settings now.
+
+A cache store can also implement the lock contract and hand out a lock that always succeeds — the `null` driver does exactly that. The package refused a store with no lock support and accepted one whose locks do nothing. It now refuses both, and says which it found.
+
+And issuance takes its lock from `lock_store`, a new setting beside `resend.store`. Pointing only `resend.store` at a lockable store — which is what the configuration reference tells you to do — fixed the resend guard and left issuance throwing on every request for a known address.
+
+### Changed
+
+- **`APP_KEY` rotation is documented where it is decided.** The invitations page still said a rotation invalidates every open invitation immediately. Since 0.25.0 it does not, as long as the outgoing key is retired into `app.previous_keys` rather than dropped — and if you are rotating because a key leaked, dropping it is the point. Both halves are now on the page.
+
+- **The JSON API contract lists the `403` a bare-token post now gets.** That response comes from the framework, so it carries a `message` and no `error` key, and a client that branches on `error` unconditionally lands in an undefined case. The page says so and shows the signed URL to post to instead.
 ## [0.25.0] - 2026-09-04
 
 ### Added
@@ -1145,7 +1186,8 @@ public repository sees the difference.
   `TwoFactorChallengeRequired`).
 - Publishable configuration, migration, and views.
 
-[Unreleased]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.24.1...HEAD
+[Unreleased]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.26.0...HEAD
+[0.26.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.25.0...v0.26.0
 [0.25.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.24.1...v0.25.0
 [0.24.1]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.24.0...v0.24.1
 [0.24.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.23.0...v0.24.0

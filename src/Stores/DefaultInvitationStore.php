@@ -23,6 +23,19 @@ use Illuminate\Support\Carbon;
  */
 final readonly class DefaultInvitationStore implements InvitationStore
 {
+    /**
+     * How the purge claims its chunk. `skip locked` is the load-bearing half: it makes the
+     * purge the one statement in this package that never WAITS on a row lock, and a
+     * statement that never waits cannot be one end of a deadlock cycle.
+     *
+     * Duplicated in the sibling store rather than shared, and pinned against it by
+     * `PurgeNeverWaitsTest` -- which also pins the `skip locked` itself, because a shared
+     * field would prevent the two from drifting apart without ever proving the value is
+     * the right one. SQLite compiles this to nothing (`compileLock` returns an empty
+     * string there), so the suites that run on it are unaffected.
+     */
+    private const string CLAIM_CHUNK_LOCK = 'for update skip locked';
+
     public function __construct(
         private MagicLinkConfig $config,
         private TokenHasher $hasher,
@@ -136,25 +149,59 @@ final readonly class DefaultInvitationStore implements InvitationStore
 
         // Chunked for the same reason as the sign-in store's purge: bounded lock time.
         do {
-            $removed = Invitation::query()
-                ->where(function (Builder $query) use ($now): void {
-                    // Never accepted and past its lifetime: nothing to learn from it.
-                    $query->where('expires_at', '<=', $now)
-                        ->whereNull('accepted_at')
-                        ->whereNull('revoked_at');
-                })
-                ->orWhere(function (Builder $query) use ($retainUntil): void {
-                    // Settled rows carry the invited address in the clear, so they are kept
-                    // only as long as the configured retention window -- an audit decision,
-                    // which is why it is a config key rather than a constant.
-                    $query->whereNotNull('accepted_at')->where('accepted_at', '<=', $retainUntil);
-                })
-                ->orWhere(function (Builder $query) use ($retainUntil): void {
-                    $query->whereNotNull('revoked_at')->where('revoked_at', '<=', $retainUntil);
-                })
-                ->limit($chunk)
-                ->delete();
-            $removed = is_int($removed) ? $removed : 0;
+            // Two statements rather than one, and the SECOND word is what matters: the purge
+            // claims its chunk with `for update skip locked`, so it NEVER waits on a row
+            // somebody else is holding. A statement that never waits cannot be one end of a
+            // deadlock cycle, whatever order the other end takes its locks in.
+            //
+            // The obvious cheaper fix does not work, and it was measured rather than reasoned
+            // about. Ordering the chunk (`order by id`) does not control the order the row
+            // locks are actually acquired in: PostgreSQL compiles a limited DELETE to
+            // `where ctid in (<subquery>)` and the outer node is free to re-order what the
+            // subquery returns. Reproduced on PostgreSQL 18 with two connections and the two
+            // rows deliberately laid out so ctid order is the reverse of id order --
+            // `deadlock detected` with and without the ORDER BY, identically.
+            //
+            // A row skipped here is not a row kept: it was locked by a transaction that is
+            // about to commit, and the next run takes it. A purge is the one caller that can
+            // always afford to come back later, which is exactly why it should be the one
+            // that yields.
+            //
+            // The lock has to be held across BOTH statements, hence the transaction. Taken in
+            // autocommit the locks would drop the moment the select returned, and the delete
+            // would be back to waiting on whatever moved in between.
+            $removed = $this->connection()->transaction(function () use ($now, $retainUntil, $chunk): int {
+                $ids = Invitation::query()
+                    ->select('id')
+                    ->where(function (Builder $query) use ($now): void {
+                        // Never accepted and past its lifetime: nothing to learn from it.
+                        $query->where('expires_at', '<=', $now)
+                            ->whereNull('accepted_at')
+                            ->whereNull('revoked_at');
+                    })
+                    ->orWhere(function (Builder $query) use ($retainUntil): void {
+                        // Settled rows carry the invited address in the clear, so they are kept
+                        // only as long as the configured retention window -- an audit decision,
+                        // which is why it is a config key rather than a constant.
+                        $query->whereNotNull('accepted_at')->where('accepted_at', '<=', $retainUntil);
+                    })
+                    ->orWhere(function (Builder $query) use ($retainUntil): void {
+                        $query->whereNotNull('revoked_at')->where('revoked_at', '<=', $retainUntil);
+                    })
+                    ->orderBy('id')
+                    ->limit($chunk)
+                    ->lock(self::CLAIM_CHUNK_LOCK)
+                    ->pluck('id');
+
+                if ($ids->isEmpty()) {
+                    return 0;
+                }
+
+                Invitation::query()->whereIn('id', $ids)->delete();
+
+                return $ids->count();
+            });
+
             $deleted += $removed;
         } while ($removed === $chunk);
 

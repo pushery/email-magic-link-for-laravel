@@ -22,6 +22,12 @@ Report them privately through GitHub's [private vulnerability reporting](https:/
 
 You can expect an acknowledgment within **3 business days** and an assessment of the report, including a remediation timeline, within **10 business days**. We will keep you informed throughout and credit you in the release notes once a fix ships, unless you prefer to remain anonymous.
 
+## Dependency updates
+
+Dependencies are kept current automatically in the development repository, where [Renovate](https://docs.renovatebot.com) opens the update pull requests and GitHub's Dependabot **alerts** flag known advisories, which Renovate turns into prioritized security updates. Every update is reviewed before it is merged.
+
+That automation does not run here. This repository is a read-only mirror of the released tree, so it carries no `renovate.json` and you will see no update pull requests on it — releases arrive as tags.
+
 ## Scope
 
 This package's security model rests on a few invariants, all covered by the test suite:

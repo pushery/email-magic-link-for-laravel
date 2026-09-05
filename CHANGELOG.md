@@ -4,6 +4,12 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.26.1] - 2026-09-05
+
+### Fixed
+
+- **The `pushery/wirekit` suggestion no longer promises a tested range that was never tested.** It said the sign-in screens were developed and tested against 2.26 and up, while the development requirement pins `^2.45` — a constraint that cannot install 2.26, so nothing below that pin had ever been exercised. What the screens actually need is unchanged and still stated: the alphabet prop arrived in WireKit 2.22 and the case-folding validation pattern in 2.26, and those are checkable facts about WireKit itself rather than claims about how this package is tested. The text now points at the development requirement as the authority for what is genuinely proven, instead of repeating a version number that goes stale the moment that pin moves. The suggestion is part of what the package publishes and is shown on its Packagist page, so this was a public claim — one a consumer on an older WireKit would have read as coverage they did not have.
+
 ## [0.26.0] - 2026-09-05
 
 ### Security
@@ -1186,7 +1192,8 @@ public repository sees the difference.
   `TwoFactorChallengeRequired`).
 - Publishable configuration, migration, and views.
 
-[Unreleased]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.26.0...HEAD
+[Unreleased]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.26.1...HEAD
+[0.26.1]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.26.0...v0.26.1
 [0.26.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.25.0...v0.26.0
 [0.25.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.24.1...v0.25.0
 [0.24.1]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.24.0...v0.24.1

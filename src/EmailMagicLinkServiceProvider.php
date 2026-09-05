@@ -33,6 +33,7 @@ use EmailMagicLink\Support\DefaultMagicLinkIssuer;
 use EmailMagicLink\Support\DefaultResendGuard;
 use EmailMagicLink\Support\EntropyGuard;
 use EmailMagicLink\Support\InvitationGuard;
+use EmailMagicLink\Support\IssuanceLock;
 use EmailMagicLink\Support\MagicLinkConfig;
 use EmailMagicLink\Support\RateLimits;
 use EmailMagicLink\Support\TokenHasher;
@@ -92,6 +93,24 @@ final class EmailMagicLinkServiceProvider extends ServiceProvider
                 is_array($previous) ? array_values(array_filter($previous, is_string(...))) : [],
             );
         });
+
+        // Bound explicitly rather than auto-resolved so the configured store reaches it.
+        // Auto-resolution gave it the default store and no way to move it, which is how a
+        // host following the resend.store advice ended up with a working guard and a
+        // throwing issuer.
+        $this->app->singleton(
+            IssuanceLock::class,
+            function (Application $app): IssuanceLock {
+                $config = $app->make(MagicLinkConfig::class);
+
+                return new IssuanceLock(
+                    $app->make(CacheFactory::class),
+                    $config->lockBlockSeconds(),
+                    $config->lockHoldSeconds(),
+                    $config->lockStore(),
+                );
+            },
+        );
 
         $this->app->singleton(TokenStore::class, function (Application $app): TokenStore {
             $custom = $app->make(MagicLinkConfig::class)->tokenStore();

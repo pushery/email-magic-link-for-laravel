@@ -179,7 +179,7 @@ final class DoctorCommand extends Command
     }
 
     /**
-     * The binding as a value rather than a literal: the analyser otherwise resolves it
+     * The binding as a value rather than a literal: the analyzer otherwise resolves it
      * to the concrete kernel of whichever application it runs in and reads the
      * instanceof above as settled.
      *

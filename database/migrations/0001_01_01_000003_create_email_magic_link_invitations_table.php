@@ -37,8 +37,13 @@ return new class extends Migration
             $table->string('invited_by')->nullable();
 
             $table->timestamp('expires_at')->index();
-            $table->timestamp('accepted_at')->nullable();
-            $table->timestamp('revoked_at')->nullable();
+            // Indexed here as well as in the purge-index migration, and that is not a
+            // duplicate. A consumer who declines the invitations tables and adopts them LATER
+            // runs this migration after the other one is already recorded, so the other one
+            // never runs again -- the two indexes the purge needs would never exist for them.
+            // The later migration skips whatever it finds, so a fresh install gets them once.
+            $table->timestamp('accepted_at')->nullable()->index();
+            $table->timestamp('revoked_at')->nullable()->index();
 
             $table->timestamps();
 

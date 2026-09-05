@@ -56,6 +56,7 @@
                     <x-wirekit::otp-input
                         name="code"
                         class="eml-otp"
+                        autofocus
                         :length="$emlCodeLength"
                         :alphabet="$emlAlphabet !== '' ? $emlAlphabet : '0123456789'"
                         :label="__('email-magic-link::messages.code_label')"

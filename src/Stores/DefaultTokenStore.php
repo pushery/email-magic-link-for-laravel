@@ -28,6 +28,19 @@ use Illuminate\Support\Facades\Hash;
  */
 final readonly class DefaultTokenStore implements TokenStore
 {
+    /**
+     * How the purge claims its chunk. `skip locked` is the load-bearing half: it makes the
+     * purge the one statement in this package that never WAITS on a row lock, and a
+     * statement that never waits cannot be one end of a deadlock cycle.
+     *
+     * Duplicated in the sibling store rather than shared, and pinned against it by
+     * `PurgeNeverWaitsTest` -- which also pins the `skip locked` itself, because a shared
+     * field would prevent the two from drifting apart without ever proving the value is
+     * the right one. SQLite compiles this to nothing (`compileLock` returns an empty
+     * string there), so the suites that run on it are unaffected.
+     */
+    private const string CLAIM_CHUNK_LOCK = 'for update skip locked';
+
     public function __construct(
         private MagicLinkConfig $config,
         private TokenHasher $hasher,
@@ -118,8 +131,24 @@ final readonly class DefaultTokenStore implements TokenStore
             $existing = $this->findLinkByHash($hash);
 
             // Nothing to claim. The atomic UPDATE below could only miss, and the
-            // classifier would answer NotFound after a third SELECT -- so the path
-            // every scanner takes costs one statement, not three.
+            // classifier would answer NotFound after a third SELECT -- so the path every
+            // scanner takes costs one statement, not three.
+            //
+            // One statement WITH NO RETIRED KEYS. The sentence used to stop at "not three"
+            // and that was true only until a host rotates APP_KEY: resolveHash() then has
+            // to try each candidate, and the scanner path costs two. Measured over 500k
+            // rows, 300 iterations: 1 statement / 0.25 ms with no previous key, 2 / 0.57 ms
+            // with one. It does NOT grow past two -- ten retired keys cost the same as one,
+            // because the candidates go into a single IN.
+            //
+            // The successful path reads this row a second time after the claim, which is
+            // 26% of its database work and was measured at about 0.19 ms. It stays. On
+            // PostgreSQL the claim could carry `returning *` instead, but MySQL has no
+            // RETURNING, so removing it means a driver-split hydration inside the most
+            // security-sensitive method here -- two engines that could disagree about
+            // consumed_at and uses_remaining, to save a fifth of a millisecond on a login.
+            // Written down so the next reader does not re-derive the measurement and reach
+            // the opposite conclusion by looking only at the ratio.
             if (! $existing instanceof MagicLinkToken) {
                 return ClaimResult::failed(ClaimFailure::NotFound);
             }
@@ -205,14 +234,48 @@ final readonly class DefaultTokenStore implements TokenStore
         $deleted = 0;
 
         do {
-            $removed = MagicLinkToken::query()
-                ->where(function (Builder $query) use ($now): void {
-                    $query->where('expires_at', '<=', $now)
-                        ->orWhereNotNull('consumed_at');
-                })
-                ->limit($chunk)
-                ->delete();
-            $removed = is_int($removed) ? $removed : 0;
+            // Two statements rather than one, and the SECOND word is what matters: the purge
+            // claims its chunk with `for update skip locked`, so it NEVER waits on a row
+            // somebody else is holding. A statement that never waits cannot be one end of a
+            // deadlock cycle, whatever order the other end takes its locks in.
+            //
+            // The obvious cheaper fix does not work, and it was measured rather than reasoned
+            // about. Ordering the chunk (`order by id`) does not control the order the row
+            // locks are actually acquired in: PostgreSQL compiles a limited DELETE to
+            // `where ctid in (<subquery>)` and the outer node is free to re-order what the
+            // subquery returns. Reproduced on PostgreSQL 18 with two connections and the two
+            // rows deliberately laid out so ctid order is the reverse of id order --
+            // `deadlock detected` with and without the ORDER BY, identically.
+            //
+            // A row skipped here is not a row kept: it was locked by a transaction that is
+            // about to commit, and the next run takes it. A purge is the one caller that can
+            // always afford to come back later, which is exactly why it should be the one
+            // that yields.
+            //
+            // The lock has to be held across BOTH statements, hence the transaction. Taken in
+            // autocommit the locks would drop the moment the select returned, and the delete
+            // would be back to waiting on whatever moved in between.
+            $removed = $this->connection()->transaction(function () use ($now, $chunk): int {
+                $ids = MagicLinkToken::query()
+                    ->select('id')
+                    ->where(function (Builder $query) use ($now): void {
+                        $query->where('expires_at', '<=', $now)
+                            ->orWhereNotNull('consumed_at');
+                    })
+                    ->orderBy('id')
+                    ->limit($chunk)
+                    ->lock(self::CLAIM_CHUNK_LOCK)
+                    ->pluck('id');
+
+                if ($ids->isEmpty()) {
+                    return 0;
+                }
+
+                MagicLinkToken::query()->whereIn('id', $ids)->delete();
+
+                return $ids->count();
+            });
+
             $deleted += $removed;
         } while ($removed === $chunk);
 

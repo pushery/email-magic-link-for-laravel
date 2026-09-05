@@ -50,6 +50,20 @@ final class ResendCountdownScript
             var other = el.getAttribute('data-template-other') || '';
             var remaining = parseInt(el.getAttribute('data-seconds'), 10) || 0;
 
+            // Freeze the box at its first-render height. When the countdown finishes it
+            // clears its own text, and an empty paragraph collapses -- which pulled the
+            // submit button 24px UP, measured, at the exact moment the person was
+            // reaching for it. The lab CLS is far under the 0.1 threshold, so this is not
+            // a Web Vitals fix; it is a mis-click fix.
+            //
+            // Measured here rather than reserved in CSS because the right number is a
+            // rendered line count, not a guess: the same string wraps to two lines on a
+            // narrow viewport and one on a wide one. First render is also the TALLEST,
+            // since the text only ever gets shorter as the number counts down.
+            if (el.getBoundingClientRect) {
+                el.style.minHeight = el.getBoundingClientRect().height + 'px';
+            }
+
             // aria-disabled, not disabled: the button stays in the tab order and announces
             // as dimmed, and aria-describedby on it names the countdown as the reason.
             var block = function (e) { e.preventDefault(); };

@@ -22,16 +22,19 @@
     "require": {
         "php": "^8.4",
         "ext-json": "*",
+        "ext-mbstring": "*",
+        "ext-filter": "*",
+        "ext-hash": "*",
         "laravel/framework": "^13.0"
     },
     "require-dev": {
         "cweagans/composer-patches": "^1.7",
         "larastan/larastan": "3.10.0",
-        "laravel/fortify": "^1.0",
+        "laravel/fortify": "^1.39",
         "laravel/pao": "^1.1",
-        "laravel/pint": "^1.0",
-        "orchestra/testbench": "^11.0",
-        "pestphp/pest": "^5.0",
+        "laravel/pint": "^1.30",
+        "orchestra/testbench": "^11.2",
+        "pestphp/pest": "^5.1",
         "pestphp/pest-plugin-agent": "^5.0",
         "pestphp/pest-plugin-browser": "^5.0",
         "pestphp/pest-plugin-evals": "^5.0",
@@ -40,7 +43,7 @@
         "phpstan/phpstan": "2.2.13",
         "pestphp/pest-plugin-rector": "5.0.4",
         "pestphp/pest-plugin-type-coverage": "^5.0",
-        "pushery/wirekit": "^2.26",
+        "pushery/wirekit": "^2.45",
         "rector/rector": "2.6.3",
         "spaze/phpstan-disallowed-calls": "4.14.0"
     },
@@ -93,7 +96,6 @@
         }
     },
     "extra": {
-        "composer-exit-on-patch-failure": true,
         "laravel": {
             "providers": [
                 "EmailMagicLink\\EmailMagicLinkServiceProvider"

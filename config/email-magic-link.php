@@ -127,6 +127,67 @@ return [
     |
     */
 
+    /*
+    |--------------------------------------------------------------------------
+    | Lock store
+    |--------------------------------------------------------------------------
+    |
+    | Issuing a credential takes a short atomic lock so two requests for one
+    | address cannot each supersede what they happened to see. Null uses the
+    | default cache store.
+    |
+    | Point this at a store whose locks really exclude if your default one does
+    | not. The `null` driver looks like it qualifies -- it implements the lock
+    | contract -- and hands out a lock that always succeeds, so the package
+    | refuses it rather than pretending to serialize.
+    |
+    | This is the sibling of `resend.store`. They were one setting short of each
+    | other: a host told to point `resend.store` at a lockable store fixed the
+    | resend guard and left issuance throwing on the default one.
+    |
+    */
+
+    'lock_store' => env('EMAIL_MAGIC_LINK_LOCK_STORE'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Lock budgets
+    |--------------------------------------------------------------------------
+    |
+    | Two different budgets, and collapsing them into one number is how a lock
+    | silently stops locking.
+    |
+    | `lock_block_seconds` is how long a SECOND caller waits for the first one to
+    | finish before giving up.
+    |
+    | It does NOT apply to the sign-in request endpoint, and that is a security
+    | property rather than a tuning choice. The lock is taken only for an address
+    | that RESOLVES to a user, so the time a request spends queueing for it is a
+    | readable answer to whether that account exists -- measured at 815 ms against
+    | 12 ms with this set to 1, and the caller produces the contention himself by
+    | sending two requests at once. That endpoint therefore gives up at once, and
+    | loses nothing by it: the request holding the lock is already sending the
+    | credential, so the answer is the one it would have given anyway.
+    |
+    | What this number still governs is the programmatic issuers, where the caller
+    | asked for a credential and wants one, and no response shape of theirs
+    | depends on how long it took. There it is a latency ceiling: a waiter holds a
+    | PHP worker for this long, so raising it trades workers for patience.
+    |
+    | `lock_hold_seconds` is the lock's TTL: how long it survives if the process
+    | holding it dies. It has to outlast the slowest issuance, including the
+    | database transaction inside it, or the lock expires while the work is
+    | still running and a second request walks straight in. Neither PostgreSQL
+    | nor MySQL caps that transaction by default (`statement_timeout` and
+    | `innodb_lock_wait_timeout` are the host's to set), which is why the
+    | default is generous rather than tight.
+    |
+    */
+
+    'lock_block_seconds' => env('EMAIL_MAGIC_LINK_LOCK_BLOCK_SECONDS', 5),
+
+    'lock_hold_seconds' => env('EMAIL_MAGIC_LINK_LOCK_HOLD_SECONDS', 60),
+
     'guard' => env('EMAIL_MAGIC_LINK_GUARD'),
 
     // Additional guards a request may sign in to (in addition to "guard"). A

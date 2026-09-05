@@ -639,6 +639,47 @@ final readonly class MagicLinkConfig
         ];
     }
 
+    /**
+     * The cache store the issuance lock uses, or null for the default one.
+     *
+     * Separate from resendStore() on purpose: a host may have exactly one lockable store and
+     * point both here, or keep resend state somewhere cheap and lock somewhere reliable.
+     */
+    public function lockStore(): ?string
+    {
+        $store = $this->config->get('email-magic-link.lock_store');
+
+        return is_string($store) && $store !== '' ? $store : null;
+    }
+
+    /**
+     * How long a second issuance for the same subject WAITS for the first.
+     *
+     * A latency ceiling on the request path rather than a correctness knob: the waiter
+     * holds a worker for this long. Giving up is answered with the endpoint's ordinary
+     * uniform response, because the request holding the lock is already sending.
+     */
+    public function lockBlockSeconds(): int
+    {
+        $seconds = $this->int($this->config->get('email-magic-link.lock_block_seconds'), 5);
+
+        return $seconds > 0 ? $seconds : 5;
+    }
+
+    /**
+     * The lock's TTL -- how long it survives a process that died holding it.
+     *
+     * Deliberately NOT the same number as the wait budget. A TTL shorter than the work it
+     * protects expires mid-issuance and lets a second request in, which is the failure the
+     * lock exists to prevent and the one that leaves no trace.
+     */
+    public function lockHoldSeconds(): int
+    {
+        $seconds = $this->int($this->config->get('email-magic-link.lock_hold_seconds'), 60);
+
+        return $seconds > 0 ? $seconds : 60;
+    }
+
     public function resendStore(): ?string
     {
         $store = $this->config->get('email-magic-link.resend.store');

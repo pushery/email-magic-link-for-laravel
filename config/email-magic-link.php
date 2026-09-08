@@ -17,7 +17,7 @@ return [
     |
     */
 
-    'enabled' => env('EMAIL_MAGIC_LINK_ENABLED', true),
+    'enabled' => filter_var(env('EMAIL_MAGIC_LINK_ENABLED', true), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? true,
 
     /*
     |--------------------------------------------------------------------------
@@ -464,7 +464,7 @@ return [
     */
 
     'resend' => [
-        'enabled' => env('EMAIL_MAGIC_LINK_RESEND', true),
+        'enabled' => filter_var(env('EMAIL_MAGIC_LINK_RESEND', true), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? true,
 
         'cooldown' => [
             'base' => 30,
@@ -549,7 +549,7 @@ return [
     */
 
     'invitations' => [
-        'enabled' => env('EMAIL_MAGIC_LINK_INVITATIONS_ENABLED', false),
+        'enabled' => filter_var(env('EMAIL_MAGIC_LINK_INVITATIONS_ENABLED', false), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? false,
         'ttl' => (int) env('EMAIL_MAGIC_LINK_INVITATION_TTL', 604800),
         'store' => null,
         'handler' => null,

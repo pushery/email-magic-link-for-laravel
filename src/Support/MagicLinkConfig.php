@@ -794,6 +794,11 @@ final readonly class MagicLinkConfig
             return $default;
         }
 
-        return filter_var($value, FILTER_VALIDATE_BOOLEAN);
+        // FILTER_NULL_ON_FAILURE, and the fallback is the DECLARED default rather than
+        // false. Without it every unreadable value answers false, so a typo does not
+        // fail -- it turns the switch off. On `enabled` that closes an authentication
+        // path and on `respect_two_factor` it stops a second factor from being honored,
+        // neither of which anyone asked for by mistyping.
+        return filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? $default;
     }
 }

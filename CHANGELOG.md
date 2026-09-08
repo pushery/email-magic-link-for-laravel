@@ -4,6 +4,16 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.26.2] - 2026-09-08
+
+### Fixed
+
+- **Every boolean switch now reads the spellings an operator actually types, and an unreadable value falls back to the value this package declared rather than to `false`.** `env()` converts exactly `"true"` and `"false"`; every other spelling arrives as a string, and a non-empty string is true. So `EMAIL_MAGIC_LINK_ENABLED=off` put the string `"off"` into the config array, which every `if` read as ON — nothing thrown, nothing logged. It survived casual checking because whoever verifies a switch types `0`, and `0` happens to work for the unrelated reason that PHP calls the string `"0"` falsy. The three env-backed switches — `EMAIL_MAGIC_LINK_ENABLED`, `EMAIL_MAGIC_LINK_RESEND` and `EMAIL_MAGIC_LINK_INVITATIONS_ENABLED` — now decide in the config file itself, so a host reading `config('email-magic-link.enabled')` directly gets a real boolean rather than whatever was typed.
+
+The second half is the sharper one and reaches further than the first. `MagicLinkConfig` already coerced these values, so reading them through the package was correct all along — but it answered `false` for anything it could not parse. A typo therefore did not fail, it turned the switch off. Four of the seven settings that go through it declare `true`, among them `enabled`, which gates an authentication path, and `fortify.respect_two_factor`, which decides whether a second factor is honored. Both now answer with their declared default when the value is unreadable, on the reasoning that the right response to "I cannot read this" is what the package promised, never "off".
+
+The empty string stays a documented false rather than becoming a fourth special case: `filter_var` groups it with `"0"`, `"off"` and `"no"`, and on a switch gating authentication that direction is loud — nobody can sign in — instead of quietly leaving a path open.
+
 ## [0.26.1] - 2026-09-05
 
 ### Fixed
@@ -1192,7 +1202,8 @@ public repository sees the difference.
   `TwoFactorChallengeRequired`).
 - Publishable configuration, migration, and views.
 
-[Unreleased]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.26.1...HEAD
+[Unreleased]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.26.2...HEAD
+[0.26.2]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.26.1...v0.26.2
 [0.26.1]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.26.0...v0.26.1
 [0.26.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.25.0...v0.26.0
 [0.25.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.24.1...v0.25.0

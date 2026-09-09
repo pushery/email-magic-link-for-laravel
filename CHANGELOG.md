@@ -4,6 +4,21 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.26.3] - 2026-09-09
+
+### Fixed
+
+- The configuration page introduced the block with "by default an invalid or expired link
+  redirects" and then showed `'via' => 'view'` underneath it. The default is `redirect`.
+  Copied as-is that turns the answer to an invalid link from a 302 into a 403, and nothing
+  looks wrong, because both work.
+- The event reference counted seven events against eight, and six `ClaimFailure` cases
+  against seven. The missing case is `Revoked` -- the one the same page calls "the one
+  refusal worth alerting on". Both tables were complete; only the numbers were wrong.
+- `email-magic-link:purge` was described as taking no options while the cleanup guide hands
+  out a scheduler line with `--isolated`. It declares none of its own and implements
+  `Isolatable`, which is where the option comes from; both pages now say so.
+
 ## [0.26.2] - 2026-09-08
 
 ### Fixed

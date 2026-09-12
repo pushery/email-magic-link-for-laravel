@@ -4,6 +4,12 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.27.0] - 2026-09-12
+
+### Added
+
+- **Two layout slots, `ui.header_view` and `ui.footer_view`**, rendered above and below the card on every screen this package draws. Both are null by default, so an install that says nothing renders exactly as before. They exist for the confirm screen: that is where a person decides, out of an e-mail, whether to sign in here, and it was the only screen of the flow with no wordmark and no language switcher -- because this package draws it and knows neither, while every other screen of a host application has both. A screen whose whole purpose is a trust decision is the worst one to strip of the marks that earn it. The only way out before was `vendor:publish` and a fork of the layout, which means carrying every later improvement to it by hand or losing it silently. Slots rather than a per-screen `view` override on purpose: an override hands over the form, the CSRF field and the token handling as well, so a security-shaped surface becomes the consumer's to maintain for the sake of a wordmark. A name that resolves to no view is dropped and logged at `warning` rather than thrown -- this renders on the sign-in path, where a typo would lock everyone out instead of spoiling one screen.
+
 ## [0.26.3] - 2026-09-09
 
 ### Fixed

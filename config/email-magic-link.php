@@ -366,6 +366,29 @@ return [
         'vite' => ['resources/css/app.css'],
         'styles' => [],
         'script_nonce' => null,
+
+        /*
+         * Two views this package renders around its own card, on every screen it draws:
+         * one above, one below. Null renders nothing at all, which is the default and the
+         * state of every install that says nothing.
+         *
+         * They exist for the confirm screen. That is where a person decides, out of an
+         * e-mail, whether to sign in here — and it was the only screen of the flow with no
+         * wordmark and no language switcher, because this package draws it and knows
+         * neither. Every other screen of your application has both. A screen whose whole
+         * purpose is a trust decision is the worst one to strip of the marks that earn it.
+         *
+         * Slots rather than a per-screen `view` override: an override would hand you the
+         * form, the CSRF field and the token handling as well, so every later change to
+         * those becomes yours to carry by hand. These give you the two places where you
+         * have something to say and leave the rest here.
+         *
+         * A name that resolves to no view is DROPPED and logged at `warning`, never thrown:
+         * this renders on the sign-in path, where a typo would lock everyone out rather
+         * than spoil a screen.
+         */
+        'header_view' => null,
+        'footer_view' => null,
     ],
 
     /*

@@ -73,9 +73,20 @@
     </style>
 </head>
 <body>
+    {{-- The consumer's two slots, above and below the card. Both are null by default and
+         render nothing; `ui.header_view` is where a wordmark belongs and `ui.footer_view`
+         where a language switcher does. They sit OUTSIDE <main> on purpose: a brand mark and
+         a locale control are not the main content of a sign-in screen, and the body's grid
+         centers all three as rows without either of them touching the card's width. --}}
+    @if ($emlHeaderView = $emlConfig->uiHeaderView())
+        @include($emlHeaderView)
+    @endif
     <main class="eml-shell">
         @yield('content')
     </main>
+    @if ($emlFooterView = $emlConfig->uiFooterView())
+        @include($emlFooterView)
+    @endif
     {{-- ORDER IS LOAD-BEARING, and it used to be wrong here. @wirekitScripts
          registers WireKit's Alpine plugins on the `alpine:init` event, and
          @livewireScripts is what BOOTS Alpine — so WireKit has to come first or

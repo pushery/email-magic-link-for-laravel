@@ -8,6 +8,7 @@ use EmailMagicLink\Contracts\InvalidLinkResponder;
 use EmailMagicLink\Contracts\ScriptNonce;
 use EmailMagicLink\Notifications\MagicLinkNotification;
 use Illuminate\Contracts\Config\Repository;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\View;
 
 /**
@@ -455,6 +456,63 @@ final readonly class MagicLinkConfig
         }
 
         return is_array($styles) ? array_values(array_filter($styles, is_string(...))) : [];
+    }
+
+    /**
+     * A view rendered ABOVE the card on every screen this package draws, or null for none.
+     *
+     * The confirm screen is the one place a person decides, out of an e-mail, whether to sign in
+     * here — and it was the only screen of the flow carrying no wordmark and no language switcher,
+     * because this package draws it and knows neither. Every other screen of a host application
+     * has both. A screen whose entire purpose is a trust decision is the worst one to strip of the
+     * marks that earn it.
+     *
+     * A SLOT RATHER THAN A `view` OVERRIDE PER SCREEN, and the choice is deliberate. An override
+     * hands the consumer the whole screen — the form, the CSRF field, the token handling — so
+     * every later change to any of that has to be carried by hand into every fork, and a
+     * security-shaped surface becomes theirs to maintain for the sake of a wordmark. Two slots
+     * keep the screen here and give away exactly the two places where the consumer has something
+     * to say.
+     *
+     * A NAME THAT RESOLVES TO NOTHING IS DROPPED, NOT THROWN. `invalid_response.view` lets a
+     * bad name throw, and for an error page that is defensible. This one renders on the SIGN-IN
+     * path: a typo there would lock every user out of the application rather than spoil a screen.
+     * The miss is logged at `warning` with the key, because silence would leave a consumer
+     * looking at an unchanged page with nothing to read.
+     */
+    public function uiHeaderView(): ?string
+    {
+        return $this->existingView('email-magic-link.ui.header_view');
+    }
+
+    /** A view rendered BELOW the card on every screen this package draws, or null for none. */
+    public function uiFooterView(): ?string
+    {
+        return $this->existingView('email-magic-link.ui.footer_view');
+    }
+
+    /**
+     * The view named by a config key, or null when it is unset, not a string, or not a view this
+     * installation can resolve.
+     */
+    private function existingView(string $key): ?string
+    {
+        $name = $this->config->get($key);
+
+        if (! is_string($name) || $name === '') {
+            return null;
+        }
+
+        if (View::exists($name)) {
+            return $name;
+        }
+
+        Log::warning('email-magic-link: a configured layout slot names a view that does not exist — nothing is rendered there', [
+            'setting' => $key,
+            'view' => $name,
+        ]);
+
+        return null;
     }
 
     public function uiMode(): string

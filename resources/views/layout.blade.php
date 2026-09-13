@@ -39,6 +39,10 @@
             min-height: 100dvh; /* iOS Safari: the visible viewport, not the toolbar-inclusive one */
             display: grid;
             place-items: center;
+            /* The header and footer slots make three rows, and a grid at least a viewport tall
+               stretches its rows (align-content: normal) and centers each item inside its own:
+               the wordmark ~230px above the card. Centering the rows keeps the three together. */
+            align-content: center;
             font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
             background: Canvas;
             color: CanvasText;
@@ -98,8 +102,9 @@
     {{-- The consumer's two slots, above and below the card. Both are null by default and
          render nothing; `ui.header_view` is where a wordmark belongs and `ui.footer_view`
          where a language switcher does. They sit OUTSIDE <main> on purpose: a brand mark and
-         a locale control are not the main content of a sign-in screen, and the body's grid
-         centers all three as rows without either of them touching the card's width. --}}
+         a locale control are not the main content of a sign-in screen. The body's grid stacks
+         all three as centered rows, kept together by `align-content`, without either slot
+         touching the card's width. --}}
     @if ($emlHeaderView = $emlConfig->uiHeaderView())
         @include($emlHeaderView)
     @endif

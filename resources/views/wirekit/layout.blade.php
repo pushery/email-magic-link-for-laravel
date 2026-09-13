@@ -29,6 +29,12 @@
          without a policy renders byte-identically. --}}
     @wirekitStyles($emlNonce)
 
+    {{-- The kit's fonts. @wirekitStyles delivers the tokens, --font-wk-sans among them, and not
+         the @font-face rules and preloads that make that family load; only this component renders
+         those. Without it the screens fell back to the system font while every other page of the
+         host stood in its configured kit font. Nonced like the rest: its <style> is inline. --}}
+    <x-wirekit::fonts :nonce="$emlNonce" />
+
     {{-- The host's compiled stylesheet (Tailwind v4 with WireKit's views
          @source'd) supplies the component utility classes. ui.vite points at
          the host's Vite entrypoint; set it false for a non-Vite host. ui.styles
@@ -57,6 +63,11 @@
             min-height: 100dvh;
             display: grid;
             place-items: center;
+            /* Three rows with the header and footer slots. A grid at least a viewport tall stretches
+               its rows (align-content: normal) and centers each item inside its own, which put the
+               wordmark ~230px above the card on a 1117px-tall desktop. Centering the rows keeps
+               header, card and footer together. */
+            align-content: center;
             background: var(--color-wk-bg, Canvas);
             color: var(--color-wk-text, CanvasText);
         }
@@ -76,8 +87,9 @@
     {{-- The consumer's two slots, above and below the card. Both are null by default and
          render nothing; `ui.header_view` is where a wordmark belongs and `ui.footer_view`
          where a language switcher does. They sit OUTSIDE <main> on purpose: a brand mark and
-         a locale control are not the main content of a sign-in screen, and the body's grid
-         centers all three as rows without either of them touching the card's width. --}}
+         a locale control are not the main content of a sign-in screen. The body's grid stacks
+         all three as centered rows, kept together by `align-content`, without either slot
+         touching the card's width. --}}
     @if ($emlHeaderView = $emlConfig->uiHeaderView())
         @include($emlHeaderView)
     @endif

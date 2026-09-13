@@ -4,6 +4,13 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.27.1] - 2026-09-13
+
+### Fixed
+
+- **With `ui.header_view` and `ui.footer_view` set, the header, the card and the footer stay together.** The body is a grid at least a viewport tall, and with the slots it has three rows; a grid stretches its rows unless told otherwise and centers each item inside its own, so the wordmark sat 237px above the card and the footer 237px below it on a 1728x1117 desktop, 146px on a phone. Measured in headless Chrome on both layouts; the body now sets `align-content: center`, and both gaps measure 0. Reported from a consumer's screenshots of v0.27.0.
+- **The WireKit screens load the kit's fonts.** `@wirekitStyles` delivers the tokens, `--font-wk-sans` among them, and not the stylesheet that loads the family; only `<x-wirekit::fonts />` renders that, and the layout did not call it. The screens fell back to the system font while every other page of the host stood in its configured kit font. The layout now renders the component with the page's CSP nonce. The component's `nonce` prop arrived in WireKit 2.31.0.
+
 ## [0.27.0] - 2026-09-12
 
 ### Added
@@ -1223,7 +1230,7 @@ public repository sees the difference.
   `TwoFactorChallengeRequired`).
 - Publishable configuration, migration, and views.
 
-[Unreleased]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.26.2...HEAD
+[Unreleased]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.27.1...HEAD
 [0.26.2]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.26.1...v0.26.2
 [0.26.1]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.26.0...v0.26.1
 [0.26.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.25.0...v0.26.0

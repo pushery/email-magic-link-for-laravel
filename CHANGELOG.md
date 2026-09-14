@@ -4,6 +4,16 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.28.0] - 2026-09-14
+
+### Added
+
+- **The WireKit screens can render in a dark host's scheme.** WireKit switches its tokens to the dark scheme under a `dark` class on the `<html>` element, and the package's layout rendered that element without a class, so a host with dark sign-in screens sent people from a dark login to a light magic-link screen. The new `ui.html_class` puts a class on the layout's `<html>` element: set it to `dark` and the screens follow. It defaults to `null`, which renders no attribute, so nothing changes for an install that says nothing.
+
+### Fixed
+
+- **A one-time code keeps to one row on a desktop and splits evenly on a phone.** WireKit's code field wraps its boxes wherever the width runs out, so on the 24rem card an eight-character code broke 6+2 on a desktop and 5+3 on a 375-pixel phone, and a six-character code 5+1, at no boundary the code has. The code screen now lays the boxes out as a grid: one row while it fits, with the card widening for a long code, and an even split below that, such as 4+4 or 3+3. Measured in Blink and WebKit. A layout you published keeps the old behavior until you publish it again.
+
 ## [0.27.1] - 2026-09-13
 
 ### Fixed
@@ -1230,7 +1240,7 @@ public repository sees the difference.
   `TwoFactorChallengeRequired`).
 - Publishable configuration, migration, and views.
 
-[Unreleased]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.27.1...HEAD
+[Unreleased]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.28.0...HEAD
 [0.26.2]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.26.1...v0.26.2
 [0.26.1]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.26.0...v0.26.1
 [0.26.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.25.0...v0.26.0

@@ -389,6 +389,16 @@ return [
          */
         'header_view' => null,
         'footer_view' => null,
+
+        /*
+         * The class attribute of the WireKit layout's <html> element, or null for none.
+         *
+         * WireKit switches its tokens to the dark scheme under `.dark` on the root element, so a
+         * host whose own sign-in screens are dark sets 'dark' here and this package's screens
+         * follow. The two slots above cannot do it: they render inside <body>. The plain Blade
+         * screens do not read this key.
+         */
+        'html_class' => null,
     ],
 
     /*

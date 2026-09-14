@@ -492,6 +492,26 @@ final readonly class MagicLinkConfig
     }
 
     /**
+     * The class attribute of the WireKit layout's `<html>` element, or null for none.
+     *
+     * WireKit declares its dark tokens under `.dark` on the root element, and the layout's body slots
+     * cannot reach that element. Whitespace around the value is dropped, and a blank or non-string
+     * value renders no attribute at all rather than an empty one.
+     */
+    public function uiHtmlClass(): ?string
+    {
+        $class = $this->config->get('email-magic-link.ui.html_class');
+
+        if (! is_string($class)) {
+            return null;
+        }
+
+        $class = trim($class);
+
+        return $class === '' ? null : $class;
+    }
+
+    /**
      * The view named by a config key, or null when it is unset, not a string, or not a view this
      * installation can resolve.
      */

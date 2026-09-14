@@ -2,8 +2,13 @@
      has no bundle for (and the host published none), the strings fall back, and a `lang`
      that still names the requested locale sends a screen reader to the wrong voice. --}}
 @php($emlLocale = app('translator')->has('email-magic-link::messages.sign_in', app()->getLocale(), false) ? app()->getLocale() : (string) config('app.fallback_locale', 'en'))
+@php($emlConfig = app(\EmailMagicLink\Support\MagicLinkConfig::class))
+@php($emlCodeBoxes = new \EmailMagicLink\Support\CodeBoxLayout($emlConfig->codeLength()))
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', $emlLocale) }}">
+{{-- The host's class for the root element, so a dark host renders these screens dark: WireKit declares
+     its dark tokens under `.dark` on <html>, which the body slots below cannot reach. Null renders no
+     attribute, so an install that says nothing renders this element exactly as before. --}}
+<html lang="{{ str_replace('_', '-', $emlLocale) }}"@if ($emlHtmlClass = $emlConfig->uiHtmlClass()) class="{{ $emlHtmlClass }}"@endif>
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -39,7 +44,6 @@
          @source'd) supplies the component utility classes. ui.vite points at
          the host's Vite entrypoint; set it false for a non-Vite host. ui.styles
          <link>s plain pre-compiled stylesheets (a CDN bundle, an asset() path). --}}
-    @php($emlConfig = app(\EmailMagicLink\Support\MagicLinkConfig::class))
     @if ($emlVite = $emlConfig->uiVite())
         @vite($emlVite)
     @endif
@@ -72,15 +76,18 @@
             color: var(--color-wk-text, CanvasText);
         }
         .eml-shell { width: 100%; max-width: 24rem; padding: 2rem; box-sizing: border-box; }
-        /* Only the CENTERING is still ours. The `flex-wrap: wrap` half of this rule
-           was a workaround and is retired: WireKit 2.21.1 ships the
-           digit row as `flex flex-wrap gap-2`, so a long code wraps on its own.
-           It does not center the wrapped remainder, and on this 24rem card an
-           eight-digit code always wraps — two boxes hanging at the left edge under
-           a full row read as a rendering fault rather than a layout. Reaching in
-           through `role="group"` is still a consumer patch, so it stays as narrow
-           as the delta actually is. */
-        .eml-otp [role="group"] { justify-content: center; }
+        /* The code boxes as a grid, because WireKit's row wraps wherever the width runs out: on this
+           24rem card an eight-character code broke 6+2 on a desktop and 5+3 on a phone, at no
+           boundary the code has. One row while it fits, the card widening for a long code; below
+           that an even split, 4+4 or 3+3, halving again while a row still would not fit. The
+           numbers come from CodeBoxLayout. Reaching in through `role="group"` is a consumer patch
+           until WireKit's otp-input can split evenly on its own. */
+        .eml-shell:has(.eml-otp) { max-width: {{ $emlCodeBoxes->cardMaxWidthRem() }}rem; }
+        .eml-otp { container-type: inline-size; }
+        .eml-otp [role="group"] { display: grid; grid-template-columns: repeat({{ $emlCodeBoxes->columns() }}, 2.5rem); justify-content: center; }
+        @foreach ($emlCodeBoxes->splits() as $emlSplit)
+        @@container (width < {{ $emlSplit['below'] }}rem) { .eml-otp [role="group"] { grid-template-columns: repeat({{ $emlSplit['columns'] }}, 2.5rem); } }
+        @endforeach
     </style>
 </head>
 <body>

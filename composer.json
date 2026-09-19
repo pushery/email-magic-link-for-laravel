@@ -25,12 +25,17 @@
         "ext-mbstring": "*",
         "ext-filter": "*",
         "ext-hash": "*",
-        "laravel/framework": "^13.0"
+        "laravel/framework": "^13.0",
+        "nesbot/carbon": "^3.0",
+        "symfony/http-foundation": "^7.0 || ^8.0"
     },
     "require-dev": {
         "cweagans/composer-patches": "^1.7",
         "larastan/larastan": "3.11.0",
+        "laravel/ai": "^0.11.2",
+        "laravel/boost": "^2.9",
         "laravel/fortify": "^1.39",
+        "laravel/mcp": "^1.0",
         "laravel/pao": "^1.1",
         "laravel/pint": "^1.30",
         "orchestra/testbench": "^11.2",
@@ -44,13 +49,14 @@
         "pestphp/pest-plugin-type-coverage": "^5.0",
         "phpstan/phpstan": "2.2.13",
         "predis/predis": "^3.2",
-        "pushery/wirekit": "^2.45",
+        "pushery/wirekit": "^2.53",
         "rector/rector": "2.6.3",
         "spaze/phpstan-disallowed-calls": "4.14.0"
     },
     "suggest": {
+        "laravel/ai": "Required only to score evals with a real judge. Not a dev dependency: it requires aws/aws-sdk-php for a provider this package never calls, which is 67 MB and 3512 files in every checkout and every CI lane.",
         "laravel/fortify": "Enables the no-bypass two-factor (TOTP) handoff: a magic-link user with confirmed 2FA completes Fortify's challenge before being logged in (^1.0).",
-        "pushery/wirekit": "Renders the sign-in screens with WireKit components when installed; the package auto-detects it and falls back to plain Blade otherwise. The screens need 2.26 or newer: the one-time-code field needs the alphabet prop (2.22) to accept a non-numeric code at all, and its case-folding validation pattern (2.26) to accept that code in lower case without scripting. Only the version pinned in require-dev is installed by the suite, so a release between that floor and the pin meets the stated requirement without a run behind it."
+        "pushery/wirekit": "Renders the sign-in screens with WireKit components when installed; the package auto-detects it and falls back to plain Blade otherwise. The screens need 2.53 or newer, and each number below is the release that made the screen correct rather than merely newer: the one-time-code field needs the alphabet prop (2.22) to accept a non-numeric code at all, its case-folding validation pattern (2.26) to accept that code in lower case without scripting, and its group prop (2.53) to break a long code on a boundary the code actually has instead of wherever the width runs out. Only the version pinned in require-dev is installed by the suite, so a release between that floor and the pin meets the stated requirement without a run behind it."
     },
     "autoload": {
         "psr-4": {

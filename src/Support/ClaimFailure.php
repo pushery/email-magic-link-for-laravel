@@ -27,4 +27,15 @@ enum ClaimFailure
      * it must be able to tell it from a re-click on an accepted one.
      */
     case Revoked;
+
+    /**
+     * The token was genuine and the account exists, but the application says that
+     * account may not sign in -- suspended, dormant, deleted-in-grace.
+     * Distinct from NotFound for the same reason Revoked is distinct from
+     * AlreadyConsumed: a refused account holding a valid link is a signal a host
+     * will want to alert on, and it is indistinguishable from ordinary noise if
+     * it arrives under the name of a token that was never issued. The HTTP
+     * response stays identical either way.
+     */
+    case Ineligible;
 }

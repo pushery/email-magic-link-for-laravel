@@ -18,12 +18,15 @@ use EmailMagicLink\Contracts\MagicLinkAuthenticator;
 use EmailMagicLink\Contracts\MagicLinkIssuer;
 use EmailMagicLink\Contracts\ResendGuard;
 use EmailMagicLink\Contracts\ScriptNonce;
+use EmailMagicLink\Contracts\SignInEligibility;
 use EmailMagicLink\Contracts\TokenStore;
 use EmailMagicLink\Contracts\UserLookup;
+use EmailMagicLink\Eligibility\AlwaysEligible;
 use EmailMagicLink\Exceptions\InvitationsMisconfiguredException;
 use EmailMagicLink\Http\Middleware\NoIndex;
 use EmailMagicLink\Http\Responses\DefaultInvalidLinkResponder;
 use EmailMagicLink\Lookups\DefaultUserLookup;
+use EmailMagicLink\Lookups\EligibleUserLookup;
 use EmailMagicLink\Stores\DefaultInvitationStore;
 use EmailMagicLink\Stores\DefaultTokenStore;
 use EmailMagicLink\Support\AutoScriptNonce;
@@ -118,10 +121,23 @@ final class EmailMagicLinkServiceProvider extends ServiceProvider
             return $this->resolveContract($app, TokenStore::class, $custom, DefaultTokenStore::class);
         });
 
+        $this->app->singleton(SignInEligibility::class, function (Application $app): SignInEligibility {
+            $custom = $app->make(MagicLinkConfig::class)->eligibility();
+
+            return $this->resolveContract($app, SignInEligibility::class, $custom, AlwaysEligible::class);
+        });
+
         $this->app->singleton(UserLookup::class, function (Application $app): UserLookup {
             $custom = $app->make(MagicLinkConfig::class)->userLookup();
 
-            return $this->resolveContract($app, UserLookup::class, $custom, DefaultUserLookup::class);
+            // Wrapped rather than replaced, so a host that binds its own lookup is gated
+            // too. Putting the gate here instead of in the two controllers that call it
+            // also means a third caller added later inherits it rather than forgetting
+            // it -- and every caller keeps branching on null, which it already did.
+            return new EligibleUserLookup(
+                $this->resolveContract($app, UserLookup::class, $custom, DefaultUserLookup::class),
+                $app->make(SignInEligibility::class),
+            );
         });
 
         $this->app->singleton(CaptchaGuard::class, function (Application $app): CaptchaGuard {

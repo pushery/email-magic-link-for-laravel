@@ -76,18 +76,20 @@
             color: var(--color-wk-text, CanvasText);
         }
         .eml-shell { width: 100%; max-width: 24rem; padding: 2rem; box-sizing: border-box; }
-        /* The code boxes as a grid, because WireKit's row wraps wherever the width runs out: on this
-           24rem card an eight-character code broke 6+2 on a desktop and 5+3 on a phone, at no
-           boundary the code has. One row while it fits, the card widening for a long code; below
-           that an even split, 4+4 or 3+3, halving again while a row still would not fit. The
-           numbers come from CodeBoxLayout. Reaching in through `role="group"` is a consumer patch
-           until WireKit's otp-input can split evenly on its own. */
+        /* The card widens for a long code so a desktop keeps the whole thing in one row. This is
+           the half of the old repair that was never WireKit's business: how wide THIS package's
+           card may grow is a decision about the screen around the component.
+           The other half — a grid reaching in through the component's own `role="group"`, splitting
+           evenly below each row width — is gone. WireKit 2.53 takes a `group` prop and breaks on a
+           boundary the code actually has, so the patch over somebody else's markup is no longer
+           needed and no longer has to survive a change to that markup. */
         .eml-shell:has(.eml-otp) { max-width: {{ $emlCodeBoxes->cardMaxWidthRem() }}rem; }
-        .eml-otp { container-type: inline-size; }
-        .eml-otp [role="group"] { display: grid; grid-template-columns: repeat({{ $emlCodeBoxes->columns() }}, 2.5rem); justify-content: center; }
-        @foreach ($emlCodeBoxes->splits() as $emlSplit)
-        @@container (width < {{ $emlSplit['below'] }}rem) { .eml-otp [role="group"] { grid-template-columns: repeat({{ $emlSplit['columns'] }}, 2.5rem); } }
-        @endforeach
+        /* One declaration still reaches into the component, and it is alignment rather than layout:
+           otp-input renders its boxes in a `flex flex-wrap` with no `justify`, so they sit against
+           the left edge of a card whose every other element is centered. The component takes no
+           prop for it and its attribute bag lands on the outer wrapper, not on this row, so there
+           is no call-site way to say it. Reported upstream; this goes when that lands. */
+        .eml-otp [role="group"] { justify-content: center; }
     </style>
 </head>
 <body>

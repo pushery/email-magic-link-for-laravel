@@ -236,6 +236,13 @@ final readonly class MagicLinkConfig
         return is_string($lookup) && $lookup !== '' ? $lookup : null;
     }
 
+    public function eligibility(): ?string
+    {
+        $eligibility = $this->config->get('email-magic-link.eligibility');
+
+        return is_string($eligibility) && $eligibility !== '' ? $eligibility : null;
+    }
+
     public function tokenStore(): ?string
     {
         $store = $this->config->get('email-magic-link.token_store');

@@ -201,6 +201,29 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Sign-in eligibility
+    |--------------------------------------------------------------------------
+    |
+    | A class implementing the SignInEligibility contract, asked whether an
+    | account may be handed a session right now -- suspended, dormant,
+    | deleted-in-grace, never-verified. What those words mean is yours; the
+    | package only asks the question.
+    |
+    | It is consulted twice, and the second time is the point. On issuance a
+    | refused account resolves to nothing, so the endpoint answers exactly as it
+    | does for an address nobody registered and the refusal is not an oracle. On
+    | redemption it is asked again, because a link issued a minute before the
+    | account was refused is still a valid credential afterwards.
+    |
+    | Leave null to let every account that exists sign in, which is what this
+    | package did before the contract existed.
+    |
+    */
+
+    'eligibility' => null,
+
+    /*
+    |--------------------------------------------------------------------------
     | Token store
     |--------------------------------------------------------------------------
     |

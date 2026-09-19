@@ -53,11 +53,18 @@
                     @php($emlAlphabet = app(\EmailMagicLink\Support\MagicLinkConfig::class)->codeAlphabet())
                     @php($emlCodeLength = app(\EmailMagicLink\Support\MagicLinkConfig::class)->codeLength())
 
+                    {{-- `group` rather than a grid over the component's markup: the groups do not
+                         break inside, so a row that fits stays one row and one that does not breaks
+                         where the code itself has a boundary. Half the code, rounded up, from the
+                         same class that decides how wide the card may grow — see CodeBoxLayout. --}}
+                    @php($emlCodeGroup = new \EmailMagicLink\Support\CodeBoxLayout($emlCodeLength)->group())
+
                     <x-wirekit::otp-input
                         name="code"
                         class="eml-otp"
                         autofocus
                         :length="$emlCodeLength"
+                        :group="$emlCodeGroup"
                         :alphabet="$emlAlphabet !== '' ? $emlAlphabet : '0123456789'"
                         :label="__('email-magic-link::messages.code_label')"
                         :error="$errors->first('code')"

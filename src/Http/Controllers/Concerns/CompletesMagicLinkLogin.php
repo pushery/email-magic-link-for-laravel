@@ -6,6 +6,7 @@ namespace EmailMagicLink\Http\Controllers\Concerns;
 
 use EmailMagicLink\Contracts\MagicLinkAuthenticator;
 use EmailMagicLink\Contracts\ResendGuard;
+use EmailMagicLink\Contracts\SignInEligibility;
 use EmailMagicLink\Events\MagicLinkConsumptionFailed;
 use EmailMagicLink\Events\MagicLinkVerified;
 use EmailMagicLink\Models\MagicLinkToken;
@@ -42,6 +43,22 @@ trait CompletesMagicLinkLogin
 
         if ($user === null) {
             return $this->failedConsumption($request, $failureRoute, ClaimFailure::NotFound);
+        }
+
+        // The half of the eligibility gate that only this path can close. Issuance is
+        // gated by EligibleUserLookup, but a link handed out a minute before the
+        // account was refused is a credential that already left the building, and
+        // nothing looks the address up on the way back -- redemption resolves the user
+        // from the token's id. The row is spent either way, which is the fail-closed
+        // direction, same as the guard check above.
+        //
+        // Deliberately BEFORE the cooldown reset and the verified event. Announcing a
+        // verification that yields no session would have hosts acting on a sign-in that
+        // did not happen, and clearing the cooldown is observable: the next request for
+        // this address would skip a throttle it is otherwise subject to, which is the
+        // difference an enumerating caller is looking for.
+        if (! app(SignInEligibility::class)->allows($user, $token->guard)) {
+            return $this->failedConsumption($request, $failureRoute, ClaimFailure::Ineligible);
         }
 
         // A verified token proves the address reached its owner, so clear the

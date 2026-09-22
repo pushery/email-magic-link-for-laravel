@@ -6,6 +6,7 @@ namespace EmailMagicLink\Http\Controllers;
 
 use EmailMagicLink\Contracts\InvitationStore;
 use EmailMagicLink\Events\InvitationRejected;
+use EmailMagicLink\Exceptions\InvitationsMisconfiguredException;
 use EmailMagicLink\Http\Controllers\Concerns\RejectsGenerically;
 use EmailMagicLink\Models\Invitation;
 use EmailMagicLink\Support\ClaimFailure;
@@ -63,6 +64,12 @@ final readonly class ShowInvitationController
 
         if ($view === null) {
             return $this->refuse($request, ClaimFailure::NotFound);
+        }
+
+        // The name is the host's, so only the view factory can say whether it resolves, and
+        // only now: a host may register the namespace that holds it after this package boots.
+        if (! $this->views->exists($view)) {
+            throw InvitationsMisconfiguredException::viewNotFound($view);
         }
 
         return $this->views->make($view, [

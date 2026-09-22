@@ -614,4 +614,25 @@ return [
         'retain_accepted_days' => 30,
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Replacing the package's models
+    |--------------------------------------------------------------------------
+    |
+    | A host that needs its own relations, scopes or casts on a token or an invitation row
+    | subclasses the model and maps it here, keyed by the package class. The package then uses
+    | the subclass on every path: every query, every row it writes, and the connection a claim
+    | runs on.
+    |
+    | A class that does not exist, or does not extend the package class, is ignored and the
+    | package class is used instead. Obeying it would fail in the middle of a sign-in, long
+    | after boot.
+    |
+    */
+
+    'models' => [
+        // \EmailMagicLink\Models\MagicLinkToken::class => \App\Models\MagicLinkToken::class,
+        // \EmailMagicLink\Models\Invitation::class => \App\Models\Invitation::class,
+    ],
+
 ];

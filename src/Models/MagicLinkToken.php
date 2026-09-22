@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace EmailMagicLink\Models;
 
 use Carbon\CarbonInterface;
+use EmailMagicLink\Models\Concerns\Replaceable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Override;
@@ -30,6 +31,8 @@ use Override;
  */
 class MagicLinkToken extends Model
 {
+    use Replaceable;
+
     protected $table = 'magic_link_tokens';
 
     /**

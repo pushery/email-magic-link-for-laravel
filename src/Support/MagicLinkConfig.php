@@ -570,6 +570,13 @@ final readonly class MagicLinkConfig
      * Resolve a view to its WireKit variant when WireKit is active and that
      * variant exists, else the plain Blade view. The existence check keeps the
      * sign-in UI from breaking if a WireKit view was never published or removed.
+     *
+     * The names are the screens this package renders itself, so every name this
+     * returns is one it ships.
+     *
+     * @param  'request'|'confirm'|'code'  $name
+     *
+     * @phpstan-return view-string
      */
     public function view(string $name): string
     {

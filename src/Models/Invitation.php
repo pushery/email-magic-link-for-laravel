@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace EmailMagicLink\Models;
 
 use Carbon\CarbonInterface;
+use EmailMagicLink\Models\Concerns\Replaceable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Override;
@@ -30,6 +31,8 @@ use Override;
  */
 class Invitation extends Model
 {
+    use Replaceable;
+
     protected $table = 'email_magic_link_invitations';
 
     /**

@@ -83,7 +83,7 @@ final readonly class DefaultTokenStore implements TokenStore
         if ($channel === 'code') {
             // Keep at most one active code per user PER GUARD so a claim is
             // unambiguous and issuing for one guard never clobbers another's code.
-            MagicLinkToken::query()
+            MagicLinkToken::model()::query()
                 ->where('user_id', $userId)
                 ->where('channel', 'code')
                 ->where('guard', $guard)
@@ -93,7 +93,7 @@ final readonly class DefaultTokenStore implements TokenStore
 
         $plaintext = $channel === 'code' ? $this->generateCode() : $this->generateLinkToken();
 
-        $record = new MagicLinkToken;
+        $record = MagicLinkToken::resolve();
         $record->user_id = $userId;
         $record->guard = $guard;
         $record->token_hash = $this->hasher->hash($plaintext);
@@ -186,7 +186,7 @@ final readonly class DefaultTokenStore implements TokenStore
             $now = Carbon::now();
             $max = $this->config->maxAttemptsPerToken();
 
-            $token = MagicLinkToken::query()
+            $token = MagicLinkToken::model()::query()
                 ->where('user_id', $this->identifierOf($user))
                 ->where('channel', 'code')
                 ->where('guard', $guard)
@@ -256,7 +256,7 @@ final readonly class DefaultTokenStore implements TokenStore
             // autocommit the locks would drop the moment the select returned, and the delete
             // would be back to waiting on whatever moved in between.
             $removed = $this->connection()->transaction(function () use ($now, $chunk): int {
-                $ids = MagicLinkToken::query()
+                $ids = MagicLinkToken::model()::query()
                     ->select('id')
                     ->where(function (Builder $query) use ($now): void {
                         $query->where('expires_at', '<=', $now)
@@ -271,7 +271,7 @@ final readonly class DefaultTokenStore implements TokenStore
                     return 0;
                 }
 
-                MagicLinkToken::query()->whereIn('id', $ids)->delete();
+                MagicLinkToken::model()::query()->whereIn('id', $ids)->delete();
 
                 return $ids->count();
             });
@@ -333,7 +333,7 @@ final readonly class DefaultTokenStore implements TokenStore
         // wrapTable() applies the connection's table prefix and the driver's quoting. A
         // literal table name here bypasses the prefix that Eloquent and Schema both honor,
         // so on a prefixed connection every claim ran against a table that does not exist.
-        $table = $connection->getQueryGrammar()->wrapTable((new MagicLinkToken)->getTable());
+        $table = $connection->getQueryGrammar()->wrapTable(MagicLinkToken::resolve()->getTable());
 
         $sql = "update {$table} set "
             .'consumed_at = case when uses_remaining <= 1 then ? else consumed_at end, '
@@ -360,7 +360,7 @@ final readonly class DefaultTokenStore implements TokenStore
         // lagging replica the answer was "no" for a link that does. The claim callers hold
         // a transaction and would reach the write PDO anyway; stating it here keeps the
         // property on the lookup rather than on whoever calls it.
-        return MagicLinkToken::query()
+        return MagicLinkToken::model()::query()
             ->useWritePdo()
             ->where('token_hash', $hash)
             ->where('channel', 'link')
@@ -427,7 +427,7 @@ final readonly class DefaultTokenStore implements TokenStore
             return $candidates[0];
         }
 
-        $stored = MagicLinkToken::query()->useWritePdo()->whereIn('token_hash', $candidates)->value('token_hash');
+        $stored = MagicLinkToken::model()::query()->useWritePdo()->whereIn('token_hash', $candidates)->value('token_hash');
 
         // Falling back to the current key keeps a miss a miss: the caller goes on to its
         // ordinary not-found path rather than branching on a second kind of nothing.
@@ -436,7 +436,7 @@ final readonly class DefaultTokenStore implements TokenStore
 
     private function connection(): Connection
     {
-        return (new MagicLinkToken)->getConnection();
+        return MagicLinkToken::resolve()->getConnection();
     }
 
     private function identifierOf(Authenticatable $user): string

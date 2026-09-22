@@ -4,6 +4,17 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.30.0] - 2026-09-22
+
+### Added
+
+- **The package's models are replaceable.** Map `MagicLinkToken` or `Invitation` to your own subclass in the new `email-magic-link.models` config key, and the package uses that class on every path: every query, every row it writes, and the connection a claim runs on. A class that does not exist, or does not extend the package class, is ignored in favor of the package class. `MagicLinkToken::model()` and `MagicLinkToken::resolve()` give your own code the same answer.
+
+### Changed
+
+- **A configured invitation view that does not exist now fails with a message naming `email-magic-link.invitations.view`.** The acceptance screen is yours, so whether it resolves can only be known when it is about to render, and until now the failure there was the view factory's generic `View [...] not found.`, which names a view rather than the setting that chose it. It is an `InvitationsMisconfiguredException` now, like the boot-time checks on the same settings. It is thrown only for a live invitation: a dead one is refused before the view is looked up, exactly as before.
+- **`MagicLinkConfig::view()` declares the three screens it resolves, `request`, `confirm` and `code`, and returns a `view-string`.** Nothing changes at runtime; a static analyzer can now check the names on both sides of the call.
+
 ## [0.29.0] - 2026-09-19
 
 ### Added
@@ -1252,7 +1263,8 @@ public repository sees the difference.
   `TwoFactorChallengeRequired`).
 - Publishable configuration, migration, and views.
 
-[Unreleased]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.29.0...HEAD
+[Unreleased]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.30.0...HEAD
+[0.30.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.29.0...v0.30.0
 [0.29.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.28.0...v0.29.0
 [0.26.2]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.26.1...v0.26.2
 [0.26.1]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.26.0...v0.26.1

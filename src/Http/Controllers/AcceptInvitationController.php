@@ -65,7 +65,7 @@ final readonly class AcceptInvitationController
         // nothing can know the pair was set, which forced a third branch that no input can
         // reach -- and an unreachable branch is not a hole to test, it is a shape to fix.
         /** @var ClaimFailure|array{0: AcceptedInvitation, 1: ?Authenticatable} $outcome */
-        $outcome = (new Invitation)->getConnection()->transaction(function () use ($token, $request): ClaimFailure|array {
+        $outcome = Invitation::resolve()->getConnection()->transaction(function () use ($token, $request): ClaimFailure|array {
             $result = $this->store->claim($token);
 
             if (! $result->successful || ! $result->invitation instanceof Invitation) {

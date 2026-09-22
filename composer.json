@@ -31,7 +31,7 @@
     },
     "require-dev": {
         "cweagans/composer-patches": "^1.7",
-        "larastan/larastan": "3.11.0",
+        "larastan/larastan": "3.12.2",
         "laravel/ai": "^0.11.2",
         "laravel/boost": "^2.9",
         "laravel/fortify": "^1.39",
@@ -47,10 +47,10 @@
         "pestphp/pest-plugin-phpstan": "5.2.1",
         "pestphp/pest-plugin-rector": "5.0.4",
         "pestphp/pest-plugin-type-coverage": "^5.0",
-        "phpstan/phpstan": "2.2.13",
+        "phpstan/phpstan": "2.2.14",
         "predis/predis": "^3.2",
         "pushery/wirekit": "^2.53",
-        "rector/rector": "2.6.3",
+        "rector/rector": "2.6.7",
         "spaze/phpstan-disallowed-calls": "4.14.0"
     },
     "suggest": {

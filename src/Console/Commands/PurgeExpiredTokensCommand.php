@@ -44,7 +44,7 @@ final class PurgeExpiredTokensCommand extends Command implements Isolatable
         // Restored rather than left off: the connection is shared, and a command that
         // silently disarms someone's profiling for the rest of the process would be a
         // worse bug than the one it fixes.
-        $connection = (new MagicLinkToken)->getConnection();
+        $connection = MagicLinkToken::resolve()->getConnection();
         $wasLogging = $connection->logging();
 
         $connection->disableQueryLog();

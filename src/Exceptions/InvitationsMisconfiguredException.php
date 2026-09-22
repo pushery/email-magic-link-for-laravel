@@ -13,6 +13,11 @@ use RuntimeException;
  * At boot rather than at request time, and that is the whole point: the alternative
  * is a 500 at the moment an invited person clicks their link, which is both the
  * worst time to find out and the hardest place to see it.
+ *
+ * One check cannot run at boot: whether the configured view resolves, because the
+ * host may register the namespace that holds it after this package has booted. That
+ * one is thrown when the acceptance screen is about to render, and it names the key
+ * to fix rather than only the view that was not found.
  */
 final class InvitationsMisconfiguredException extends RuntimeException
 {
@@ -32,6 +37,14 @@ final class InvitationsMisconfiguredException extends RuntimeException
             .'Point it at your acceptance screen; the package ships none, because one '
             .'carrying a password field would put credential handling inside a package '
             .'that handles none.',
+        );
+    }
+
+    public static function viewNotFound(string $view): self
+    {
+        return new self(
+            "email-magic-link.invitations.view is set to [{$view}], and no such view exists. "
+            .'Point it at your acceptance screen, or register the namespace that holds it.',
         );
     }
 

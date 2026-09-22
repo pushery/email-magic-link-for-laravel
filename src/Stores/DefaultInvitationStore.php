@@ -54,7 +54,7 @@ final readonly class DefaultInvitationStore implements InvitationStore
             $now = Carbon::now();
             $plaintext = $this->generateToken();
 
-            $record = new Invitation;
+            $record = Invitation::resolve();
             $record->email = $normalized;
             $record->guard = $guard;
             $record->token_hash = $this->hasher->hash($plaintext);
@@ -78,7 +78,7 @@ final readonly class DefaultInvitationStore implements InvitationStore
             //
             // Already ACCEPTED rows are left alone: they are a record of something that
             // happened, not an open door.
-            Invitation::query()
+            Invitation::model()::query()
                 ->where('email', $normalized)
                 ->where('guard', $guard)
                 ->where('id', '<', $record->id)
@@ -98,7 +98,7 @@ final readonly class DefaultInvitationStore implements InvitationStore
         // Pinned to the write connection, like every other read of a row the previous
         // request may just have written: on a lagging replica the acceptance page
         // otherwise refuses a fresh, valid invitation.
-        $live = Invitation::query()
+        $live = Invitation::model()::query()
             ->useWritePdo()
             ->where('token_hash', $hash)
             ->whereNull('accepted_at')
@@ -121,7 +121,7 @@ final readonly class DefaultInvitationStore implements InvitationStore
                 return InvitationClaimResult::failed($this->classify($hash, $now));
             }
 
-            $record = Invitation::query()->where('token_hash', $hash)->first();
+            $record = Invitation::model()::query()->where('token_hash', $hash)->first();
 
             return $record instanceof Invitation
                 ? InvitationClaimResult::success($record)
@@ -131,7 +131,7 @@ final readonly class DefaultInvitationStore implements InvitationStore
 
     public function revoke(string $email, string $guard): int
     {
-        return Invitation::query()
+        return Invitation::model()::query()
             ->where('email', $this->normalize($email))
             ->where('guard', $guard)
             ->whereNull('accepted_at')
@@ -171,7 +171,7 @@ final readonly class DefaultInvitationStore implements InvitationStore
             // autocommit the locks would drop the moment the select returned, and the delete
             // would be back to waiting on whatever moved in between.
             $removed = $this->connection()->transaction(function () use ($now, $retainUntil, $chunk): int {
-                $ids = Invitation::query()
+                $ids = Invitation::model()::query()
                     ->select('id')
                     ->where(function (Builder $query) use ($now): void {
                         // Never accepted and past its lifetime: nothing to learn from it.
@@ -197,7 +197,7 @@ final readonly class DefaultInvitationStore implements InvitationStore
                     return 0;
                 }
 
-                Invitation::query()->whereIn('id', $ids)->delete();
+                Invitation::model()::query()->whereIn('id', $ids)->delete();
 
                 return $ids->count();
             });
@@ -222,7 +222,7 @@ final readonly class DefaultInvitationStore implements InvitationStore
         $connection = $this->connection();
 
         // Same reason as the sign-in store: the prefix lives on the connection, not in a literal.
-        $table = $connection->getQueryGrammar()->wrapTable((new Invitation)->getTable());
+        $table = $connection->getQueryGrammar()->wrapTable(Invitation::resolve()->getTable());
 
         $sql = "update {$table} set accepted_at = ?, updated_at = ? "
             .'where token_hash = ? and accepted_at is null and revoked_at is null and expires_at > ?';
@@ -234,28 +234,22 @@ final readonly class DefaultInvitationStore implements InvitationStore
             // anyway -- but stating it here keeps the safety a property of this statement
             // rather than of whoever calls it.
             //
-            // Three reported survivors sit on this line and NONE of them is a testable gap.
-            // Recorded so the next pass spends its measurements elsewhere:
+            // Three details of this line look optional, and none of them is a simplification
+            // waiting to happen:
             //
-            //   `false` -> `true`   equivalent for the only caller. Measured with a real
-            //                       read/write split configured: inside a transaction
-            //                       getReadPdo() returns the write PDO, so the argument
-            //                       changes nothing. What actually pins this to the write
-            //                       connection is the transaction, and InvitationClaim-
-            //                       PostgresTest asserts that directly.
-            //   drop ' returning id'  equivalent. Measured against real postgres: for an
-            //                       UPDATE, select() answers with one result when a row
-            //                       matched and none when none did -- with or without
-            //                       RETURNING. Those are the only two cases `!== []`
-            //                       distinguishes. The clause states the intent; it is not
-            //                       what makes the check work.
-            //   negate the driver test  equivalent. Postgres answers correctly through the
-            //                       update() branch too, and SQLite has supported RETURNING
-            //                       since 3.35, so both branches work on both drivers.
-            //
-            // None of that is a reason to simplify the line: the explicit `false` is the
-            // safety for a caller that does NOT hold a transaction, and RETURNING is what
-            // makes the row count trustworthy rather than incidental.
+            //   `false`          inside the caller's transaction getReadPdo() already returns
+            //                    the write PDO, so the argument changes nothing there; the
+            //                    transaction is what pins the statement to the write
+            //                    connection. The argument is the safety for a caller that does
+            //                    not hold one.
+            //   ' returning id'  for an UPDATE, select() answers with one result when a row
+            //                    matched and none when none did, with or without the clause,
+            //                    and those are the only two cases `!== []` distinguishes. The
+            //                    clause states the intent and makes the row count trustworthy
+            //                    rather than incidental.
+            //   the driver test  Postgres would answer correctly through the update() branch
+            //                    too, and SQLite has supported RETURNING since 3.35, so both
+            //                    branches work on both drivers.
             return $connection->select($sql.' returning id', $bindings, false) !== [];
         }
 
@@ -268,7 +262,7 @@ final readonly class DefaultInvitationStore implements InvitationStore
      */
     private function classify(string $hash, CarbonInterface $now): ClaimFailure
     {
-        $record = Invitation::query()->useWritePdo()->where('token_hash', $hash)->first();
+        $record = Invitation::model()::query()->useWritePdo()->where('token_hash', $hash)->first();
 
         if (! $record instanceof Invitation) {
             return ClaimFailure::NotFound;
@@ -318,7 +312,7 @@ final readonly class DefaultInvitationStore implements InvitationStore
             return $candidates[0];
         }
 
-        $stored = Invitation::query()->useWritePdo()->whereIn('token_hash', $candidates)->value('token_hash');
+        $stored = Invitation::model()::query()->useWritePdo()->whereIn('token_hash', $candidates)->value('token_hash');
 
         // Falling back to the current key keeps a miss a miss: the caller goes on to its
         // ordinary not-found path rather than branching on a second kind of nothing.
@@ -327,6 +321,6 @@ final readonly class DefaultInvitationStore implements InvitationStore
 
     private function connection(): Connection
     {
-        return (new Invitation)->getConnection();
+        return Invitation::resolve()->getConnection();
     }
 }

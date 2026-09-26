@@ -21,7 +21,7 @@
     @php($emlCountdownScript = route('email-magic-link.resend-countdown-script', ['v' => \EmailMagicLink\Support\ResendCountdownScript::version()]))
 
     {{-- role="timer", not role="status". A status region is aria-live="polite", so a
-         value that changes every second is announced every second — a screen reader
+         value that changes every second is announced every second — a screen
          reader would hear the remaining time read out eight times instead of being
          told once that they have to wait. role="timer" is implicitly aria-live="off",
          so the text is read when the reader navigates to it and not on every tick.

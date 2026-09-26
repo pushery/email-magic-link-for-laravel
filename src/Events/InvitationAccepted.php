@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace EmailMagicLink\Events;
 
 use EmailMagicLink\Support\AcceptedInvitation;
+use EmailMagicLink\Support\LeavesTheRequestBehind;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Events\ShouldDispatchAfterCommit;
 use Illuminate\Http\Request;
@@ -22,9 +23,11 @@ use Illuminate\Http\Request;
  */
 final readonly class InvitationAccepted implements ShouldDispatchAfterCommit
 {
+    use LeavesTheRequestBehind;
+
     public function __construct(
         public AcceptedInvitation $invitation,
         public ?Authenticatable $user,
-        public Request $request,
+        public ?Request $request,
     ) {}
 }

@@ -36,7 +36,12 @@ final readonly class DefaultInvitationIssuer implements InvitationIssuer
 
     public function revoke(string $email, ?string $guard = null): int
     {
-        return $this->store->revoke($email, $this->prepare($guard));
+        // Not narrowed to the guards that are open today. Revoking closes something and
+        // opens nothing, and after an operator closes a guard, its outstanding invitations
+        // are exactly the ones that have to stay withdrawable.
+        $this->assertEnabled();
+
+        return $this->store->revoke($email, $guard ?? $this->config->guard());
     }
 
     /**
@@ -53,9 +58,7 @@ final readonly class DefaultInvitationIssuer implements InvitationIssuer
      */
     private function prepare(?string $guard): string
     {
-        if (! $this->config->enabled() || ! $this->config->invitationsEnabled()) {
-            throw InvitationsDisabledException::make();
-        }
+        $this->assertEnabled();
 
         if ($guard === null) {
             return $this->config->guard();
@@ -68,5 +71,16 @@ final readonly class DefaultInvitationIssuer implements InvitationIssuer
         }
 
         return $guard;
+    }
+
+    private function assertEnabled(): void
+    {
+        if (! $this->config->enabled()) {
+            throw InvitationsDisabledException::channelOff();
+        }
+
+        if (! $this->config->invitationsEnabled()) {
+            throw InvitationsDisabledException::make();
+        }
     }
 }

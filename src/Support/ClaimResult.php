@@ -32,9 +32,8 @@ final readonly class ClaimResult
      *
      * The constructor is private and there are exactly two ways in, so `successful` and
      * `token` are two views of one fact: success always carries a token, failure never
-     * does and always carries a reason. Callers could not express that, and so wrote it
-     * out again as a second check on every branch -- a condition no input can reach and
-     * no test can exercise.
+     * does and always carries a reason. The assertions below tell the type system so, and
+     * a caller needs no second check on a branch no input can reach.
      *
      * @phpstan-assert-if-true !null $this->token
      *

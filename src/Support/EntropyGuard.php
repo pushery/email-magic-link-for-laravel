@@ -12,7 +12,8 @@ use EmailMagicLink\Exceptions\InsecureMagicLinkConfigurationException;
  * Magic links carry 256 bits of entropy and pass trivially. Short codes do not:
  * their brute-force resistance is keyspace / attempts-per-token, and this guard
  * refuses to boot a configuration where that ratio falls below the safety
- * factor — protecting adopters who never read the entropy math.
+ * factor — protecting adopters who never read the entropy math. It checks the code
+ * settings in every mode, because a code can be minted and redeemed in every mode.
  */
 final readonly class EntropyGuard
 {
@@ -34,11 +35,9 @@ final readonly class EntropyGuard
             );
         }
 
-        // Link tokens are 256-bit by construction; only code mode needs the check.
-        if ($this->config->mode() === 'link') {
-            return;
-        }
-
+        // Checked in every mode. Link tokens are 256-bit by construction, but the mode only
+        // decides what the request endpoint sends: issueCode() and the code route exist in
+        // link mode too, so a code minted there is exactly as guessable as its settings.
         $this->validateCodeKeyspace();
     }
 
@@ -51,19 +50,19 @@ final readonly class EntropyGuard
 
         if ($alphabetSize < 2) {
             throw new InsecureMagicLinkConfigurationException(
-                'email-magic-link.code_alphabet must contain at least 2 distinct characters in code mode.',
+                'email-magic-link.code_alphabet must contain at least 2 distinct characters.',
             );
         }
 
         if ($length < 1) {
             throw new InsecureMagicLinkConfigurationException(
-                "email-magic-link.code_length must be at least 1 in code mode; [{$length}] given.",
+                "email-magic-link.code_length must be at least 1; [{$length}] given.",
             );
         }
 
         if ($maxAttempts < 1) {
             throw new InsecureMagicLinkConfigurationException(
-                'email-magic-link.max_attempts_per_token must be set to at least 1 in code mode.',
+                'email-magic-link.max_attempts_per_token must be set to at least 1.',
             );
         }
 

@@ -48,11 +48,30 @@ final class InvitationsMisconfiguredException extends RuntimeException
         );
     }
 
+    public static function handlerNotFound(string $class): self
+    {
+        return new self(
+            "email-magic-link.invitations.handler is set to [{$class}], and no such class exists. "
+            .'Check the class name, and that Composer can autoload it.',
+        );
+    }
+
     public static function handlerContract(string $class): self
     {
         return new self(
             "[{$class}] must implement [".InvitationHandler::class.'] to be used as '
             .'email-magic-link.invitations.handler.',
+        );
+    }
+
+    public static function handlerUserNotInGuard(string $guard): self
+    {
+        return new self(
+            "The invitation handler returned a user that the [{$guard}] guard's user provider does "
+            .'not resolve to. A session keeps only the identifier and resolves it through that '
+            .'provider, so the invited person would become whichever of its accounts carries the '
+            .'same id. Return a user of the invitation\'s guard from accept(); '
+            .'AcceptedInvitation::$guard names it.',
         );
     }
 }

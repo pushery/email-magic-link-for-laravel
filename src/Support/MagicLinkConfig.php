@@ -4,26 +4,40 @@ declare(strict_types=1);
 
 namespace EmailMagicLink\Support;
 
+use Closure;
 use EmailMagicLink\Contracts\InvalidLinkResponder;
 use EmailMagicLink\Contracts\ScriptNonce;
 use EmailMagicLink\Notifications\MagicLinkNotification;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\Str;
 
 /**
  * Typed gateway to the package configuration.
  *
  * Every configuration read in the package goes through here so the rest of the
- * code never touches the loosely typed config repository directly.
+ * code never touches the loosely typed config repository directly -- with two
+ * exceptions by design. Replaceable::model() asks the container for the model map,
+ * because it has to answer outside an application too, where there is no
+ * repository to build this class from. And `email-magic-link:doctor` reads
+ * `ui.script_nonce` raw, because it reports a configured value this class would
+ * discard as unusable.
  */
 final readonly class MagicLinkConfig
 {
-    public function __construct(private Repository $config) {}
+    /**
+     * @param  Repository|Closure(): Repository  $config  the repository, or how to find the current
+     *                                                    one. A long-lived worker swaps the
+     *                                                    repository in for every request; a
+     *                                                    resolver reads the one in force, the
+     *                                                    instance held at boot does not.
+     */
+    public function __construct(private Repository|Closure $config) {}
 
     public function enabled(): bool
     {
-        return $this->bool($this->config->get('email-magic-link.enabled'), true);
+        return $this->bool($this->repository()->get('email-magic-link.enabled'), true);
     }
 
     /**
@@ -31,7 +45,7 @@ final readonly class MagicLinkConfig
      */
     public function mode(): string
     {
-        return match ($this->string($this->config->get('email-magic-link.mode'), 'link')) {
+        return match ($this->string($this->repository()->get('email-magic-link.mode'), 'link')) {
             'code' => 'code',
             'both' => 'both',
             default => 'link',
@@ -40,7 +54,7 @@ final readonly class MagicLinkConfig
 
     public function ttl(): int
     {
-        return $this->int($this->config->get('email-magic-link.ttl'), 900);
+        return $this->int($this->repository()->get('email-magic-link.ttl'), 900);
     }
 
     /**
@@ -55,8 +69,8 @@ final readonly class MagicLinkConfig
     public function ttlFor(string $channel): int
     {
         // The same rule every other integer key follows: an int or a numeric string,
-        // nothing else. A float override used to be truncated here and rejected on `ttl`.
-        $override = $this->int($this->config->get("email-magic-link.{$channel}_ttl"), 0);
+        // nothing else, so an override reads the way `ttl` itself does.
+        $override = $this->int($this->repository()->get("email-magic-link.{$channel}_ttl"), 0);
 
         return $override > 0 ? $override : $this->ttl();
     }
@@ -67,17 +81,17 @@ final readonly class MagicLinkConfig
      */
     public function maxUses(): int
     {
-        return max(1, $this->int($this->config->get('email-magic-link.max_uses'), 1));
+        return max(1, $this->int($this->repository()->get('email-magic-link.max_uses'), 1));
     }
 
     public function codeLength(): int
     {
-        return $this->int($this->config->get('email-magic-link.code_length'), 8);
+        return $this->int($this->repository()->get('email-magic-link.code_length'), 8);
     }
 
     public function codeAlphabet(): string
     {
-        return $this->string($this->config->get('email-magic-link.code_alphabet'), '');
+        return $this->string($this->repository()->get('email-magic-link.code_alphabet'), '');
     }
 
     /**
@@ -104,11 +118,10 @@ final readonly class MagicLinkConfig
      * -- silently, looking exactly like an expired code while the attempt counter
      * runs down.
      *
-     * The direction matters as much as the decision. Folding was unconditionally
-     * UPWARD, which is right for the shipped alphabet and wrong for a lower-case
-     * one: the generator mints `abc`, the comparison sees `ABC`, and that alphabet
-     * is as unusable as a mixed one. Nobody reported it because nobody configured
-     * one -- the defect was in the same line the whole time.
+     * The direction matters as much as the decision. Folding upward is right for
+     * the shipped alphabet and wrong for a lower-case one: the generator would mint
+     * `abc`, the comparison would see `ABC`, and that alphabet would be as unusable
+     * as a mixed one. So the direction follows the alphabet.
      *
      * Digits and symbols answer `null` too, and correctly so: they have no case,
      * so there is nothing to fold and no behavior to change.
@@ -119,11 +132,10 @@ final readonly class MagicLinkConfig
     {
         $alphabet = $this->codeAlphabet();
 
-        // The same test `OneTimeCodeFieldTest` already ran to decide whether the
-        // rendered field may widen its validation pattern -- it had the derivation
-        // right while the code that folds did not. Keeping ONE copy is the point: a
-        // field that accepts a case the request then folds away, or the reverse, is
-        // exactly the drift two independent derivations produce.
+        // The same derivation the rendered field uses to decide whether it may widen
+        // its validation pattern. Keeping ONE copy is the point: a field that accepts a
+        // case the request then folds away, or the reverse, is exactly the drift two
+        // independent derivations produce.
         $hasUpper = preg_match('/\p{Lu}/u', $alphabet) === 1;
         $hasLower = preg_match('/\p{Ll}/u', $alphabet) === 1;
 
@@ -141,9 +153,9 @@ final readonly class MagicLinkConfig
      * Under a fold, characters collapse into one another, so counting the
      * configured distinct characters overstates the keyspace -- the guard whose
      * only job is to refuse a weak scheme would certify one that is weaker than
-     * it measured. With the fold now derived (a mixed alphabet is no longer
-     * folded at all) the two sets agree again in every case, and this method is
-     * what keeps them agreeing if the derivation ever changes.
+     * it measured. With the fold derived from the alphabet (a mixed alphabet is
+     * not folded at all) the two sets agree in every case, and this method is what
+     * keeps them agreeing if the derivation ever changes.
      *
      * @return list<string>
      */
@@ -164,23 +176,23 @@ final readonly class MagicLinkConfig
 
     public function maxAttemptsPerToken(): int
     {
-        return $this->int($this->config->get('email-magic-link.max_attempts_per_token'), 0);
+        return $this->int($this->repository()->get('email-magic-link.max_attempts_per_token'), 0);
     }
 
     public function entropySafetyFactor(): int
     {
-        return $this->int($this->config->get('email-magic-link.entropy_safety_factor'), 1_000_000);
+        return $this->int($this->repository()->get('email-magic-link.entropy_safety_factor'), 1_000_000);
     }
 
     public function guard(): string
     {
-        $guard = $this->config->get('email-magic-link.guard');
+        $guard = $this->repository()->get('email-magic-link.guard');
 
         if (is_string($guard) && $guard !== '') {
             return $guard;
         }
 
-        return $this->string($this->config->get('auth.defaults.guard'), 'web');
+        return $this->string($this->repository()->get('auth.defaults.guard'), 'web');
     }
 
     /**
@@ -192,7 +204,7 @@ final readonly class MagicLinkConfig
     {
         $list = [$this->guard()];
 
-        $guards = $this->config->get('email-magic-link.guards');
+        $guards = $this->repository()->get('email-magic-link.guards');
 
         if (is_array($guards)) {
             foreach ($guards as $guard) {
@@ -224,35 +236,35 @@ final readonly class MagicLinkConfig
      */
     public function providerForGuard(string $guard): ?string
     {
-        $provider = $this->config->get("auth.guards.{$guard}.provider");
+        $provider = $this->repository()->get("auth.guards.{$guard}.provider");
 
         return is_string($provider) ? $provider : null;
     }
 
     public function userLookup(): ?string
     {
-        $lookup = $this->config->get('email-magic-link.user_lookup');
+        $lookup = $this->repository()->get('email-magic-link.user_lookup');
 
         return is_string($lookup) && $lookup !== '' ? $lookup : null;
     }
 
     public function eligibility(): ?string
     {
-        $eligibility = $this->config->get('email-magic-link.eligibility');
+        $eligibility = $this->repository()->get('email-magic-link.eligibility');
 
         return is_string($eligibility) && $eligibility !== '' ? $eligibility : null;
     }
 
     public function tokenStore(): ?string
     {
-        $store = $this->config->get('email-magic-link.token_store');
+        $store = $this->repository()->get('email-magic-link.token_store');
 
         return is_string($store) && $store !== '' ? $store : null;
     }
 
     public function captcha(): ?string
     {
-        $captcha = $this->config->get('email-magic-link.captcha');
+        $captcha = $this->repository()->get('email-magic-link.captcha');
 
         return is_string($captcha) && $captcha !== '' ? $captcha : null;
     }
@@ -262,7 +274,7 @@ final readonly class MagicLinkConfig
      */
     public function notification(): string
     {
-        $notification = $this->config->get('email-magic-link.notification');
+        $notification = $this->repository()->get('email-magic-link.notification');
 
         if (is_string($notification) && is_a($notification, MagicLinkNotification::class, true)) {
             return $notification;
@@ -273,7 +285,7 @@ final readonly class MagicLinkConfig
 
     public function routePrefix(): string
     {
-        return $this->string($this->config->get('email-magic-link.routes.prefix'), '');
+        return $this->string($this->repository()->get('email-magic-link.routes.prefix'), '');
     }
 
     /**
@@ -281,7 +293,7 @@ final readonly class MagicLinkConfig
      */
     public function routeMiddleware(): array
     {
-        $middleware = $this->config->get('email-magic-link.routes.middleware');
+        $middleware = $this->repository()->get('email-magic-link.routes.middleware');
 
         if (! is_array($middleware)) {
             return ['web'];
@@ -300,12 +312,12 @@ final readonly class MagicLinkConfig
 
     public function redirectTo(): string
     {
-        return $this->string($this->config->get('email-magic-link.routes.redirect_to'), '/');
+        return $this->string($this->repository()->get('email-magic-link.routes.redirect_to'), '/');
     }
 
     public function redirectToIntended(): bool
     {
-        return $this->bool($this->config->get('email-magic-link.routes.intended'), true);
+        return $this->bool($this->repository()->get('email-magic-link.routes.intended'), true);
     }
 
     /**
@@ -313,7 +325,7 @@ final readonly class MagicLinkConfig
      */
     public function pruneSchedule(): bool
     {
-        return $this->bool($this->config->get('email-magic-link.prune.schedule'), false);
+        return $this->bool($this->repository()->get('email-magic-link.prune.schedule'), false);
     }
 
     /**
@@ -328,7 +340,7 @@ final readonly class MagicLinkConfig
      */
     public function pruneFrequency(): string
     {
-        return match ($this->string($this->config->get('email-magic-link.prune.frequency'), 'daily')) {
+        return match ($this->string($this->repository()->get('email-magic-link.prune.frequency'), 'daily')) {
             'hourly' => 'hourly',
             'weekly' => 'weekly',
             'monthly' => 'monthly',
@@ -338,7 +350,7 @@ final readonly class MagicLinkConfig
 
     public function apiEnabled(): bool
     {
-        return $this->bool($this->config->get('email-magic-link.api.enabled'), false);
+        return $this->bool($this->repository()->get('email-magic-link.api.enabled'), false);
     }
 
     /**
@@ -351,7 +363,7 @@ final readonly class MagicLinkConfig
      */
     public function invalidLinkResponderClass(): ?string
     {
-        $via = $this->config->get('email-magic-link.invalid_response.via');
+        $via = $this->repository()->get('email-magic-link.invalid_response.via');
 
         return is_string($via) && is_a($via, InvalidLinkResponder::class, true) ? $via : null;
     }
@@ -365,7 +377,7 @@ final readonly class MagicLinkConfig
      */
     public function invalidResponseMode(): string
     {
-        return match ($this->string($this->config->get('email-magic-link.invalid_response.via'), 'redirect')) {
+        return match ($this->string($this->repository()->get('email-magic-link.invalid_response.via'), 'redirect')) {
             'view' => 'view',
             'abort' => 'abort',
             'json' => 'json',
@@ -376,7 +388,7 @@ final readonly class MagicLinkConfig
     public function invalidResponseView(): string
     {
         return $this->string(
-            $this->config->get('email-magic-link.invalid_response.view'),
+            $this->repository()->get('email-magic-link.invalid_response.view'),
             'email-magic-link::invalid',
         );
     }
@@ -387,7 +399,7 @@ final readonly class MagicLinkConfig
      */
     public function invalidResponseRedirectTo(): ?string
     {
-        $to = $this->config->get('email-magic-link.invalid_response.redirect_to');
+        $to = $this->repository()->get('email-magic-link.invalid_response.redirect_to');
 
         return is_string($to) && $to !== '' ? $to : null;
     }
@@ -399,14 +411,14 @@ final readonly class MagicLinkConfig
      */
     public function pruneChunk(): int
     {
-        $chunk = $this->int($this->config->get('email-magic-link.prune.chunk'), 1000);
+        $chunk = $this->int($this->repository()->get('email-magic-link.prune.chunk'), 1000);
 
         return $chunk > 0 ? $chunk : 1000;
     }
 
     public function invalidResponseAbortStatus(): int
     {
-        $status = $this->int($this->config->get('email-magic-link.invalid_response.abort_status'), 403);
+        $status = $this->int($this->repository()->get('email-magic-link.invalid_response.abort_status'), 403);
 
         // A refusal answers with an error status or not at all: 200 would make the
         // error page a success, and 0 or 999 is a 500 the moment Symfony renders it.
@@ -421,14 +433,11 @@ final readonly class MagicLinkConfig
     public function invalidResponseErrorCode(): string
     {
         return $this->string(
-            $this->config->get('email-magic-link.invalid_response.error_code'),
+            $this->repository()->get('email-magic-link.invalid_response.error_code'),
             'invalid_or_expired',
         );
     }
 
-    /**
-     * @return 'auto'|'blade'
-     */
     /**
      * The host's Vite entrypoints for the WireKit layout, or false for a non-Vite host.
      *
@@ -436,7 +445,7 @@ final readonly class MagicLinkConfig
      */
     public function uiVite(): array|false
     {
-        $vite = $this->config->get('email-magic-link.ui.vite', ['resources/css/app.css']);
+        $vite = $this->repository()->get('email-magic-link.ui.vite', ['resources/css/app.css']);
 
         if (in_array($vite, [false, null, []], true)) {
             return false;
@@ -456,7 +465,7 @@ final readonly class MagicLinkConfig
      */
     public function uiStyles(): array
     {
-        $styles = $this->config->get('email-magic-link.ui.styles', []);
+        $styles = $this->repository()->get('email-magic-link.ui.styles', []);
 
         if (is_string($styles)) {
             return $styles === '' ? [] : [$styles];
@@ -469,10 +478,9 @@ final readonly class MagicLinkConfig
      * A view rendered ABOVE the card on every screen this package draws, or null for none.
      *
      * The confirm screen is the one place a person decides, out of an e-mail, whether to sign in
-     * here — and it was the only screen of the flow carrying no wordmark and no language switcher,
-     * because this package draws it and knows neither. Every other screen of a host application
-     * has both. A screen whose entire purpose is a trust decision is the worst one to strip of the
-     * marks that earn it.
+     * here, and this package draws it without knowing the host's wordmark or language switcher.
+     * Every other screen of a host application has both. A screen whose entire purpose is a trust
+     * decision is the worst one to strip of the marks that earn it.
      *
      * A SLOT RATHER THAN A `view` OVERRIDE PER SCREEN, and the choice is deliberate. An override
      * hands the consumer the whole screen — the form, the CSRF field, the token handling — so
@@ -503,17 +511,19 @@ final readonly class MagicLinkConfig
      *
      * WireKit declares its dark tokens under `.dark` on the root element, and the layout's body slots
      * cannot reach that element. Whitespace around the value is dropped, and a blank or non-string
-     * value renders no attribute at all rather than an empty one.
+     * value renders no attribute at all rather than an empty one. Unicode whitespace too: HTML
+     * splits classes at ASCII whitespace only, so a no-break space copied in with the value would
+     * make it a class that `.dark` never matches.
      */
     public function uiHtmlClass(): ?string
     {
-        $class = $this->config->get('email-magic-link.ui.html_class');
+        $class = $this->repository()->get('email-magic-link.ui.html_class');
 
         if (! is_string($class)) {
             return null;
         }
 
-        $class = trim($class);
+        $class = Str::trim($class);
 
         return $class === '' ? null : $class;
     }
@@ -524,7 +534,7 @@ final readonly class MagicLinkConfig
      */
     private function existingView(string $key): ?string
     {
-        $name = $this->config->get($key);
+        $name = $this->repository()->get($key);
 
         if (! is_string($name) || $name === '') {
             return null;
@@ -542,9 +552,12 @@ final readonly class MagicLinkConfig
         return null;
     }
 
+    /**
+     * @return 'auto'|'blade'
+     */
     public function uiMode(): string
     {
-        return $this->string($this->config->get('email-magic-link.ui.mode'), 'auto') === 'blade'
+        return $this->string($this->repository()->get('email-magic-link.ui.mode'), 'auto') === 'blade'
             ? 'blade'
             : 'auto';
     }
@@ -556,7 +569,7 @@ final readonly class MagicLinkConfig
      */
     public function scriptNonce(): ?string
     {
-        $source = $this->config->get('email-magic-link.ui.script_nonce');
+        $source = $this->repository()->get('email-magic-link.ui.script_nonce');
 
         return is_string($source) && is_a($source, ScriptNonce::class, true) ? $source : null;
     }
@@ -592,19 +605,22 @@ final readonly class MagicLinkConfig
      */
     public function fortifyMode(): string|bool
     {
-        $mode = $this->config->get('email-magic-link.fortify.mode', 'auto');
+        $mode = $this->repository()->get('email-magic-link.fortify.mode', 'auto');
 
         if (is_bool($mode)) {
             return $mode;
         }
 
-        if (! is_string($mode) || $mode === 'auto') {
+        // A set but empty EMAIL_MAGIC_LINK_FORTIFY arrives as "", which `filter_var` reads as
+        // false -- and false switches the two-factor handoff off. Blank means not set here,
+        // so it stays on auto.
+        if (! is_string($mode) || $mode === 'auto' || Str::trim($mode) === '') {
             return 'auto';
         }
 
         // Every spelling the other switches accept -- "0", "off", "no" and their
-        // opposites -- decides here too; EMAIL_MAGIC_LINK_FORTIFY=0 used to fall back
-        // to auto, the one value it was written to leave.
+        // opposites -- decides here too, so EMAIL_MAGIC_LINK_FORTIFY=0 means off and
+        // never falls back to auto, the one value it was written to leave.
         $decided = filter_var($mode, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
 
         return is_bool($decided) ? $decided : 'auto';
@@ -612,12 +628,12 @@ final readonly class MagicLinkConfig
 
     public function respectTwoFactor(): bool
     {
-        return $this->bool($this->config->get('email-magic-link.fortify.respect_two_factor'), true);
+        return $this->bool($this->repository()->get('email-magic-link.fortify.respect_two_factor'), true);
     }
 
     public function challengeRoute(): string
     {
-        return $this->string($this->config->get('email-magic-link.fortify.challenge_route'), 'two-factor.login');
+        return $this->string($this->repository()->get('email-magic-link.fortify.challenge_route'), 'two-factor.login');
     }
 
     /**
@@ -629,26 +645,26 @@ final readonly class MagicLinkConfig
      */
     public function guardSharesFortifyProvider(string $guard): bool
     {
-        $fortifyGuard = $this->string($this->config->get('fortify.guard'), '');
+        $fortifyGuard = $this->string($this->repository()->get('fortify.guard'), '');
 
         if ($fortifyGuard === '') {
-            $fortifyGuard = $this->string($this->config->get('auth.defaults.guard'), 'web');
+            $fortifyGuard = $this->string($this->repository()->get('auth.defaults.guard'), 'web');
         }
 
-        $guardProvider = $this->config->get("auth.guards.{$guard}.provider");
-        $fortifyProvider = $this->config->get("auth.guards.{$fortifyGuard}.provider");
+        $guardProvider = $this->repository()->get("auth.guards.{$guard}.provider");
+        $fortifyProvider = $this->repository()->get("auth.guards.{$fortifyGuard}.provider");
 
         return is_string($guardProvider) && is_string($fortifyProvider) && $guardProvider === $fortifyProvider;
     }
 
     public function requestLimiter(): string
     {
-        return $this->string($this->config->get('email-magic-link.limiters.request'), 'email-magic-link:request');
+        return $this->string($this->repository()->get('email-magic-link.limiters.request'), 'email-magic-link:request');
     }
 
     public function consumeLimiter(): string
     {
-        return $this->string($this->config->get('email-magic-link.limiters.consume'), 'email-magic-link:consume');
+        return $this->string($this->repository()->get('email-magic-link.limiters.consume'), 'email-magic-link:consume');
     }
 
     /**
@@ -658,7 +674,7 @@ final readonly class MagicLinkConfig
      */
     public function invitationViewLimiter(): string
     {
-        return $this->string($this->config->get('email-magic-link.limiters.invitation_view'), 'email-magic-link:invitation-view');
+        return $this->string($this->repository()->get('email-magic-link.limiters.invitation_view'), 'email-magic-link:invitation-view');
     }
 
     /**
@@ -690,7 +706,7 @@ final readonly class MagicLinkConfig
 
     public function resendEnabled(): bool
     {
-        return $this->bool($this->config->get('email-magic-link.resend.enabled'), true);
+        return EnvFlag::protection($this->repository()->get('email-magic-link.resend.enabled'), true);
     }
 
     /**
@@ -702,7 +718,7 @@ final readonly class MagicLinkConfig
      */
     public function resendCooldown(): array
     {
-        $cooldown = $this->config->get('email-magic-link.resend.cooldown');
+        $cooldown = $this->repository()->get('email-magic-link.resend.cooldown');
         $cooldown = is_array($cooldown) ? $cooldown : [];
 
         $base = max(1, $this->int($cooldown['base'] ?? null, 30));
@@ -722,7 +738,7 @@ final readonly class MagicLinkConfig
      */
     public function resendWindow(): array
     {
-        $window = $this->config->get('email-magic-link.resend.window');
+        $window = $this->repository()->get('email-magic-link.resend.window');
         $window = is_array($window) ? $window : [];
 
         return [
@@ -739,7 +755,7 @@ final readonly class MagicLinkConfig
      */
     public function lockStore(): ?string
     {
-        $store = $this->config->get('email-magic-link.lock_store');
+        $store = $this->repository()->get('email-magic-link.lock_store');
 
         return is_string($store) && $store !== '' ? $store : null;
     }
@@ -753,7 +769,7 @@ final readonly class MagicLinkConfig
      */
     public function lockBlockSeconds(): int
     {
-        $seconds = $this->int($this->config->get('email-magic-link.lock_block_seconds'), 5);
+        $seconds = $this->int($this->repository()->get('email-magic-link.lock_block_seconds'), 5);
 
         return $seconds > 0 ? $seconds : 5;
     }
@@ -767,14 +783,14 @@ final readonly class MagicLinkConfig
      */
     public function lockHoldSeconds(): int
     {
-        $seconds = $this->int($this->config->get('email-magic-link.lock_hold_seconds'), 60);
+        $seconds = $this->int($this->repository()->get('email-magic-link.lock_hold_seconds'), 60);
 
         return $seconds > 0 ? $seconds : 60;
     }
 
     public function resendStore(): ?string
     {
-        $store = $this->config->get('email-magic-link.resend.store');
+        $store = $this->repository()->get('email-magic-link.resend.store');
 
         return is_string($store) && $store !== '' ? $store : null;
     }
@@ -784,7 +800,7 @@ final readonly class MagicLinkConfig
      */
     private function readLimit(string $key, int $defaultMax): array
     {
-        $limit = $this->config->get("email-magic-link.limits.{$key}");
+        $limit = $this->repository()->get("email-magic-link.limits.{$key}");
         $limit = is_array($limit) ? $limit : [];
 
         return [
@@ -802,7 +818,7 @@ final readonly class MagicLinkConfig
      */
     public function invitationsEnabled(): bool
     {
-        return $this->bool($this->config->get('email-magic-link.invitations.enabled'), false);
+        return $this->bool($this->repository()->get('email-magic-link.invitations.enabled'), false);
     }
 
     /**
@@ -811,12 +827,12 @@ final readonly class MagicLinkConfig
      */
     public function invitationTtl(): int
     {
-        return max(60, $this->int($this->config->get('email-magic-link.invitations.ttl'), 604800));
+        return max(60, $this->int($this->repository()->get('email-magic-link.invitations.ttl'), 604800));
     }
 
     public function invitationStore(): ?string
     {
-        $store = $this->config->get('email-magic-link.invitations.store');
+        $store = $this->repository()->get('email-magic-link.invitations.store');
 
         return is_string($store) && $store !== '' ? $store : null;
     }
@@ -828,7 +844,7 @@ final readonly class MagicLinkConfig
      */
     public function invitationHandler(): ?string
     {
-        $handler = $this->config->get('email-magic-link.invitations.handler');
+        $handler = $this->repository()->get('email-magic-link.invitations.handler');
 
         return is_string($handler) && $handler !== '' ? $handler : null;
     }
@@ -840,14 +856,14 @@ final readonly class MagicLinkConfig
      */
     public function invitationView(): ?string
     {
-        $view = $this->config->get('email-magic-link.invitations.view');
+        $view = $this->repository()->get('email-magic-link.invitations.view');
 
         return is_string($view) && $view !== '' ? $view : null;
     }
 
     public function invitationRedirectTo(): string
     {
-        return $this->string($this->config->get('email-magic-link.invitations.redirect_to'), '/');
+        return $this->string($this->repository()->get('email-magic-link.invitations.redirect_to'), '/');
     }
 
     /**
@@ -859,7 +875,16 @@ final readonly class MagicLinkConfig
      */
     public function invitationRetainAcceptedDays(): int
     {
-        return max(0, $this->int($this->config->get('email-magic-link.invitations.retain_accepted_days'), 30));
+        return max(0, $this->int($this->repository()->get('email-magic-link.invitations.retain_accepted_days'), 30));
+    }
+
+    /**
+     * `config()` hands back whatever the host wrote, so the value arrives as `mixed`. This
+     * narrows it to a string and answers the declared default for anything else.
+     */
+    private function repository(): Repository
+    {
+        return $this->config instanceof Closure ? ($this->config)() : $this->config;
     }
 
     private function string(mixed $value, string $default): string
@@ -867,6 +892,11 @@ final readonly class MagicLinkConfig
         return is_string($value) ? $value : $default;
     }
 
+    /**
+     * `config()` hands back whatever the host wrote, so the value arrives as `mixed`. This
+     * narrows it to an integer: an int as it is, a numeric string converted, and anything
+     * else, an empty `.env` line included, the declared default.
+     */
     private function int(mixed $value, int $default): int
     {
         if (is_int($value)) {

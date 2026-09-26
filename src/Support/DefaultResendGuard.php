@@ -24,15 +24,14 @@ use RuntimeException;
  * read the same window and slip past the cap.
  *
  * This guard ALWAYS guards. The `resend.enabled` switch is checked by the
- * package's own request endpoint before it calls in — never here. It used to be
- * checked in attempt() and peek(), which made it a global kill-switch: a host
- * that injects this contract for its own keys (the contract explicitly invites
- * that, and names "two-factor:{user id}" as the example) had its guard silently
- * disarmed by an env flag named for, and documented as, the magic-link request
- * flow. The failure was invisible — ResendDecision::allowed() is the same object
- * a legitimately-allowed send returns. An operator turning off magic-link
- * throttling must not be able to turn off an unrelated subsystem's flood
- * protection without ever being told.
+ * package's own request endpoint before it calls in — never here. Checked in
+ * attempt() and peek(), it would be a global kill-switch: a host that injects this
+ * contract for its own keys (the contract invites that, and names
+ * "two-factor:{user id}" as the example) would have its guard disarmed by an env
+ * flag named for the magic-link request flow, and invisibly, because
+ * ResendDecision::allowed() is the same object a legitimately allowed send
+ * returns. Turning off magic-link throttling must not turn off another
+ * subsystem's flood protection.
  */
 final readonly class DefaultResendGuard implements ResendGuard
 {
@@ -50,10 +49,9 @@ final readonly class DefaultResendGuard implements ResendGuard
     /**
      * The lock's TTL, and deliberately not the same number.
      *
-     * One constant used to serve all three of these, which is the exact shape that stopped
-     * the issuance lock from locking: a TTL equal to the wait budget expires while the work
-     * it protects is still running, and the second caller walks in believing it holds
-     * something. The evaluation below is two cache round-trips and finishes in
+     * A TTL equal to the wait budget expires while the work it protects is still running,
+     * and the second caller walks in believing it holds something. The evaluation below is
+     * two cache round-trips and finishes in
      * milliseconds -- but "the cache is fast" is an assumption about the host's store, and
      * a stalled store is precisely when this guard matters.
      */
@@ -82,7 +80,7 @@ final readonly class DefaultResendGuard implements ResendGuard
         // satisfies, and its NoLock::acquire() returns true every time. This guard would
         // then evaluate the window under a lock that excludes nothing -- and because the
         // whole point of it is to hold sends back, a lock that never says no makes it
-        // FAIL OPEN: unlimited mail per address, with every arm of the suite green.
+        // fail open: unlimited mail per address, with nothing turning red.
         //
         // Loud on the first request rather than silent forever. A host reaching this has
         // CACHE_STORE=null, which no production deployment wants for a flood guard, and

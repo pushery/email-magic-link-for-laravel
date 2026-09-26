@@ -7,18 +7,11 @@ namespace EmailMagicLink\Support;
 /**
  * How the WireKit code screen lays out its code boxes, from the code length alone.
  *
- * WireKit's otp-input used to wrap its boxes wherever the width ran out, so on the 24rem card an
- * eight-character code broke 6+2 on a desktop and 5+3 on a phone, at no boundary the code has.
- * This class held the repair: a grid reaching in through the component's own `role="group"`, one
- * row while it fits and an even split below that.
- *
- * That half is gone. WireKit 2.53 takes a `group` prop, the groups do not break inside, and a row
- * that does not fit breaks on a group boundary — the same result without a consumer patch over
- * somebody else's markup, and it moves with the component if that markup ever changes.
- *
- * What stays is the half that was never WireKit's business: how wide THIS package's card may grow
- * so a desktop keeps the whole code in one row. A card width is a decision about the screen around
- * the component, not about the component.
+ * WireKit's otp-input takes a `group` prop (2.53 and later): the groups do not break inside, and a
+ * row that does not fit breaks on a group boundary, so a code breaks where it has a boundary and
+ * nowhere else. This class names the group size, and the one thing that is not WireKit's business:
+ * how wide THIS package's card may grow so a desktop keeps the whole code in one row. A card width
+ * is a decision about the screen around the component, not about the component.
  *
  * The sizes are WireKit's: a box is `w-10` (2.5rem) and the gap `gap-2` (0.5rem).
  */
@@ -34,7 +27,8 @@ final readonly class CodeBoxLayout
      * That width is the visible separator — WireKit chose a gap over a glyph so a screen reader has
      * nothing extra to read out or hide. It matters here because it makes a grouped row wider than
      * the same number of ungrouped boxes, and the card has to be sized for the row it will actually
-     * paint. Missing that put an eight-box code at 4+4 on a 1280px desktop, half a rem short.
+     * paint: sized for the ungrouped row, an eight-box code breaks 4+4 on a 1280px desktop, half a
+     * rem short.
      */
     private const float GROUP_GAP_REM = 1.0;
 
@@ -56,21 +50,18 @@ final readonly class CodeBoxLayout
     /**
      * How many boxes form a group, for WireKit's `group` prop.
      *
-     * Half the code, rounded up, which is the first step the old repair took and the only one a
-     * group boundary can express: the groups themselves do not wrap, so `group` names ONE break
-     * rather than a cascade. Measured against the widths the browser arms cover, the two agree —
-     * eight boxes give 8 on a desktop and 4+4 at 375px and 320px, six give 6 and 3+3.
+     * Half the code, rounded up, the only split a group boundary can express: the groups
+     * themselves do not wrap, so `group` names one break rather than a cascade. Eight boxes give 8
+     * on a desktop and 4+4 at 375px and 320px, six give 6 and 3+3.
      *
-     * The difference is at lengths nothing ships today: the old grid halved again and again while
-     * a row still would not fit, so a twelve-character code in a very narrow container reached
-     * three boxes per row where a group of six stops. That is a real loss of range, it is named
-     * here rather than left to be discovered, and it costs nothing at the lengths that exist —
-     * a group of six is 17.5rem, which fits the card this package widens for it.
+     * One break has a limit, at lengths nothing ships: a twelve-character code in a very narrow
+     * container stops at six boxes per row where three would fit. At the lengths that exist it
+     * costs nothing: a group of six is 17.5rem, which fits the card this package widens for it.
      *
      * Null below THREE boxes, and the number is WireKit's rather than a preference. Its
      * StrictnessGate clamps `group` to the range 2..length, so half of a two-box code is 1 and
-     * would be refused and silently replaced by the length — a prop that says something and does
-     * nothing. Below three there is also nothing to say: half of two is a group per box, which
+     * would be refused, with an exception in strict mode and a logged warning otherwise, and
+     * replaced by the length — a prop that says something and does nothing. Below three there is also nothing to say: half of two is a group per box, which
      * draws the separator gap between every character of a code the reader copies as one word.
      */
     public function group(): ?int
@@ -88,9 +79,8 @@ final readonly class CodeBoxLayout
      * The width of the row as it will actually be painted, in rem.
      *
      * Ungrouped this is `rowRem()`. Grouped, every boundary between two groups costs the difference
-     * between the two gaps, so the row is wider than its box count alone suggests — measured, not
-     * assumed: without this an eight-box code broke 4+4 on a 1280px desktop, half a rem short of
-     * the room it needed.
+     * between the two gaps, so the row is wider than its box count alone suggests: without it, an
+     * eight-box code breaks 4+4 on a 1280px desktop, half a rem short of the room it needs.
      */
     public function paintedRowRem(): float
     {

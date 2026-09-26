@@ -11,11 +11,9 @@
     <title>@yield('title', __('email-magic-link::messages.sign_in')) &raquo; {{ config('app.name') }}</title>
 
     {{-- The application's per-response CSP nonce, or null when it has no policy.
-         The WireKit layout has noncing its inline <style> since the CSP work; this one
-         did not, and the omission is worth naming because the consequence is not subtle:
-         under a strict policy the block below is blocked, and the block below IS the
-         entire styling of these screens — the sign-in page arrives completely unstyled.
-         The countdown script degrades politely when it is blocked. This does not.
+         Under a strict policy a block without it is blocked, and the block below IS the
+         entire styling of these screens: the sign-in page would arrive unstyled. The
+         countdown script degrades politely when it is blocked. This does not.
 
          Same seam the countdown partial uses. --}}
     @php($emlNonce = app(\EmailMagicLink\Contracts\ScriptNonce::class)->value())

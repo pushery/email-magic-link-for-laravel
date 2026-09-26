@@ -15,9 +15,9 @@ use Illuminate\Support\Facades\URL;
  * Extracted so the sign-in confirmation link and the invitation link are built by
  * the SAME code. The host override is the part worth centralizing: it signs on a
  * generator of its own that carries the tenant origin, so the shared `url` singleton
- * is never written to. An earlier version forced the origin on the singleton and
- * "restored" it with `forceRootUrl(null)` -- a reset, not a restore, which wiped
- * whatever origin or scheme the host itself had forced, for the rest of the process.
+ * is never written to. Forcing the origin on the singleton and "restoring" it with
+ * `forceRootUrl(null)` would be a reset, not a restore: it would wipe whatever origin or
+ * scheme the host itself had forced, for the rest of the process.
  */
 final class SignedTokenUrl
 {
@@ -90,9 +90,9 @@ final class SignedTokenUrl
     /**
      * Completes a base URL that carries no scheme with the application's own.
      *
-     * A bare host used to travel straight through: `forceRootUrl('//tenant.test')`
+     * A bare host would otherwise travel straight through: `forceRootUrl('//tenant.test')`
      * holds a root with no scheme of its own, the root then decides, and the link
-     * came out as `tenant.test/magic-link/...`. Defensible for a caller that
+     * comes out as `tenant.test/magic-link/...`. Defensible for a caller that
      * deliberately passed a bare host -- and poor for the place these links actually
      * go, which is an email. A mail client turns a schemeless string into a link,
      * into no link, or into a relative one, depending on the client; for an

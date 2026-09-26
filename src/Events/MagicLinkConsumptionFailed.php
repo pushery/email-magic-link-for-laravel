@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace EmailMagicLink\Events;
 
 use EmailMagicLink\Support\ClaimFailure;
+use EmailMagicLink\Support\LeavesTheRequestBehind;
 use Illuminate\Http\Request;
 
 /**
@@ -17,8 +18,10 @@ use Illuminate\Http\Request;
  */
 final readonly class MagicLinkConsumptionFailed
 {
+    use LeavesTheRequestBehind;
+
     public function __construct(
         public ClaimFailure $reason,
-        public Request $request,
+        public ?Request $request,
     ) {}
 }

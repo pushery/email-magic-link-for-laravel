@@ -12,9 +12,10 @@ return new class extends Migration
     {
         Schema::table('magic_link_tokens', function (Blueprint $table): void {
             // Optional per-link passphrase gate. Null (the default) means the link
-            // has no passphrase; when set it holds a bcrypt hash of a shared secret
-            // that must be entered on the confirmation page before the link is
-            // consumed. It is a lightweight gate, NOT the Fortify two-factor path.
+            // has no passphrase; when set it holds a hash of a shared secret, made with
+            // the application's configured hasher, that must be entered on the
+            // confirmation page before the link is consumed. It is a lightweight gate,
+            // NOT the Fortify two-factor path.
             $table->string('passphrase_hash')->nullable();
         });
     }

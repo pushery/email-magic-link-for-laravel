@@ -10,30 +10,26 @@ use Throwable;
 /**
  * Finds the application's CSP nonce without the application configuring anything.
  *
- * Two probes, in order, because the ecosystem moved and this class did not notice.
+ * Two probes, in order:
  *
- * 1. The container binding `csp-nonce`. That is what spatie/laravel-csp actually
- *    registers — `$this->app->scoped('csp-nonce', …)` in its service provider — and
- *    it is what the package's own `@cspNonce` directive reads. Scoped means one nonce
- *    per request, so resolving it here yields the same value the policy header carries.
- * 2. A global `csp_nonce()` function, kept for hosts that define one themselves.
+ * 1. The container binding `csp-nonce`. That is what spatie/laravel-csp registers —
+ *    `$this->app->scoped('csp-nonce', …)` in its service provider — and it is what that
+ *    package's own `@cspNonce` directive reads. Scoped means one nonce per request, so
+ *    resolving it here yields the same value the policy header carries.
+ * 2. A global `csp_nonce()` function, for hosts that define one themselves.
  *
- * The order is not arbitrary, and the second probe used to be the ONLY one. That was
- * wrong for every current consumer: `csp_nonce()` existed in spatie/laravel-csp from
- * 1.2.0 through 2.10.3, the last 2.x release, and exists nowhere in 3.x — measured against the package's own metadata, where every
- * 3.x release publishes `autoload.psr-4` and no `autoload.files`, so it cannot register
- * a global function at all. `function_exists('csp_nonce')` was therefore false for every
- * v3 host, this class returned null, and the countdown script shipped with no nonce
- * under exactly the strict policy the seam exists to serve. It failed silently, which is
- * why it took three separate consumers to notice.
+ * The binding comes first because it is the only one spatie/laravel-csp 3.x offers:
+ * `csp_nonce()` exists from 1.2.0 through 2.10.3 and nowhere in 3.x, whose releases
+ * publish `autoload.psr-4` and no `autoload.files`, so they cannot register a global
+ * function at all. Asked only for the function, a 3.x host has no nonce here, and the
+ * screens' tags ship without one under exactly the strict policy this seam serves.
  *
  * Probed by name and by key so this package never references that package's symbols and
  * stays installable without it.
  *
- * Everything here fails to NULL rather than throwing. A missing nonce degrades to
- * exactly the behavior that shipped before the seam existed (an inline script with
- * no nonce, fine under a permissive policy); an exception would take down the whole
- * sign-in screen over a progressive enhancement. That trade is the wrong way round.
+ * Everything here fails to NULL rather than throwing. A missing nonce degrades to tags
+ * without one, fine under a permissive policy; an exception would take down the whole
+ * sign-in screen over a missing attribute.
  */
 final class AutoScriptNonce implements ScriptNonce
 {

@@ -9,9 +9,11 @@ use EmailMagicLink\Models\Invitation;
 /**
  * Outcome of a peek or an atomic claim: either the invitation, or the reason it failed.
  *
- * Reuses ClaimFailure rather than introducing a parallel enum. The reasons are the same
- * three an invitation can have -- unknown, expired, already spent -- and a caller that
- * already handles the sign-in failures handles these unchanged.
+ * Reuses ClaimFailure rather than introducing a parallel enum. An invitation fails for four
+ * reasons: unknown, expired and already spent, which a sign-in link shares, and revoked,
+ * which only an invitation has -- withdrawn through revoke(), superseded by a newer
+ * invitation to the same address, or issued on a guard the operator has since closed. A
+ * caller that handles the sign-in failures still has to handle `Revoked`.
  */
 final readonly class InvitationClaimResult
 {

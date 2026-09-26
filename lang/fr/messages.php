@@ -20,7 +20,7 @@ return [
 
     // Confirmation page.
     'confirm_title' => 'Confirmer la connexion',
-    'confirm_intro' => 'Pour votre sécurité, confirmez que vous souhaitez vous connecter. Ce lien ne peut être utilisé qu’une seule fois.',
+    'confirm_intro' => 'Pour votre sécurité, confirmez que vous souhaitez vous connecter.',
 
     // Code entry form.
     'code_title' => 'Saisissez votre code',
@@ -48,6 +48,7 @@ return [
     'mail_link_intro' => 'Utilisez le bouton ci-dessous pour vous connecter à :app.',
     'mail_link_action' => 'Se connecter',
     'mail_link_expiry' => '[0,1] Ce lien expire dans :minutes minute et ne peut être utilisé qu’une seule fois.|[2,*] Ce lien expire dans :minutes minutes et ne peut être utilisé qu’une seule fois.',
+    'mail_link_expiry_reusable' => '[0,1] Ce lien expire dans :minutes minute et peut être utilisé :uses fois.|[2,*] Ce lien expire dans :minutes minutes et peut être utilisé :uses fois.',
 
     // Notification — one-time code.
     'mail_code_subject' => 'Votre code de connexion :app',

@@ -13,8 +13,8 @@ use EmailMagicLink\Models\MagicLinkToken;
  * same signed GET URL: the inert confirmation page. Only the POST consume route
  * mutates state, so this URL is safe for link-following scanners and prefetch.
  *
- * The signing itself now lives in SignedTokenUrl, shared with the invitation link.
- * This signature is public API and stays exactly as it was.
+ * The signing itself lives in SignedTokenUrl, shared with the invitation link. This
+ * signature is public API.
  */
 final class ConfirmationUrl
 {

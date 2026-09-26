@@ -17,9 +17,9 @@ use Symfony\Component\HttpFoundation\Response;
  * "was this ever a real link", which is the question the uniformity exists to leave
  * unanswered.
  *
- * Extracted from CompletesMagicLinkLogin so the sign-in flow and the invitation flow
- * share ONE response path. They used to have one; the moment there were two, they
- * could drift, and drift between two refusals is exactly what makes them tell apart.
+ * Shared by the sign-in flow and the invitation flow so both have ONE response path.
+ * Two paths could drift, and drift between two refusals is exactly what makes them
+ * tell apart.
  */
 trait RejectsGenerically
 {

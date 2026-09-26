@@ -20,7 +20,7 @@ return [
 
     // Confirmation page.
     'confirm_title' => 'Anmeldung bestätigen',
-    'confirm_intro' => 'Bestätige zu deiner Sicherheit, dass du dich anmelden möchtest. Dieser Link kann nur einmal verwendet werden.',
+    'confirm_intro' => 'Bestätige zu deiner Sicherheit, dass du dich anmelden möchtest.',
 
     // Code entry form.
     'code_title' => 'Code eingeben',
@@ -48,6 +48,7 @@ return [
     'mail_link_intro' => 'Nutze die Schaltfläche unten, um dich bei :app anzumelden.',
     'mail_link_action' => 'Anmelden',
     'mail_link_expiry' => '{1} Dieser Link läuft in :minutes Minute ab und kann nur einmal verwendet werden.|[0,*] Dieser Link läuft in :minutes Minuten ab und kann nur einmal verwendet werden.',
+    'mail_link_expiry_reusable' => '{1} Dieser Link läuft in :minutes Minute ab und kann :uses-mal verwendet werden.|[0,*] Dieser Link läuft in :minutes Minuten ab und kann :uses-mal verwendet werden.',
 
     // Notification — one-time code.
     'mail_code_subject' => 'Dein Anmeldecode für :app',

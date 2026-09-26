@@ -21,7 +21,7 @@
             @error('email') aria-invalid="true" aria-describedby="email-error" @enderror>
 
         <label for="code" class="eml-code-label">{{ __('email-magic-link::messages.code_label') }}</label>
-        @php($emlNumeric = ctype_digit((string) config('email-magic-link.code_alphabet', '')))
+        @php($emlNumeric = ctype_digit(app(\EmailMagicLink\Support\MagicLinkConfig::class)->codeAlphabet()))
         <input id="code" name="code" type="text" inputmode="{{ $emlNumeric ? 'numeric' : 'text' }}"
             @unless ($emlNumeric) autocapitalize="characters" spellcheck="false" @endunless
             autocomplete="one-time-code" required autofocus

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use EmailMagicLink\Notifications\MagicLinkNotification;
+use EmailMagicLink\Support\EnvFlag;
 
 return [
 
@@ -25,8 +26,9 @@ return [
     |--------------------------------------------------------------------------
     |
     | "link" emails a high-entropy magic link, "code" emails a short numeric or
-    | alphanumeric one-time code, and "both" offers either. Code mode is bound
-    | by the entropy guardrail (see below); link mode passes it trivially.
+    | alphanumeric one-time code, and "both" offers either. The code settings
+    | are bound by the entropy guardrail (see below) in every mode, because the
+    | Mint API can issue a code whatever the request endpoint sends.
     |
     | Supported: "link", "code", "both"
     |
@@ -47,7 +49,9 @@ return [
     |
     */
 
-    'ttl' => (int) env('EMAIL_MAGIC_LINK_TTL', 900),
+    // Read raw, and turned into a number by the package with 900 as the fallback. A cast
+    // here made a set but empty EMAIL_MAGIC_LINK_TTL a lifetime of 0, which refuses to boot.
+    'ttl' => env('EMAIL_MAGIC_LINK_TTL', 900),
 
     'link_ttl' => env('EMAIL_MAGIC_LINK_LINK_TTL'),
 
@@ -112,23 +116,6 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Guard and user resolution
-    |--------------------------------------------------------------------------
-    |
-    | The stateful guard to log the user into, and how to resolve a user from a
-    | submitted email. Leave "guard" null to use the application default; by
-    | default users are resolved through that guard's configured provider.
-    | Provide a "user_lookup" class implementing the UserLookup contract to fully
-    | control resolution (custom columns, multi-tenancy, soft-deletes, and so on).
-    |
-    | When the Fortify two-factor handoff is enabled, "guard" must resolve to the
-    | same provider as "fortify.guard" so Fortify can re-resolve the challenged
-    | user from the same table.
-    |
-    */
-
-    /*
-    |--------------------------------------------------------------------------
     | Lock store
     |--------------------------------------------------------------------------
     |
@@ -141,9 +128,9 @@ return [
     | contract -- and hands out a lock that always succeeds, so the package
     | refuses it rather than pretending to serialize.
     |
-    | This is the sibling of `resend.store`. They were one setting short of each
-    | other: a host told to point `resend.store` at a lockable store fixed the
-    | resend guard and left issuance throwing on the default one.
+    | This is the sibling of `resend.store`, and both need a lockable store:
+    | pointing only `resend.store` at one fixes the resend guard and leaves
+    | issuance throwing on the default store.
     |
     */
 
@@ -163,7 +150,7 @@ return [
     | It does NOT apply to the sign-in request endpoint, and that is a security
     | property rather than a tuning choice. The lock is taken only for an address
     | that RESOLVES to a user, so the time a request spends queueing for it is a
-    | readable answer to whether that account exists -- measured at 815 ms against
+    | readable answer to whether that account exists -- measured at 827 ms against
     | 12 ms with this set to 1, and the caller produces the contention himself by
     | sending two requests at once. That endpoint therefore gives up at once, and
     | loses nothing by it: the request holding the lock is already sending the
@@ -177,16 +164,34 @@ return [
     | `lock_hold_seconds` is the lock's TTL: how long it survives if the process
     | holding it dies. It has to outlast the slowest issuance, including the
     | database transaction inside it, or the lock expires while the work is
-    | still running and a second request walks straight in. Neither PostgreSQL
-    | nor MySQL caps that transaction by default (`statement_timeout` and
-    | `innodb_lock_wait_timeout` are the host's to set), which is why the
-    | default is generous rather than tight.
+    | still running and a second request walks straight in. PostgreSQL does not
+    | cap that transaction by default (`statement_timeout` is the host's to set),
+    | and MySQL rolls back only a lock WAIT after `innodb_lock_wait_timeout`
+    | (50 seconds by default), which does not bound the transaction's own
+    | runtime -- which is why the default is generous rather than tight.
     |
     */
 
     'lock_block_seconds' => env('EMAIL_MAGIC_LINK_LOCK_BLOCK_SECONDS', 5),
 
     'lock_hold_seconds' => env('EMAIL_MAGIC_LINK_LOCK_HOLD_SECONDS', 60),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Guard and user resolution
+    |--------------------------------------------------------------------------
+    |
+    | The stateful guard to log the user into, and how to resolve a user from a
+    | submitted email. Leave "guard" null to use the application default; by
+    | default users are resolved through that guard's configured provider.
+    | Provide a "user_lookup" class implementing the UserLookup contract to fully
+    | control resolution (custom columns, multi-tenancy, soft-deletes, and so on).
+    |
+    | When the Fortify two-factor handoff is enabled, "guard" must resolve to the
+    | same provider as "fortify.guard" so Fortify can re-resolve the challenged
+    | user from the same table.
+    |
+    */
 
     'guard' => env('EMAIL_MAGIC_LINK_GUARD'),
 
@@ -354,14 +359,17 @@ return [
     |
     | "script_nonce" names a class implementing EmailMagicLink\Contracts\
     | ScriptNonce, which supplies the CSP nonce for every tag the bundled screens
-    | emit that a strict policy would otherwise reject: the resend countdown's
-    | inline script, the WireKit layout's inline stylesheet, and the <link> and
-    | <script> WireKit itself writes. Leave it null and the package finds the nonce
-    | on its own — it reads the "csp-nonce" container binding spatie/laravel-csp
-    | registers, and falls back to a global csp_nonce() function for hosts that
-    | define one. Set it only when your nonce lives somewhere else entirely.
-    | Under a strict policy without a nonce these are blocked SILENTLY — the
-    | countdown simply never runs, and the screen renders unstyled.
+    | emit that a strict policy would otherwise reject: the inline stylesheet both
+    | layouts carry, the <link> and <script> tags WireKit and Livewire write, the
+    | WireKit layout's "styles" links and Vite tags (Vite keeps a nonce it already
+    | has), and the resend countdown's script, a same-origin file that needs the
+    | nonce only under a 'strict-dynamic' policy. Leave it null and the package
+    | finds the nonce on its own — it reads the "csp-nonce" container binding
+    | spatie/laravel-csp registers, and falls back to a global csp_nonce()
+    | function for hosts that define one. Set it only when your nonce lives
+    | somewhere else entirely.
+    | Under a strict policy without a nonce these are blocked SILENTLY — the screen
+    | renders unstyled, and under 'strict-dynamic' the countdown never runs.
     |
     | The WireKit screens have one more requirement, and it is not a nonce. Their
     | components are driven by Alpine, and Alpine's default build compiles its
@@ -463,10 +471,12 @@ return [
     | credential.
     |
     | "invitation_view" covers the one route that is throttled without spending
-    | anything: the GET that DISPLAYS an invitation. It is guarded because the token
-    | in its path is guessable-in-principle and the page confirms whether it exists --
-    | but out of its own budget, because merely looking at an invitation must not
-    | consume the allowance that accepting one needs. Behind a shared egress address
+    | anything: the GET that DISPLAYS an invitation. It is guarded because every
+    | call with a valid link costs a lookup and a render of your acceptance view
+    | (without a valid signature the page refuses before it looks anything up, so
+    | it confirms nothing about a guessed token) -- but out of its own budget,
+    | because merely looking at an invitation must not consume the allowance that
+    | accepting one needs. Behind a shared egress address
     | (an office, a carrier's CGNAT, a school) the per-IP budget is shared by every
     | user on it, so a page reloaded a few times would otherwise cost someone else
     | their sign-in. Its default is correspondingly higher: a page load is cheap and
@@ -520,7 +530,8 @@ return [
     */
 
     'resend' => [
-        'enabled' => filter_var(env('EMAIL_MAGIC_LINK_RESEND', true), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? true,
+        // A protection, so a set but empty value keeps it on instead of switching it off.
+        'enabled' => EnvFlag::protection(env('EMAIL_MAGIC_LINK_RESEND', true), true),
 
         'cooldown' => [
             'base' => 30,
@@ -561,6 +572,11 @@ return [
     | Under multi-tenancy the scheduled entry runs on the central connection with no
     | tenant context. Leave "schedule" off there and run the command through your
     | tenancy runner instead; see "Running under multi-tenancy" in the documentation.
+    |
+    | A host that calls EmailMagicLinkServiceProvider::ignoreMigrations() gets the
+    | entry only with ignoreMigrations(tablesExist: true): without it the package
+    | cannot tell whether its tables exist, and it will not schedule a nightly
+    | command against tables that may be missing. `email-magic-link:doctor` says so.
     |
     */
 
@@ -606,7 +622,8 @@ return [
 
     'invitations' => [
         'enabled' => filter_var(env('EMAIL_MAGIC_LINK_INVITATIONS_ENABLED', false), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? false,
-        'ttl' => (int) env('EMAIL_MAGIC_LINK_INVITATION_TTL', 604800),
+        // Read raw for the same reason as "ttl": an empty value must not become 0.
+        'ttl' => env('EMAIL_MAGIC_LINK_INVITATION_TTL', 604800),
         'store' => null,
         'handler' => null,
         'view' => null,

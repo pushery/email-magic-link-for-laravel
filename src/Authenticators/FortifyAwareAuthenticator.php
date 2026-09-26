@@ -8,8 +8,10 @@ use EmailMagicLink\Contracts\MagicLinkAuthenticator;
 use EmailMagicLink\Events\TwoFactorChallengeRequired;
 use EmailMagicLink\Support\MagicLinkConfig;
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -60,26 +62,51 @@ final readonly class FortifyAwareAuthenticator implements MagicLinkAuthenticator
 
         // Hand off as a guest. Do not log in here: Fortify completes the login
         // after the TOTP code is verified.
+        //
+        // `login.id` is Fortify's key and holds the model's PRIMARY key: Fortify writes it
+        // that way and its challenge reads it back with find(). The auth identifier is the
+        // same value only while the model names no other column as its identifier.
         $request->session()->put([
-            'login.id' => $user->getAuthIdentifier(),
+            'login.id' => $user instanceof Model ? $user->getKey() : $user->getAuthIdentifier(),
             'login.remember' => $remember,
         ]);
 
         event(new TwoFactorChallengeRequired($user, $request));
 
-        $redirect = redirect()->route($this->config->challengeRoute());
-
         // Tell an API client it must complete the second factor and where to go,
-        // rather than handing it a bare redirect it cannot follow.
+        // rather than handing it a bare redirect it cannot follow. Resolved before the
+        // browser redirect, not from it: Fortify registers the GET challenge page only
+        // with its views on, and an SPA -- the client this answer is for -- runs with
+        // `'views' => false`. Building the redirect first threw there, after login.id
+        // was already written, and spent the link.
         if ($request->expectsJson() && $this->config->apiEnabled()) {
-            return new JsonResponse([
+            $challenge = $this->challengeUrl();
+
+            return new JsonResponse(array_filter([
                 'authenticated' => false,
                 'two_factor' => true,
-                'redirect' => $redirect->getTargetUrl(),
-            ]);
+                'redirect' => $challenge,
+            ], static fn (mixed $value): bool => $value !== null));
         }
 
-        return $redirect;
+        return redirect()->route($this->config->challengeRoute());
+    }
+
+    /**
+     * Where an API client completes the challenge: the configured page when it exists,
+     * otherwise the URI Fortify's SPA endpoint takes the code at -- the same path,
+     * registered whether or not the views are -- and null when neither is registered,
+     * so the key is left out the way Fortify leaves it out of its own answer.
+     */
+    private function challengeUrl(): ?string
+    {
+        foreach ([$this->config->challengeRoute(), 'two-factor.login.store'] as $name) {
+            if (Route::has($name)) {
+                return route($name);
+            }
+        }
+
+        return null;
     }
 
     private function hasEnabledTwoFactor(Authenticatable $user): bool
@@ -88,8 +115,8 @@ final readonly class FortifyAwareAuthenticator implements MagicLinkAuthenticator
         // password login challenges. With `confirm` on, that is a secret AND a
         // confirmed_at, which keeps a user mid-setup out of the challenge; with
         // `confirm` off -- Fortify's shipped feature registration -- it is a secret
-        // alone, and confirmed_at is never written. Re-deriving the verdict from
-        // confirmed_at let an enabled second factor through on every host that had
+        // alone, and confirmed_at is never written. Deriving the verdict from
+        // confirmed_at would let an enabled second factor through on every host that
         // never turned confirmation on.
         if (method_exists($user, 'hasEnabledTwoFactorAuthentication')) {
             return (bool) $user->hasEnabledTwoFactorAuthentication();

@@ -1,7 +1,7 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
     "name": "pushery/email-magic-link-for-laravel",
-    "description": "Passwordless email magic-link & OTP authentication for Laravel — standalone or with a correct, no-bypass Fortify 2FA handoff and scanner-safe link consumption.",
+    "description": "Passwordless email magic-link & OTP authentication for Laravel — standalone, or with Fortify so that a user with 2FA reaches the challenge before any session exists, and with scanner-safe link consumption.",
     "keywords": [
         "laravel",
         "authentication",
@@ -13,11 +13,18 @@
         "login"
     ],
     "license": "MIT",
+    "authors": [
+        {
+            "name": "Pushery",
+            "homepage": "https://www.pushery.com"
+        }
+    ],
     "type": "library",
     "homepage": "https://github.com/pushery/email-magic-link-for-laravel",
     "support": {
         "issues": "https://github.com/pushery/email-magic-link-for-laravel/issues",
-        "source": "https://github.com/pushery/email-magic-link-for-laravel"
+        "source": "https://github.com/pushery/email-magic-link-for-laravel",
+        "docs": "https://docs.pushery.com/email-magic-link-for-laravel/"
     },
     "require": {
         "php": "^8.4",
@@ -25,6 +32,7 @@
         "ext-mbstring": "*",
         "ext-filter": "*",
         "ext-hash": "*",
+        "ext-ctype": "*",
         "laravel/framework": "^13.0",
         "nesbot/carbon": "^3.0",
         "symfony/http-foundation": "^7.0 || ^8.0"
@@ -49,14 +57,13 @@
         "pestphp/pest-plugin-type-coverage": "^5.0",
         "phpstan/phpstan": "2.2.14",
         "predis/predis": "^3.2",
-        "pushery/wirekit": "^2.53",
+        "pushery/wirekit": "^2.54",
         "rector/rector": "2.6.7",
         "spaze/phpstan-disallowed-calls": "4.14.0"
     },
     "suggest": {
-        "laravel/ai": "Required only to score evals with a real judge. Not a dev dependency: it requires aws/aws-sdk-php for a provider this package never calls, which is 67 MB and 3512 files in every checkout and every CI lane.",
-        "laravel/fortify": "Enables the no-bypass two-factor (TOTP) handoff: a magic-link user with confirmed 2FA completes Fortify's challenge before being logged in (^1.0).",
-        "pushery/wirekit": "Renders the sign-in screens with WireKit components when installed; the package auto-detects it and falls back to plain Blade otherwise. The screens need 2.53 or newer, and each number below is the release that made the screen correct rather than merely newer: the one-time-code field needs the alphabet prop (2.22) to accept a non-numeric code at all, its case-folding validation pattern (2.26) to accept that code in lower case without scripting, and its group prop (2.53) to break a long code on a boundary the code actually has instead of wherever the width runs out. Only the version pinned in require-dev is installed by the suite, so a release between that floor and the pin meets the stated requirement without a run behind it."
+        "laravel/fortify": "Enables the no-bypass two-factor (TOTP) handoff: a magic-link user with confirmed 2FA completes Fortify's challenge before being logged in. Proven on ^1.39, the constraint the suite installs; with Laravel 13 no release below 1.34.1 installs at all.",
+        "pushery/wirekit": "Renders the sign-in screens with WireKit components when installed; the package auto-detects it and falls back to plain Blade otherwise. The screens need 2.54 or newer, and each number below is the release that made the screen correct rather than merely newer: the one-time-code field needs the alphabet prop (2.22) to accept a non-numeric code at all, its case-folding validation pattern (2.26) to accept that code in lower case without scripting, its group prop (2.53) to break a long code on a boundary the code actually has instead of wherever the width runs out, and its justify prop (2.54) to center the row of boxes in the card. Only the version pinned in require-dev is installed by the suite, so a release between that floor and the pin meets the stated requirement without a run behind it."
     },
     "autoload": {
         "psr-4": {
@@ -73,7 +80,7 @@
     },
     "scripts": {
         "test": "pest",
-        "test:coverage": "@php -d pcov.directory=. vendor/bin/pest --coverage --min=100",
+        "test:coverage": "@php -d pcov.directory=. -d pcov.exclude='~/(vendor|tests|workbench)/~' vendor/bin/pest --coverage --min=100",
         "test:type-coverage": "pest --type-coverage --min=100",
         "test:browser": "pest tests/Browser tests/BrowserFortify tests/BrowserWireKit",
         "test:browser:wirekit": "pest tests/BrowserWireKit",

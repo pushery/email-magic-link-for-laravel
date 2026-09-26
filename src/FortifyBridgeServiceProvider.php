@@ -17,8 +17,9 @@ use Override;
  *
  * Registered by the core provider only when Fortify is installed and the bridge
  * is enabled. It wraps the bound MagicLinkAuthenticator with the Fortify-aware
- * decorator so a confirmed-2FA user is routed through Fortify's challenge. This
- * file is the only one that participates in the Fortify-internal coupling.
+ * decorator so a user Fortify considers two-factor-enabled is routed through
+ * Fortify's challenge. The coupling to Fortify's internals lives in that
+ * decorator; this provider only wires it in.
  */
 final class FortifyBridgeServiceProvider extends ServiceProvider
 {

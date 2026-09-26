@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Route;
 
 // Resolved through MagicLinkConfig, not a raw `(string) config(...)`: config()
 // returns mixed, and casting mixed to string is an error waiting for the first
-// host that sets a limiter to an array or null — it would throw during route
+// host that sets a limiter to an array — it would throw during route
 // registration, i.e. on every request, with a message pointing at this file
 // rather than at their config. MagicLinkConfig::string() narrows and falls back
 // to the documented default instead, and it is the same resolution every other
@@ -35,19 +35,25 @@ Route::post('magic-link', SendMagicLinkController::class)
     ->middleware("throttle:{$requestLimiter}")
     ->name('email-magic-link.request');
 
-// GET is signed and inert; only the POST consumes the token.
+// GET is inert; only the POST consumes the token. Both verify the link's signature in
+// the controller rather than with the `signed` middleware: the signature expires with the
+// token, and the middleware answered an expired link with a bare 403 that skipped the
+// configured refusal and the failure event.
 Route::get('magic-link/verify/{token}', ConfirmMagicLinkController::class)
-    ->middleware('signed')
     ->name('email-magic-link.confirm');
 
-// The POST is signed too, and that is the arm that matters. The token is the whole
-// credential, so a consume step that accepts a bare token undoes what signing the GET
-// bought: an application that answers a forged `Host` mails a link pointing at the
-// attacker, the victim opens it, and the attacker replays the bare token here. Both
-// routes share this URI, so the signature the GET arrived with verifies the POST
-// unchanged -- the confirmation form simply posts back to the URL it was reached at.
+// The POST checks the signature too. The token is the whole credential, so a consume
+// step that accepted a bare token would let a token minted for one host be spent at
+// another: a link built for one tenant's host could sign its reader in at a different
+// tenant. Both routes share this URI, so the signature the GET arrived with verifies the
+// POST unchanged -- the confirmation form simply posts back to the URL it was reached at.
+//
+// What the signature cannot do is tell a forged host from a real one. It names a host,
+// not a server, and an application that answers any `Host` header accepts a replay that
+// carries the forged name again. Only the application can refuse a host it does not own,
+// with trustHosts or a forced origin, and `email-magic-link:doctor` reports which is set.
 Route::post('magic-link/verify/{token}', ConsumeMagicLinkController::class)
-    ->middleware(["throttle:{$consumeLimiter}", 'signed'])
+    ->middleware("throttle:{$consumeLimiter}")
     ->name('email-magic-link.consume');
 
 Route::get('magic-link/code', ShowCodeFormController::class)
@@ -79,9 +85,10 @@ if ($config->invitationsEnabled()) {
     // scanner following the link cannot burn it.
     //
     // It is nevertheless the one GET in the package that carries a limiter, and that
-    // is deliberate rather than left over: unlike the sign-in confirmation it is not
-    // behind `signed`, so an unauthenticated caller can address it with any token it
-    // likes and the answer says whether that token exists.
+    // is deliberate rather than left over. Not to hide whether a token exists: without
+    // a valid signature the controller refuses before the store is asked, so an invented
+    // token learns nothing. It bounds what a replayed valid link costs, a store lookup
+    // and the host's own acceptance view on every call.
     //
     // Its OWN limiter, though, not the consume one. Sharing that budget would mean
     // looking at an invitation spends the allowance accepting it needs -- and behind

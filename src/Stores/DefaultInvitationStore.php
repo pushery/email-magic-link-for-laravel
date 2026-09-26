@@ -154,13 +154,11 @@ final readonly class DefaultInvitationStore implements InvitationStore
             // somebody else is holding. A statement that never waits cannot be one end of a
             // deadlock cycle, whatever order the other end takes its locks in.
             //
-            // The obvious cheaper fix does not work, and it was measured rather than reasoned
-            // about. Ordering the chunk (`order by id`) does not control the order the row
-            // locks are actually acquired in: PostgreSQL compiles a limited DELETE to
-            // `where ctid in (<subquery>)` and the outer node is free to re-order what the
-            // subquery returns. Reproduced on PostgreSQL 18 with two connections and the two
-            // rows deliberately laid out so ctid order is the reverse of id order --
-            // `deadlock detected` with and without the ORDER BY, identically.
+            // Ordering the chunk (`order by id`) does not help: it does not control the order
+            // the row locks are acquired in. PostgreSQL compiles a limited DELETE to
+            // `where ctid in (<subquery>)`, and the outer node is free to re-order what the
+            // subquery returns. On PostgreSQL 18, with two connections and two rows laid out
+            // so ctid order is the reverse of id order, both forms end in `deadlock detected`.
             //
             // A row skipped here is not a row kept: it was locked by a transaction that is
             // about to commit, and the next run takes it. A purge is the one caller that can

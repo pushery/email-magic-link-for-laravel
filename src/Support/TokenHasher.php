@@ -12,11 +12,11 @@ namespace EmailMagicLink\Support;
  *
  * Retired keys are carried alongside the current one, because the hash is what FINDS a
  * row. Laravel supports rotating `APP_KEY` gently -- the new key signs, the listed
- * previous ones still verify -- and this package's link signatures already honor that
- * list. Its hashes did not, so a rotation quietly orphaned every live token: a
- * fifteen-minute sign-in link barely notices, but an invitation lives seven days by
- * default, and every open one came back as the same generic refusal an unknown token
- * gets. Nothing told the operator, and nothing told the invited person.
+ * previous ones still verify -- and this package's link signatures honor that list.
+ * Its hashes honor it too: otherwise a rotation would quietly orphan every live token.
+ * A fifteen-minute sign-in link barely notices, but an invitation lives seven days by
+ * default, and every open one would come back as the same generic refusal an unknown
+ * token gets, with nothing telling the operator or the invited person.
  */
 final readonly class TokenHasher
 {

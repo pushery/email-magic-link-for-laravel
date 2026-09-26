@@ -52,9 +52,10 @@ final readonly class DefaultTokenStore implements TokenStore
         $userId = $this->identifierOf($user);
 
         // Only the code channel supersedes, so only it can lose the race: two concurrent
-        // issues each invalidate what they can see and then both insert, and PostgreSQL
-        // lets neither see the other. A link is deliberately allowed to coexist with
-        // earlier live links, so there is nothing to serialize and nothing to pay for.
+        // issues each invalidate what they can see and then both insert, on any engine,
+        // because write() revokes before it inserts and holds no transaction. A link is
+        // deliberately allowed to coexist with earlier live links, so there is nothing to
+        // serialize and nothing to pay for.
         return $channel === 'code'
             ? $this->lock->run('code', $userId, $guard, fn (): IssuedToken => $this->write($userId, $guard, $channel, $maxUses, $passphrase))
             : $this->write($userId, $guard, $channel, $maxUses, $passphrase);
@@ -134,27 +135,28 @@ final readonly class DefaultTokenStore implements TokenStore
             // classifier would answer NotFound after a third SELECT -- so the path every
             // scanner takes costs one statement, not three.
             //
-            // One statement WITH NO RETIRED KEYS. The sentence used to stop at "not three"
-            // and that was true only until a host rotates APP_KEY: resolveHash() then has
-            // to try each candidate, and the scanner path costs two. Measured over 500k
-            // rows, 300 iterations: 1 statement / 0.25 ms with no previous key, 2 / 0.57 ms
-            // with one. It does NOT grow past two -- ten retired keys cost the same as one,
-            // because the candidates go into a single IN.
+            // One statement with no retired keys, two with any: once a host rotates APP_KEY,
+            // resolveHash() has to try each candidate. Over 500k rows and 300 iterations:
+            // 1 statement and 0.25 ms with no previous key, 2 and 0.57 ms with one. It does
+            // not grow past two -- ten retired keys cost the same as one, because the
+            // candidates go into a single IN.
             //
             // The successful path reads this row a second time after the claim, which is
-            // 26% of its database work and was measured at about 0.19 ms. It stays. On
+            // 26% of its database work, about 0.19 ms. It stays. On
             // PostgreSQL the claim could carry `returning *` instead, but MySQL has no
             // RETURNING, so removing it means a driver-split hydration inside the most
             // security-sensitive method here -- two engines that could disagree about
             // consumed_at and uses_remaining, to save a fifth of a millisecond on a login.
-            // Written down so the next reader does not re-derive the measurement and reach
-            // the opposite conclusion by looking only at the ratio.
             if (! $existing instanceof MagicLinkToken) {
                 return ClaimResult::failed(ClaimFailure::NotFound);
             }
 
+            // A wrong passphrase counts against the link the way a wrong code counts against a
+            // code. The passphrase guards a link that reached the wrong hands, and it is a
+            // human-chosen secret: bounded only by the rate limiter it could be guessed for as
+            // long as the link lives, which for an invitation-length lifetime is days.
             if ($existing->passphrase_hash !== null && ! $this->passphraseMatches($passphrase, $existing->passphrase_hash)) {
-                return ClaimResult::failed(ClaimFailure::InvalidPassphrase);
+                return $this->recordFailedAttempt($existing, $this->config->maxAttemptsPerToken(), $now, ClaimFailure::InvalidPassphrase);
             }
 
             if ($this->atomicClaim('token_hash', $hash, 'link', $now)) {
@@ -208,7 +210,7 @@ final readonly class DefaultTokenStore implements TokenStore
             }
 
             if (! $this->hasher->matches($code, $token->token_hash)) {
-                return $this->recordFailedCodeAttempt($token, $max, $now);
+                return $this->recordFailedAttempt($token, $max, $now, ClaimFailure::InvalidCode);
             }
 
             if (! $this->atomicClaim('id', (string) $token->id, 'code', $now)) {
@@ -239,13 +241,11 @@ final readonly class DefaultTokenStore implements TokenStore
             // somebody else is holding. A statement that never waits cannot be one end of a
             // deadlock cycle, whatever order the other end takes its locks in.
             //
-            // The obvious cheaper fix does not work, and it was measured rather than reasoned
-            // about. Ordering the chunk (`order by id`) does not control the order the row
-            // locks are actually acquired in: PostgreSQL compiles a limited DELETE to
-            // `where ctid in (<subquery>)` and the outer node is free to re-order what the
-            // subquery returns. Reproduced on PostgreSQL 18 with two connections and the two
-            // rows deliberately laid out so ctid order is the reverse of id order --
-            // `deadlock detected` with and without the ORDER BY, identically.
+            // Ordering the chunk (`order by id`) does not help: it does not control the order
+            // the row locks are acquired in. PostgreSQL compiles a limited DELETE to
+            // `where ctid in (<subquery>)`, and the outer node is free to re-order what the
+            // subquery returns. On PostgreSQL 18, with two connections and two rows laid out
+            // so ctid order is the reverse of id order, both forms end in `deadlock detected`.
             //
             // A row skipped here is not a row kept: it was locked by a transaction that is
             // about to commit, and the next run takes it. A purge is the one caller that can
@@ -282,32 +282,35 @@ final readonly class DefaultTokenStore implements TokenStore
         return $deleted;
     }
 
-    private function recordFailedCodeAttempt(MagicLinkToken $token, int $max, CarbonInterface $now): ClaimResult
+    private function recordFailedAttempt(MagicLinkToken $token, int $max, CarbonInterface $now, ClaimFailure $belowLimit): ClaimResult
     {
-        $connection = $this->connection();
-
-        $connection->table('magic_link_tokens')
-            ->where('id', $token->id)
+        // Through the configured model like every other statement here, not a table named by
+        // hand: this counter is the brute-force limit, and a host model with its own table,
+        // connection or scopes had it counting somewhere else -- a 500 per wrong guess, or,
+        // with the old table still present, attempts read as 0 and a lockout that never came.
+        MagicLinkToken::model()::query()
+            ->whereKey($token->id)
             ->whereNull('consumed_at')
             ->increment('attempts', 1, ['updated_at' => $now]);
 
-        $attempts = $connection->table('magic_link_tokens')
-            ->where('id', $token->id)
+        $attempts = MagicLinkToken::model()::query()
+            ->useWritePdo()
+            ->whereKey($token->id)
             ->value('attempts');
         $attempts = is_numeric($attempts) ? (int) $attempts : 0;
 
         if ($attempts >= $max) {
             // Burn the token: the lockout, not the rate limiter, bounds brute force.
             // updated_at was already bumped by the increment above.
-            $connection->table('magic_link_tokens')
-                ->where('id', $token->id)
+            MagicLinkToken::model()::query()
+                ->whereKey($token->id)
                 ->whereNull('consumed_at')
                 ->update(['consumed_at' => $now]);
 
             return ClaimResult::failed(ClaimFailure::LockedOut);
         }
 
-        return ClaimResult::failed(ClaimFailure::InvalidCode);
+        return ClaimResult::failed($belowLimit);
     }
 
     /**
@@ -332,7 +335,7 @@ final readonly class DefaultTokenStore implements TokenStore
 
         // wrapTable() applies the connection's table prefix and the driver's quoting. A
         // literal table name here bypasses the prefix that Eloquent and Schema both honor,
-        // so on a prefixed connection every claim ran against a table that does not exist.
+        // so on a prefixed connection every claim would run against a table that does not exist.
         $table = $connection->getQueryGrammar()->wrapTable(MagicLinkToken::resolve()->getTable());
 
         $sql = "update {$table} set "
@@ -357,7 +360,7 @@ final readonly class DefaultTokenStore implements TokenStore
     {
         // Pinned to the write connection: the confirm page asks whether a link wants a
         // passphrase in a request of its own, after the one that issued the row, and on a
-        // lagging replica the answer was "no" for a link that does. The claim callers hold
+        // lagging replica the answer would be "no" for a link that does. The claim callers hold
         // a transaction and would reach the write PDO anyway; stating it here keeps the
         // property on the lookup rather than on whoever calls it.
         return MagicLinkToken::model()::query()
@@ -395,8 +398,8 @@ final readonly class DefaultTokenStore implements TokenStore
         // certifies, so the generated distribution matches the proven keyspace.
         //
         // EFFECTIVE, not configured: minting a character that the fold then collapses
-        // produces a code that can never be redeemed -- the same failure this fold
-        // was corrected to remove, arriving from the other side. The generator and
+        // produces a code that can never be redeemed -- the failure the fold exists to
+        // prevent, arriving from the other side. The generator and
         // the guardrail must read the same set or one of them is describing an
         // alphabet that does not exist at comparison time.
         $characters = $this->config->effectiveCodeAlphabetCharacters();

@@ -60,6 +60,12 @@ final readonly class ShowInvitationController
             return $this->refuse($request, $result->failure ?? ClaimFailure::NotFound);
         }
 
+        // An invitation on a guard the operator has since closed is dead, and its screen
+        // is never shown. Refused only: this GET stays inert, and the POST withdraws it.
+        if (! in_array($result->invitation->guard, $this->config->allowedGuards(), true)) {
+            return $this->refuse($request, ClaimFailure::Revoked);
+        }
+
         $view = $this->config->invitationView();
 
         if ($view === null) {

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace EmailMagicLink\Events;
 
+use EmailMagicLink\Support\LeavesTheRequestBehind;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Http\Request;
 
@@ -17,8 +18,10 @@ use Illuminate\Http\Request;
  */
 final readonly class MagicLinkVerified
 {
+    use LeavesTheRequestBehind;
+
     public function __construct(
         public Authenticatable $user,
-        public Request $request,
+        public ?Request $request,
     ) {}
 }

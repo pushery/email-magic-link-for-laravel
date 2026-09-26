@@ -12,9 +12,7 @@ metadata:
 # Email Magic Link for Laravel
 
 Use this skill when a Laravel application installs or integrates the
-`pushery/email-magic-link-for-laravel` package. Laravel Boost surfaces it inside
-consuming applications, so keep it focused on adoption — never on package
-internals.
+`pushery/email-magic-link-for-laravel` package.
 
 ## Primary Goal
 
@@ -261,6 +259,5 @@ and run `email-magic-link:purge` through the tenancy runner instead.
 - Do not treat the passphrase gate as two-factor. It is a shared secret on the
   link; a passphrase-gated link for a 2FA user still goes through the Fortify
   challenge.
-- Do not document package internals here; keep this skill focused on adoption.
-  Deeper reference material lives at
+- Do not guess at behavior this skill does not cover. The full reference is at
   <https://docs.pushery.com/email-magic-link-for-laravel/>.

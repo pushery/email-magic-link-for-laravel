@@ -11,52 +11,52 @@ use Illuminate\Support\Facades\Schema;
  *
  * Both purges are a disjunction, and PostgreSQL reaches for an index only when EVERY arm
  * of one is covered. An index on `expires_at` alone leaves the `consumed_at` arm without
- * one, so the planner falls back to a sequential scan over the whole table however
- * selective the predicate is. These are the missing arms.
+ * one, so the planner falls back to reading the table, walking the primary key or scanning
+ * all of it, however selective the predicate is. These are the missing arms.
  *
- * The statement the numbers below describe is not the one written in the store. Laravel
- * cannot emit `DELETE ... LIMIT` on PostgreSQL, so it rewrites the chunk into
- * `delete from t where ctid in (select ctid from t where ... limit n)`. That is not
- * cosmetic: the Tid Scan above the subquery costs roughly a buffer hit per row and puts a
- * floor of about 1 ms under a chunk of 1000, which is why the 98% row above shows the same
- * time with and without the indexes although the scan itself differs by 0.16 ms. Read the
- * table as a comparison between two plans, never as the cost of the DELETE.
+ * A chunk is two statements: `select id ... order by id limit n for update skip locked`,
+ * then `delete ... where id in (...)`. The DELETE goes by primary key and costs the same
+ * with and without these indexes, 0.8 ms for a chunk of 800. The SELECT is what they
+ * decide, and it is what the table below times.
  *
- * Measured on PostgreSQL 18, chunk 1000, plans read with EXPLAIN ANALYZE. The steady state
- * is the honest row -- 260 hourly purge cycles against a 7-day TTL, 134k rows surviving,
- * 0.6% qualifying -- because that is the shape a real invitation table settles into:
+ * Measured on PostgreSQL 18 over the token table's purge, chunk 1000, plans read with
+ * EXPLAIN (ANALYZE, BUFFERS), both sides warm: the best of five runs after a warm-up. The
+ * steady state is the honest row -- 260 hourly purge cycles of the store's own loop against
+ * a 7-day TTL, 134k rows surviving, 0.6% qualifying -- because that is the shape a table
+ * with a long lifetime and a frequent purge settles into:
  *
- *   regime                       with these indexes        without
- *   98% qualifying, 200k rows    Seq Scan, ~1.0 ms         Seq Scan, ~1.0 ms
- *   1% qualifying,  200k rows    BitmapOr, 3.3 ms          Seq Scan, 9.0 ms
- *   steady state,   134k rows    BitmapOr, 0.91 ms         Seq Scan, 10.05 ms
+ *   regime                       with these indexes           without
+ *   98% qualifying, 200k rows    primary key walk, 0.26 ms    primary key walk, 0.26 ms
+ *   5% qualifying,  200k rows    primary key walk, 1.4 ms     primary key walk, 1.4 ms
+ *   1% qualifying,  200k rows    BitmapOr, 0.77 ms            primary key walk, 6.4 ms
+ *   steady state,   134k rows    BitmapOr, 0.23 ms            Seq Scan, 5.6 ms
  *
  * So: free in the regime a short-lived sign-in link produces, where almost every row
- * qualifies and a sequential scan is genuinely the right plan, and worth about ELEVEN
- * times the runtime in the regime a seven-day invitation with a daily purge produces.
+ * qualifies and walking the primary key in id order finds a chunk in the first rows it
+ * reads, and worth about TWENTY-FOUR times the runtime in the steady state.
  *
- * The number here said "roughly fifty times", and it was wrong by a factor of five. It
- * came from a 35.8 ms reading that could not be reproduced warm: it compared a COLD
- * sequential scan, paying dirty-buffer writeback, against a warm bitmap scan. Measured
- * symmetrically -- both sides cold, or both warm -- the ratio is 3x for a single chunk and
- * 11x over a steady-state purge. A ratio between two differently-warmed measurements is
- * not a ratio, and it flattered the decision this file already justifies on its own.
+ * Both sides are measured equally warm on purpose. A cold scan, paying for its reads,
+ * against a warm bitmap scan would suggest a larger factor; a ratio between two differently
+ * warmed measurements is not a ratio.
  *
- * The planner stops using them between 5% and 10% qualifying, measured. And the worst case
- * for the unindexed side is NOT the smallest slice: while fewer than `chunk` rows qualify
- * the LIMIT never engages, so the scan reads the whole table however little it finds.
+ * The planner stops using them between 1% and 5% qualifying, measured: above that, the
+ * primary key reaches a full chunk sooner. And the worst case for the unindexed side is NOT
+ * the smallest slice: while fewer than `chunk` rows qualify the LIMIT never engages, so the
+ * scan reads the whole table however little it finds.
  *
- * Plain indexes, not partial ones. Correct, but not for the reason written here before:
- * a partial index produces the same BitmapOr and is far SMALLER, not marginally so
- * (1368 kB against 16 kB on the 1% fixture, against 8 kB in the steady state), so "the
- * last few percent" understated it by two orders of magnitude. It also does not save the
+ * The invitation purge's predicate, three arms with conjunctions, was measured only in the
+ * purge's earlier form, a single limited DELETE; its two indexes rest on the same argument.
+ *
+ * Plain indexes, not partial ones, and not for size: in that earlier measurement a partial
+ * index produced the same BitmapOr and was far SMALLER (1368 kB against 16 kB on the 1%
+ * fixture, against 8 kB in the steady state). It also does not save the
  * write cost below, because PostgreSQL counts a predicate's columns among the attributes
  * that block a heap-only update. What actually decides it: a partial index does not exist
  * on MySQL 8.4, and one schema file for both engines is worth more than a size win on one.
  *
- * WHAT THESE INDEXES COST, which nothing here said. Before them, the claim path's UPDATE
- * touched only unindexed columns and stayed a heap-only tuple update. With an index on
- * `consumed_at` it cannot. Measured over 10,000 real claims, with a control updating only
+ * WHAT THESE INDEXES COST. Without them, the claim path's UPDATE touches only unindexed
+ * columns and stays a heap-only tuple update. With an index on `consumed_at` it cannot.
+ * Measured over 10,000 real claims, with a control updating only
  * never-indexed columns in the same row:
  *
  *                  control        the claim statement
@@ -75,11 +75,17 @@ return new class extends Migration
         $this->add('email_magic_link_invitations', 'revoked_at');
     }
 
+    /**
+     * Only the index no other migration creates.
+     *
+     * The create-table migration carries the two invitation indexes itself, so they belong to
+     * it and go when its table goes. Dropping them here as well left that migration recorded
+     * as run and its table without the indexes the purge filters on, after nothing more than
+     * a one-step rollback.
+     */
     public function down(): void
     {
         $this->drop('magic_link_tokens', 'consumed_at');
-        $this->drop('email_magic_link_invitations', 'accepted_at');
-        $this->drop('email_magic_link_invitations', 'revoked_at');
     }
 
     /**

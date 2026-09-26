@@ -31,9 +31,9 @@
                         {{-- A fieldset with a legend, not a bare stack: the two radios are a
                              choice, and without a group label a screen reader announces
                              "Magic link" and "One-time code" with nothing saying what is
-                             being chosen. The plain Blade twin has always used
-                             fieldset + legend; this set had lost it. field.set brings its
-                             own spacing, so it replaces the stack rather than wrapping it. --}}
+                             being chosen. The plain Blade twin uses fieldset + legend
+                             too. field.set brings its own spacing, so it replaces the
+                             stack rather than wrapping it. --}}
                         <x-wirekit::field.set :legend="__('email-magic-link::messages.delivery_legend')">
                             {{-- old('channel'): a failed submit keeps the choice, or a person who picked
                                  the code, mistyped the address and corrected it receives a link. --}}

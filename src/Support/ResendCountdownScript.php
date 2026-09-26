@@ -7,11 +7,10 @@ namespace EmailMagicLink\Support;
 /**
  * The resend countdown's client script, and the version stamp its URL carries.
  *
- * It used to be an inline `<script>` in the partial, which meant a strict policy
- * needed a nonce for it -- and a host whose policy issues NO nonces had nothing to
- * pass through, so for them the countdown could not be made to run at all. An
- * external same-origin file satisfies a plain `script-src 'self'` with no nonce and
- * no host action, which is the reason for the move.
+ * An external same-origin file rather than an inline `<script>`: an inline script needs
+ * a nonce under a strict policy, and a host whose policy issues no nonces has none to pass
+ * through, so an inline countdown could not run there at all. A same-origin file
+ * satisfies a plain `script-src 'self'` with no nonce and no host action.
  *
  * WHY THE SOURCE LIVES IN A PHP CONSTANT rather than a `.js` file. This package
  * deliberately has no client-asset path: no npm, no build step, no `dist/`, and no
@@ -32,6 +31,22 @@ final class ResendCountdownScript
      * Progressive enhancement, and it degrades in the right direction: with the
      * script blocked or absent the button stays usable and the server simply holds
      * the next request back again.
+     *
+     * The reasons live here rather than in the script, because the script is sent to
+     * every browser that shows the countdown:
+     *
+     * - Two templates, `data-template-one` and `data-template-other`: the countdown
+     *   passes through one on its way down, and a baked-in plural would read "1 seconds"
+     *   for a whole second in every language. The server renders both forms, and the
+     *   script picks between them.
+     * - The box keeps its first-render height (`minHeight`). When the countdown finishes
+     *   it clears its own text, and an empty paragraph collapses, which pulls the submit
+     *   button 24px up at the moment the person reaches for it. The height is measured
+     *   rather than reserved in CSS, because it is a rendered line count: the same string
+     *   wraps to two lines on a narrow viewport and one on a wide one, and the first
+     *   render is the tallest, since the text only gets shorter.
+     * - `aria-disabled`, not `disabled`: the button stays in the tab order and announces
+     *   as dimmed, and `aria-describedby` on it names the countdown as the reason.
      */
     private const string SOURCE = <<<'JS'
         (function () {
@@ -43,29 +58,14 @@ final class ResendCountdownScript
 
             var form = (el.closest('main') || document).querySelector('form');
             var button = form ? form.querySelector('button[type="submit"], button:not([type])') : null;
-            // Two templates, not one: the countdown passes THROUGH one on its way down,
-            // and a baked-in plural would read "1 seconds" for a whole second in every
-            // language. The server renders both forms; this picks between them.
             var one = el.getAttribute('data-template-one') || '';
             var other = el.getAttribute('data-template-other') || '';
             var remaining = parseInt(el.getAttribute('data-seconds'), 10) || 0;
 
-            // Freeze the box at its first-render height. When the countdown finishes it
-            // clears its own text, and an empty paragraph collapses -- which pulled the
-            // submit button 24px UP, measured, at the exact moment the person was
-            // reaching for it. The lab CLS is far under the 0.1 threshold, so this is not
-            // a Web Vitals fix; it is a mis-click fix.
-            //
-            // Measured here rather than reserved in CSS because the right number is a
-            // rendered line count, not a guess: the same string wraps to two lines on a
-            // narrow viewport and one on a wide one. First render is also the TALLEST,
-            // since the text only ever gets shorter as the number counts down.
             if (el.getBoundingClientRect) {
                 el.style.minHeight = el.getBoundingClientRect().height + 'px';
             }
 
-            // aria-disabled, not disabled: the button stays in the tab order and announces
-            // as dimmed, and aria-describedby on it names the countdown as the reason.
             var block = function (e) { e.preventDefault(); };
 
             if (button) {

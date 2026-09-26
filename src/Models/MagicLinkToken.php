@@ -36,9 +36,9 @@ class MagicLinkToken extends Model
     protected $table = 'magic_link_tokens';
 
     /**
-     * The passphrase hash is a bcrypt of a human-chosen secret, which is offline-crackable;
-     * the token hash is keyed. Neither belongs in a serialized model, and the model is
-     * exposed on public value objects.
+     * The passphrase hash is made with the application's configured hasher from a
+     * human-chosen secret, which is offline-crackable; the token hash is keyed. Neither
+     * belongs in a serialized model, and the model is exposed on public value objects.
      *
      * @var list<string>
      */

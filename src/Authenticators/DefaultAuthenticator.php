@@ -20,9 +20,10 @@ use Symfony\Component\HttpFoundation\Response;
  * Standalone post-verification flow: log the user into the stateful guard and
  * redirect (or return JSON for API clients).
  *
- * There is no second factor here by design. When Fortify is installed and a
- * user has confirmed TOTP, the bridge wraps this authenticator and intercepts
- * first.
+ * There is no second factor here by design. When Fortify is installed and
+ * Fortify considers the user two-factor-enabled (hasEnabledTwoFactorAuthentication(),
+ * which with `confirm` on also requires a confirmed setup), the bridge wraps this
+ * authenticator and intercepts first.
  */
 final readonly class DefaultAuthenticator implements MagicLinkAuthenticator
 {

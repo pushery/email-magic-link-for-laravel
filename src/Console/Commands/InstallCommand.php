@@ -22,20 +22,35 @@ final class InstallCommand extends Command
 
     public function handle(): int
     {
-        $force = $this->option('force');
+        $force = (bool) $this->option('force');
 
-        $this->callSilently('vendor:publish', [
-            '--tag' => 'email-magic-link-config',
-            '--force' => $force,
-        ]);
-        $this->info('Published config/email-magic-link.php');
+        // vendor:publish skips a file that exists unless it is forced, and says so on a line this
+        // command does not show. So the existing file is looked at here: after an upgrade, the
+        // published config is the one that lacks the new keys, and "Published" would tell the
+        // operator the opposite.
+        if (! $force && is_file(config_path('email-magic-link.php'))) {
+            $this->warn('config/email-magic-link.php already exists and was kept. Pass --force to overwrite it,');
+            $this->warn('or run php artisan email-magic-link:doctor to see which keys it is missing.');
+        } else {
+            $this->callSilently('vendor:publish', [
+                '--tag' => 'email-magic-link-config',
+                '--force' => $force,
+            ]);
+            $this->info('Published config/email-magic-link.php');
+        }
 
         if ($this->option('views')) {
+            $existed = is_dir(resource_path('views/vendor/email-magic-link'));
+
             $this->callSilently('vendor:publish', [
                 '--tag' => 'email-magic-link-views',
                 '--force' => $force,
             ]);
-            $this->info('Published the views to resources/views/vendor/email-magic-link');
+            if ($existed && ! $force) {
+                $this->info('Published the views to resources/views/vendor/email-magic-link; the ones already there were kept');
+            } else {
+                $this->info('Published the views to resources/views/vendor/email-magic-link');
+            }
         }
 
         $this->newLine();
@@ -60,7 +75,8 @@ final class InstallCommand extends Command
         $this->line('  php artisan vendor:publish --tag=email-magic-link-migrations');
         $this->line('only if you need to customize them. Once a published copy exists the bundled');
         $this->line('files are no longer loaded, so nothing runs twice. If you rename the copy, call');
-        $this->line('EmailMagicLinkServiceProvider::ignoreMigrations() in a service provider.');
+        $this->line('EmailMagicLinkServiceProvider::ignoreMigrations(tablesExist: true) in a service provider,');
+        $this->line('so a scheduled purge keeps running.');
 
         return self::SUCCESS;
     }

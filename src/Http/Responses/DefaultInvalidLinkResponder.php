@@ -16,7 +16,7 @@ use Symfony\Component\HttpFoundation\Response;
  *
  *   redirect  send the user back to the sign-in form (default) — or to a
  *             configured URL — with the generic error flashed and the email
- *             re-prefilled. Preserves the original browser behavior.
+ *             re-prefilled. The default, and the browser behavior.
  *   view      render a Blade view (receives `message`), so the host owns the
  *             branding of the error page; answered with `abort_status`, never 200.
  *   abort     abort() with a configurable HTTP status, handing off to the
@@ -58,7 +58,7 @@ final readonly class DefaultInvalidLinkResponder implements InvalidLinkResponder
         // Flash only what the forms re-prefill -- the email and the guard -- so a
         // retry keeps them without putting them in the URL. An allowlist, never a
         // denylist: the consume form posts a passphrase and the host's acceptance
-        // form posts a password, and `except('code')` wrote both into the session
+        // form posts a password, and `except('code')` would write both into the session
         // store in the clear. The next secret field cannot land there either.
         // The code form keys the generic failure on the CODE field: an unknown email and
         // a wrong code still produce a byte-identical response (both come through here),

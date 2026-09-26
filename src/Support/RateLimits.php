@@ -46,9 +46,8 @@ final readonly class RateLimits
      * facade. The facade caches the first instance it resolved, so after the
      * `forgetInstance()` above it would register these limiters on the discarded
      * object -- while the throttle middleware, container-constructed, receives the
-     * new and empty one, and every throttled route answers 500. Measured: the
-     * repair the docblock describes only worked when the host ALSO cleared the
-     * facade, which nothing told it to do.
+     * new and empty one, and every throttled route answers 500, unless the host also
+     * clears the facade, which nothing tells it to do.
      */
     public function define(): void
     {
@@ -70,11 +69,11 @@ final readonly class RateLimits
 
         return [
             // Hashed here rather than left to the framework, and the difference only shows on
-            // a host that has turned the framework's hashing off. `RateLimiter::shouldHashKeys(false)`
-            // is a supported call, and after it the raw key is what reaches the cache -- so the
-            // address would sit in Redis in the clear, under a key that survives as long as the
-            // window. This class already hashes the token and says so in a comment; the address
-            // is the more identifying of the two, and it was going through raw.
+            // a host that has turned the framework's hashing off.
+            // `ThrottleRequests::shouldHashKeys(false)` is a supported call, and after it the raw
+            // key is what reaches the cache -- so the address would sit in Redis in the clear,
+            // under a key that survives as long as the window. The address is the more
+            // identifying of the two subjects, and it is hashed like the token.
             //
             // The IP is deliberately NOT hashed: it is not the subject, it is already in every
             // access log the request touches, and an operator reading a limiter key needs to be
@@ -115,12 +114,9 @@ final readonly class RateLimits
     /**
      * The token in the path decides the bucket; the submitted email is the fallback
      * only when there is no token, so a caller cannot pick a bucket by shortening the
-     * token in the URL. Never the raw subject -- always its hash.
-     *
-     * That sentence said "never the raw TOKEN", and the fallback beneath it returned the
-     * raw address. The asymmetry was invisible because the promise was written about the
-     * branch that kept it. Both branches hash now, and the normalization still decides
-     * the bucket -- it just happens before the hash rather than instead of it.
+     * token in the URL. Never the raw subject -- always its hash, in both branches. The
+     * normalization still decides the bucket; it happens before the hash rather than
+     * instead of it.
      */
     private function discriminator(Request $request): string
     {

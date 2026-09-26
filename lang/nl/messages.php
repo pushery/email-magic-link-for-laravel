@@ -20,7 +20,7 @@ return [
 
     // Confirmation page.
     'confirm_title' => 'Inloggen bevestigen',
-    'confirm_intro' => 'Bevestig voor je veiligheid dat je wilt inloggen. Deze link kan maar één keer worden gebruikt.',
+    'confirm_intro' => 'Bevestig voor je veiligheid dat je wilt inloggen.',
 
     // Code entry form.
     'code_title' => 'Voer je code in',
@@ -48,6 +48,7 @@ return [
     'mail_link_intro' => 'Gebruik de knop hieronder om in te loggen bij :app.',
     'mail_link_action' => 'Inloggen',
     'mail_link_expiry' => '{1} Deze link verloopt over :minutes minuut en kan maar één keer worden gebruikt.|[0,*] Deze link verloopt over :minutes minuten en kan maar één keer worden gebruikt.',
+    'mail_link_expiry_reusable' => '{1} Deze link verloopt over :minutes minuut en kan :uses keer worden gebruikt.|[0,*] Deze link verloopt over :minutes minuten en kan :uses keer worden gebruikt.',
 
     // Notification — one-time code.
     'mail_code_subject' => 'Je inlogcode voor :app',

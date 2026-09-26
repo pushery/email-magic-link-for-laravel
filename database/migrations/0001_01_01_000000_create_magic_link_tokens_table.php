@@ -28,28 +28,22 @@ return new class extends Migration
             // a disjunction only when EVERY arm is covered, so one arm alone buys nothing.
             //
             // The measurement lives in 0001_01_01_000004_index_the_purge_predicates.php and
-            // is deliberately NOT repeated here. It used to be, and the two copies did what
-            // two copies of a number do: the ratio was corrected in that file on 2026-09-05
-            // -- it compared a COLD sequential scan against a warm bitmap scan and was wrong
-            // by a factor of five -- while this one kept saying "about fifty times" and kept
-            // the 35.8 ms reading the correction had just discredited. Both were edited the
-            // same day, in the same session, by whoever is reading this.
+            // is deliberately NOT repeated here: two copies of a number drift apart.
             //
             // The short version, for a reader who does not want to open the other file: on a
-            // table of fifteen-minute links almost every row qualifies, a sequential scan is
-            // genuinely correct, and the pair costs what it costs. On a table with a long
-            // TTL and a frequent purge the pair is worth about eleven times the runtime.
+            // table of fifteen-minute links almost every row qualifies, walking the primary
+            // key is genuinely the right plan, and the pair costs what it costs. On a table
+            // with a long TTL and a frequent purge the pair is worth more than an order of
+            // magnitude.
             //
-            // TWO SENTENCES HERE WERE FALSE, and both read as reassurance. One said the
-            // other arm did not exist -- it was added by the purge-index migration in the
-            // same release. The other said this index "is used by the claim path", and the
-            // plan says otherwise: the claim path enters through the token_hash index and
-            // evaluates `expires_at > now()` as a FILTER on the fetched row, so it never
-            // touches this one. Measured 2026-09-05, same server, 200k rows:
+            // The claim path does not use this index: its UPDATE enters through the
+            // token_hash index and evaluates the rest as a FILTER on the fetched row.
+            // PostgreSQL 18, 200k rows, the statement the store runs:
             //
-            //   Index Scan using magic_link_tokens_token_hash_idx
-            //     Index Cond: token_hash = '827ccb…'
-            //     Filter: guard = 'web' AND channel = 'link' AND expires_at > now()
+            //   Index Scan using magic_link_tokens_token_hash_index
+            //     Index Cond: token_hash = '03e6c6…'
+            //     Filter: consumed_at IS NULL AND expires_at > '…' AND uses_remaining > 0
+            //             AND channel = 'link'
             //
             // The purge is what uses THIS one, and only in company.
             //

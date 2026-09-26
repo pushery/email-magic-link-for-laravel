@@ -20,7 +20,7 @@ return [
 
     // Confirmation page.
     'confirm_title' => 'Conferma accesso',
-    'confirm_intro' => 'Per la tua sicurezza, conferma di voler accedere. Questo link può essere usato una sola volta.',
+    'confirm_intro' => 'Per la tua sicurezza, conferma di voler accedere.',
 
     // Code entry form.
     'code_title' => 'Inserisci il tuo codice',
@@ -48,6 +48,7 @@ return [
     'mail_link_intro' => 'Usa il pulsante qui sotto per accedere a :app.',
     'mail_link_action' => 'Accedi',
     'mail_link_expiry' => '{1} Questo link scade tra :minutes minuto e può essere usato una sola volta.|[0,*] Questo link scade tra :minutes minuti e può essere usato una sola volta.',
+    'mail_link_expiry_reusable' => '{1} Questo link scade tra :minutes minuto e può essere usato :uses volte.|[0,*] Questo link scade tra :minutes minuti e può essere usato :uses volte.',
 
     // Notification — one-time code.
     'mail_code_subject' => 'Il tuo codice di accesso di :app',

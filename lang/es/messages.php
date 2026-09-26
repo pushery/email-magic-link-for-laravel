@@ -20,7 +20,7 @@ return [
 
     // Confirmation page.
     'confirm_title' => 'Confirmar inicio de sesión',
-    'confirm_intro' => 'Por tu seguridad, confirma que quieres iniciar sesión. Este enlace solo se puede usar una vez.',
+    'confirm_intro' => 'Por tu seguridad, confirma que quieres iniciar sesión.',
 
     // Code entry form.
     'code_title' => 'Introduce tu código',
@@ -48,6 +48,7 @@ return [
     'mail_link_intro' => 'Usa el botón de abajo para iniciar sesión en :app.',
     'mail_link_action' => 'Iniciar sesión',
     'mail_link_expiry' => '{1} Este enlace caduca en :minutes minuto y solo se puede usar una vez.|[0,*] Este enlace caduca en :minutes minutos y solo se puede usar una vez.',
+    'mail_link_expiry_reusable' => '{1} Este enlace caduca en :minutes minuto y se puede usar :uses veces.|[0,*] Este enlace caduca en :minutes minutos y se puede usar :uses veces.',
 
     // Notification — one-time code.
     'mail_code_subject' => 'Tu código de acceso de :app',

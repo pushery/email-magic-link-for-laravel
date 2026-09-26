@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace EmailMagicLink\Console\Commands;
 
 use EmailMagicLink\Contracts\ScriptNonce;
+use EmailMagicLink\EmailMagicLinkServiceProvider;
 use EmailMagicLink\Support\AutoScriptNonce;
+use EmailMagicLink\Support\MagicLinkConfig;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Foundation\Application;
@@ -22,11 +24,10 @@ use ReflectionProperty;
  * merge means those keys still take effect — but the FILE never mentions them, so
  * an operator reading it cannot see that a subsystem exists, let alone tune it.
  *
- * That is not hypothetical. A consumer's published copy carried 33 dot-keys against
- * the package's 56: no `resend` block at all, while the application actively injected
- * the resend guard. A security-relevant subsystem running on defaults its operator
- * could not see and did not know existed. Nobody chose that; the file simply never
- * learned, and the better the defaults the quieter the drift.
+ * A published copy can lag far behind: 33 dot-keys against the package's 56 is a copy
+ * with no `resend` block at all, while the application injects the resend guard, a
+ * security-relevant subsystem running on defaults its operator cannot see. The better
+ * the defaults, the quieter that drift.
  *
  * So this command answers one question — "what is in the package that my file does
  * not mention?" — and answers it against the file on disk, never against the merged
@@ -50,6 +51,7 @@ final class DoctorCommand extends Command
             // question, and this branch returns before the report below.
             $this->reportScriptNonce($config);
             $this->reportLinkOrigin($app);
+            $this->reportPruneSchedule($app);
 
             return self::SUCCESS;
         }
@@ -96,6 +98,7 @@ final class DoctorCommand extends Command
 
         $this->reportScriptNonce($config);
         $this->reportLinkOrigin($app);
+        $this->reportPruneSchedule($app);
 
         // Reporting, never gating: this runs in a deploy pipeline and a drifted
         // config is a thing to read, not a thing to fail a release on. `unknown`
@@ -104,27 +107,29 @@ final class DoctorCommand extends Command
     }
 
     /**
-     * Report WHERE a CSP nonce would come from — never what it is.
+     * Report a purge schedule that was asked for and is not registered.
      *
-     * `AutoScriptNonce` deliberately falls back to null instead of throwing, because
-     * an exception would take down the sign-in screen over a progressive
-     * enhancement. The price is that a nonce which cannot be resolved produces NO
-     * signal at all: the script ships without the attribute, a strict policy blocks
-     * it, and the only symptom is a resend button that never counts down. That took
-     * four separate consumers to notice.
-     *
-     * A log warning would be the wrong instrument — most hosts have no policy at
-     * all, so it would fire almost always, get filtered, and take the one meaningful
-     * warning with it. This command is already the place someone reads when they
-     * have a question.
-     *
-     * It reports the SOURCE, not the value, and that is a correctness point
-     * rather than caution. The nonce is scoped per request; a console command either
-     * cannot resolve the binding at all or resolves one that no response will ever
-     * carry. Printing it would show a value that is real and useless. Whether the
-     * SOURCE exists is the same question in the console as in a request, so that is
-     * what gets answered.
+     * `prune.schedule` asks the package to schedule the purge. A host that called
+     * ignoreMigrations() without saying its tables exist gets no entry, because the
+     * provider cannot tell a copy migrated under another name from tables that were
+     * declined. Nothing else says so, and the token table then grows without bound.
      */
+    private function reportPruneSchedule(Application $app): void
+    {
+        $wanted = $app->make(MagicLinkConfig::class)->pruneSchedule();
+        $registered = EmailMagicLinkServiceProvider::$runsMigrations
+            || EmailMagicLinkServiceProvider::$tablesMigratedElsewhere;
+
+        if (! $wanted || $registered) {
+            return;
+        }
+
+        $this->line('Purge       requested by prune.schedule, and NOT scheduled.');
+        $this->line('            ignoreMigrations() was called without tablesExist: true, so the');
+        $this->line('            package cannot tell whether its tables exist. Pass it if they do,');
+        $this->line('            or schedule email-magic-link:purge yourself.');
+    }
+
     /**
      * Report WHERE the host of an emailed link comes from.
      *
@@ -190,6 +195,27 @@ final class DoctorCommand extends Command
         return KernelContract::class;
     }
 
+    /**
+     * Report WHERE a CSP nonce would come from — never what it is.
+     *
+     * `AutoScriptNonce` deliberately falls back to null instead of throwing, because
+     * an exception would take down the sign-in screen over a progressive
+     * enhancement. The price is that a nonce which cannot be resolved produces NO
+     * signal at all: the tags ship without the attribute, a strict policy blocks
+     * them, and the symptom is a screen without its styles, with nothing logged.
+     *
+     * A log warning would be the wrong instrument — most hosts have no policy at
+     * all, so it would fire almost always, get filtered, and take the one meaningful
+     * warning with it. This command is already the place someone reads when they
+     * have a question.
+     *
+     * It reports the SOURCE, not the value, and that is a correctness point
+     * rather than caution. The nonce is scoped per request; a console command either
+     * cannot resolve the binding at all or resolves one that no response will ever
+     * carry. Printing it would show a value that is real and useless. Whether the
+     * SOURCE exists is the same question in the console as in a request, so that is
+     * what gets answered.
+     */
     private function reportScriptNonce(Repository $config): void
     {
         $this->newLine();
@@ -224,8 +250,8 @@ final class DoctorCommand extends Command
 
         if ($sources === []) {
             $this->line('CSP nonce   no source detected — fine if this app has no policy');
-            $this->line('            Under a strict Content-Security-Policy the bundled inline script');
-            $this->line('            would be blocked, and it fails silently. See ui.script_nonce.');
+            $this->line('            Under a strict Content-Security-Policy the screens\' inline styles');
+            $this->line('            would be blocked, silently, and they render unstyled. See ui.script_nonce.');
 
             return;
         }
@@ -277,6 +303,9 @@ final class DoctorCommand extends Command
 
     /**
      * A value as an operator would write it in the config file.
+     *
+     * `mixed`, because it renders whatever a config file holds, nested arrays included; each
+     * arm of the match narrows the value before it is used.
      */
     private static function render(mixed $value): string
     {

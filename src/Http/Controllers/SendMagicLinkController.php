@@ -13,6 +13,7 @@ use EmailMagicLink\Events\MagicLinkRequestRefused;
 use EmailMagicLink\Http\Controllers\Concerns\RespondsToApiClients;
 use EmailMagicLink\Http\Requests\SendMagicLinkRequest;
 use EmailMagicLink\Notifications\MagicLinkNotification;
+use EmailMagicLink\Support\AccountAddress;
 use EmailMagicLink\Support\ConfirmationUrl;
 use EmailMagicLink\Support\IssuanceLock;
 use EmailMagicLink\Support\IssuedToken;
@@ -25,6 +26,7 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Support\Facades\Notification as NotificationSender;
 use Symfony\Component\HttpFoundation\Response;
+use Throwable;
 
 /**
  * Issues a magic link or code for a submitted email.
@@ -63,11 +65,11 @@ final class SendMagicLinkController
         // (never on whether it resolves to a user), so it stays enumeration-safe.
         //
         // `resend.enabled` is checked HERE, not inside the guard. It is the switch
-        // for THIS endpoint, which is what its name and documentation promise. When
-        // the check lived in DefaultResendGuard it disarmed every key, including the
-        // host application's own — the contract invites hosts to inject the guard
-        // for their own mail endpoints, so an operator disabling magic-link
-        // throttling was also disabling, say, a second-factor flood guard, silently.
+        // for THIS endpoint, which is what its name and documentation promise. Inside
+        // the guard it would disarm every key, including the host application's own:
+        // the contract invites hosts to inject the guard for their own mail
+        // endpoints, so disabling magic-link throttling would silently disable, say,
+        // a second-factor flood guard as well.
         if ($config->resendEnabled()) {
             $decision = $resendGuard->attempt(ResendKey::forRequest($email));
 
@@ -79,9 +81,24 @@ final class SendMagicLinkController
         $channel = $this->resolveChannel($request->requestedChannel(), $config->mode());
         $guard = $config->resolveGuard($request->requestedGuard());
 
+        // A code is issued under a lock, and the lock is taken only for an address that
+        // resolves, so a store that cannot lock would fail only for known addresses -- a
+        // 500 against the redirect. Asked here, before the lookup, it fails the same way
+        // for every address.
+        if ($channel === 'code') {
+            $lock->assertUsable();
+        }
+
         $user = $lookup->findByEmail($email, $guard);
 
-        if ($user instanceof Authenticatable) {
+        // The credential goes to the address the account states, never to the string
+        // that was typed: a database that folds accents resolves `victim@exämple.com` to
+        // the account stored as `victim@example.com`, and the typed form is a mailbox on
+        // a look-alike domain. An account that states no address gets nothing, the same
+        // as an unknown one.
+        $route = $user instanceof Authenticatable ? AccountAddress::mailRoute($user) : null;
+
+        if ($user instanceof Authenticatable && $route !== null) {
             try {
                 // NOT $store->issue(...) directly, and the wrapper is the whole fix for
                 // the timing half of the enumeration hole the catch below closes for the
@@ -90,8 +107,8 @@ final class SendMagicLinkController
                 // The lock is taken only for an address that RESOLVES, so every millisecond
                 // spent queueing for it is an answer to "does this account exist" -- and the
                 // attacker produces the contention himself by sending two requests at once.
-                // Measured before this line existed: 827 ms for a known contended address
-                // against 12 ms for an unknown one, on a one-second budget.
+                // Waiting out the budget instead, measured: 827 ms for a known contended
+                // address against 12 ms for an unknown one, on a one-second budget.
                 //
                 // Waiting was never buying this response anything: the request holding the
                 // lock is the one sending the credential, so the answer below is already
@@ -103,10 +120,10 @@ final class SendMagicLinkController
                 // the request's travels with it. The mail route is an anonymous notifiable
                 // with no locale preference of its own, so this is the only place the
                 // request's language can be captured.
-                NotificationSender::route('mail', $email)
+                NotificationSender::route('mail', $route)
                     ->notify($this->buildNotification($issued, $channel, $config)->locale(app()->getLocale()));
 
-                event(new MagicLinkRequested($user, $channel, $request));
+                $this->dispatchUniformly(new MagicLinkRequested($user, $channel, $request));
             } catch (LockTimeoutException) {
                 // A concurrent request for this same address is mid-issuance and outlasted
                 // the wait budget. Falling through to the ordinary response is not
@@ -120,7 +137,7 @@ final class SendMagicLinkController
                 // to anyone willing to send two requests at once.
                 //
                 // The event is how a host sees it at all, since the response cannot say.
-                event(new MagicLinkRequestRefused(RequestRefusal::IssuanceContended, $email, null, $request));
+                $this->dispatchUniformly(new MagicLinkRequestRefused(RequestRefusal::IssuanceContended, $email, null, $request));
             }
         }
 
@@ -128,6 +145,23 @@ final class SendMagicLinkController
         // shape is identical for allowed and unknown guards — guards stay
         // un-enumerable. resolveGuard() re-validates it on consume.
         return $this->sentResponse($request, $channel, $email, $request->requestedGuard());
+    }
+
+    /**
+     * Dispatch an event of the branch only a resolved address reaches.
+     *
+     * A host listener that throws here would turn this branch, and only this one, into a
+     * 500, and the difference between a 500 and the ordinary redirect is whether the
+     * account exists. The exception is reported, so nobody loses it; the answer stays the
+     * one every address gets.
+     */
+    private function dispatchUniformly(object $event): void
+    {
+        try {
+            event($event);
+        } catch (Throwable $exception) {
+            report($exception);
+        }
     }
 
     private function captchaFailed(SendMagicLinkRequest $request): Response
@@ -202,6 +236,7 @@ final class SendMagicLinkController
             $actionUrl,
             $channel === 'code' ? $issued->plaintext : null,
             $minutes,
+            $channel === 'link' ? $issued->record->uses_remaining : 1,
         );
     }
 

@@ -31,11 +31,15 @@ final readonly class InvitationGuard
             throw InvitationsMisconfiguredException::missingHandler();
         }
 
-        // class_exists AND the contract check, in that order: a typo in the class name
-        // and a class that simply does not implement the interface are different
-        // mistakes, and telling them apart is the difference between a useful message
-        // and "something is wrong with your handler".
-        if (! class_exists($handler) || ! is_a($handler, InvitationHandler::class, true)) {
+        // class_exists, then the contract check, each with its own message: a typo in the
+        // class name and a class that simply does not implement the interface are
+        // different mistakes, and telling them apart is the difference between a useful
+        // message and "something is wrong with your handler".
+        if (! class_exists($handler)) {
+            throw InvitationsMisconfiguredException::handlerNotFound($handler);
+        }
+
+        if (! is_a($handler, InvitationHandler::class, true)) {
             throw InvitationsMisconfiguredException::handlerContract($handler);
         }
 

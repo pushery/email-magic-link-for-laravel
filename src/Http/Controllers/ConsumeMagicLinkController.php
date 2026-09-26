@@ -6,6 +6,8 @@ namespace EmailMagicLink\Http\Controllers;
 
 use EmailMagicLink\Contracts\TokenStore;
 use EmailMagicLink\Http\Controllers\Concerns\CompletesMagicLinkLogin;
+use EmailMagicLink\Support\ClaimFailure;
+use EmailMagicLink\Support\LinkSignature;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -21,6 +23,14 @@ final class ConsumeMagicLinkController
 
     public function __invoke(Request $request, string $token, TokenStore $store): Response
     {
+        // The signature binds spending the token to the host the link was minted for, and
+        // it is checked before the token is touched: a failed check spends nothing.
+        $failure = LinkSignature::failure($request);
+
+        if ($failure instanceof ClaimFailure) {
+            return $this->failedConsumption($request, 'email-magic-link.request.form', $failure);
+        }
+
         // Read as raw input, not through string(): that helper casts, and an array
         // value ("passphrase[]=a") was a 500 before the claim ran. Anything but a
         // non-empty string is "no passphrase", which the claim then refuses.

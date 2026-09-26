@@ -20,7 +20,7 @@ return [
 
     // Confirmation page.
     'confirm_title' => 'Confirm sign in',
-    'confirm_intro' => 'For your security, confirm that you want to sign in. This link can only be used once.',
+    'confirm_intro' => 'For your security, confirm that you want to sign in.',
 
     // Code entry form.
     'code_title' => 'Enter your code',
@@ -48,6 +48,7 @@ return [
     'mail_link_intro' => 'Use the button below to sign in to :app.',
     'mail_link_action' => 'Sign in',
     'mail_link_expiry' => '{1} This link expires in :minutes minute and can be used once.|[0,*] This link expires in :minutes minutes and can be used once.',
+    'mail_link_expiry_reusable' => '{1} This link expires in :minutes minute and can be used :uses times.|[0,*] This link expires in :minutes minutes and can be used :uses times.',
 
     // Notification — one-time code.
     'mail_code_subject' => 'Your :app sign-in code',

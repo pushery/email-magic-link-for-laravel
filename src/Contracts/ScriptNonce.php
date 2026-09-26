@@ -5,15 +5,15 @@ declare(strict_types=1);
 namespace EmailMagicLink\Contracts;
 
 /**
- * Supplies the CSP nonce the bundled screens put on their inline script.
+ * Supplies the CSP nonce the bundled screens put on the tags a strict policy would reject.
  *
- * An application with a strict Content-Security-Policy sets a per-response nonce
- * on `script-src`. Any inline script without it is blocked — and blocked
- * SILENTLY, which is what makes this worth a seam: the resend countdown is
- * progressive enhancement, so a blocked script produces no console error the user
- * would report, just a button that never counts down and a rejection when they
- * click too early. The apps most likely to run a strict CSP are exactly the ones
- * that care about the rest of this package.
+ * An application with a strict Content-Security-Policy sets a per-response nonce, and
+ * without it the screens lose what they cannot load: the inline stylesheet both layouts
+ * carry, so they render unstyled under a strict `style-src`; the `<link>` and `<script>`
+ * tags WireKit and Livewire write; and, only under a policy built on 'strict-dynamic',
+ * which ignores 'self', the resend countdown's script, a same-origin file since 0.22.0.
+ * All of it is blocked SILENTLY, which is what makes this worth a seam: nothing on the
+ * page reports it, and the user sees a broken screen rather than an error.
  *
  * The default implementation reads the `csp-nonce` container binding spatie/laravel-csp
  * registers and falls back to a global `csp_nonce()` for hosts that define one, so

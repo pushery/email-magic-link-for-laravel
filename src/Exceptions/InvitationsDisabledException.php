@@ -21,4 +21,16 @@ final class InvitationsDisabledException extends RuntimeException
             .'and configure invitations.handler and invitations.view.',
         );
     }
+
+    /**
+     * The master switch is off while invitations themselves are on. Telling the host to set
+     * invitations.enabled would name a key that is already true.
+     */
+    public static function channelOff(): self
+    {
+        return new self(
+            'Invitations are disabled because the whole email-magic-link channel is '
+            .'(email-magic-link.enabled = false). Enable it before issuing invitations.',
+        );
+    }
 }

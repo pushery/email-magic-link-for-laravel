@@ -20,7 +20,7 @@ return [
 
     // Confirmation page.
     'confirm_title' => 'Confirmar início de sessão',
-    'confirm_intro' => 'Para sua segurança, confirme que pretende iniciar sessão. Este link só pode ser usado uma vez.',
+    'confirm_intro' => 'Para sua segurança, confirme que pretende iniciar sessão.',
 
     // Code entry form.
     'code_title' => 'Introduza o seu código',
@@ -38,7 +38,7 @@ return [
     'status_link_sent' => 'Se existir uma conta com esse e-mail, enviámos um link de acesso.',
     'status_code_sent' => 'Se existir uma conta com esse e-mail, enviámos um código de acesso.',
     'consume_failed' => 'Este pedido de acesso é inválido ou expirou. Solicite um novo.',
-    'invitation_failed' => 'Este convite é inválido ou expirou. Peça um novo a quem te convidou.',
+    'invitation_failed' => 'Este convite é inválido ou expirou. Peça um novo a quem enviou o convite.',
     'captcha_failed' => 'A verificação falhou. Tente novamente.',
     'resend_throttled' => '{1} Aguarde :seconds segundo antes de solicitar outro e-mail de acesso.|[0,*] Aguarde :seconds segundos antes de solicitar outro e-mail de acesso.',
     'resend_countdown_label' => 'Tempo de espera antes de poder solicitar outro e-mail',
@@ -48,6 +48,7 @@ return [
     'mail_link_intro' => 'Utilize o botão abaixo para iniciar sessão em :app.',
     'mail_link_action' => 'Iniciar sessão',
     'mail_link_expiry' => '{1} Este link expira em :minutes minuto e só pode ser usado uma vez.|[0,*] Este link expira em :minutes minutos e só pode ser usado uma vez.',
+    'mail_link_expiry_reusable' => '{1} Este link expira em :minutes minuto e pode ser usado :uses vezes.|[0,*] Este link expira em :minutes minutos e pode ser usado :uses vezes.',
 
     // Notification — one-time code.
     'mail_code_subject' => 'O seu código de acesso de :app',

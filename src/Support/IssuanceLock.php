@@ -20,8 +20,9 @@ use RuntimeException;
  * in opposite orders:
  *
  * - The invitation store inserts first and then revokes everything below the new row's id, in
- *   one transaction. That order is safe without gap locks on InnoDB, where the second writer
- *   waits on the first writer's uncommitted index entry. PostgreSQL gives no such wait. Under
+ *   one transaction. On InnoDB the second writer waits on the first writer's uncommitted index
+ *   entry, with the plan MySQL picks for the revoke (measured on 8.0.36); a plan that read the
+ *   other writer's row as well would deadlock instead. PostgreSQL gives no such wait. Under
  *   READ COMMITTED the second writer's UPDATE takes a snapshot that excludes the first writer's
  *   uncommitted INSERT, and there is no row to block on, so it supersedes nothing. Both
  *   transactions commit and the address is left holding two live invitations -- measured
@@ -34,10 +35,10 @@ use RuntimeException;
  * be the package's answer for an engine set that includes MySQL. This lock is the
  * engine-neutral one.
  *
- *  `Repository::withoutOverlapping()` is EXACTLY this line and it is deliberately not used:
- * `Illuminate\Contracts\Cache\Factory::store()` returns the CONTRACT repository, which
- * declares twelve methods and not that one. Reaching it means typing against the concrete
- * class or the facade. It also probes nothing, so a store without locks would die with
+ * `Repository::withoutOverlapping()` does exactly this and is not used on purpose:
+ * `Illuminate\Contracts\Cache\Factory::store()` returns the contract repository, which
+ * declares twelve methods and not that one, so reaching it means typing against the concrete
+ * class or the facade. It also probes nothing, and a store without locks would end in
  * `Error: Call to undefined method ...::lock()` instead of the message below.
  */
 final class IssuanceLock
@@ -71,13 +72,12 @@ final class IssuanceLock
     /**
      * Run $callback with the wait budget at zero: a competing writer gives up at once.
      *
-     *  THIS IS AN ENUMERATION FIX, NOT A PERFORMANCE ONE. The lock is taken only in the
-     * known-user branch -- an unknown address never reaches the issuer -- so the time a
-     * request spends waiting for it IS the answer to "does this account exist". Measured on
-     * the real endpoint with a one-second budget: 827 ms for a known, contended address
-     * against 12 ms for an unknown one. At the shipped default of five seconds it is five
-     * times that. And the attacker does not have to wait for contention to happen; two
-     * simultaneous requests for one address produce it.
+     * This closes an enumeration channel; it is not about speed. The lock is taken only in
+     * the known-user branch -- an unknown address never reaches the issuer -- so the time a
+     * request spends waiting for it answers "does this account exist". Measured on the real
+     * endpoint with a one-second budget: 827 ms for a known, contended address against 12 ms
+     * for an unknown one, and five times that at the shipped default of five seconds. An
+     * attacker need not wait for contention either: two simultaneous requests produce it.
      *
      * Dropping the wait is safe rather than merely cheaper, and the reason is the same one
      * the controller's catch already gives: the request holding the lock is the one sending

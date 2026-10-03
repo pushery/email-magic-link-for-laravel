@@ -31,9 +31,14 @@ use Throwable;
 /**
  * Issues a magic link or code for a submitted email.
  *
- * Enumeration-resistant: the response is identical whether or not the
- * email belongs to a user. A token is issued and a queued notification
- * dispatched only when a user is found, but the caller can never observe that.
+ * Enumeration-resistant in what the caller is told: the response is identical
+ * whether or not the email belongs to a user. It is not constant-time. A token is
+ * issued and a queued notification dispatched only when a user is found, and that
+ * work shows: measured in-process over 1,000 interleaved requests per address, a
+ * known address answers about 1.4 ms later than an unknown one, on PostgreSQL 18
+ * and MySQL 8.0 with the database queue. What keeps the difference from being
+ * sampled is the resend guard, which counts every request for an address before
+ * the lookup, whether or not the address is known.
  *
  * The user is resolved through the guard's own lookup, so this flow trusts the
  * resolved user as belonging to the guard. The public Mint-API

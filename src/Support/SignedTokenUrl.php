@@ -7,6 +7,7 @@ namespace EmailMagicLink\Support;
 use Carbon\CarbonInterface;
 use Illuminate\Routing\UrlGenerator;
 use Illuminate\Support\Facades\URL;
+use SensitiveParameter;
 
 /**
  * Builds a temporary signed URL carrying a plaintext token, optionally against
@@ -40,7 +41,7 @@ final class SignedTokenUrl
      *                                with no scheme is completed with the application's
      *                                own; see `absolute()`.
      */
-    public static function for(string $routeName, CarbonInterface $expiresAt, string $plaintext, ?string $baseUrl = null): string
+    public static function for(string $routeName, CarbonInterface $expiresAt, #[SensitiveParameter] string $plaintext, ?string $baseUrl = null): string
     {
         if ($baseUrl === null || $baseUrl === '') {
             return self::sign($routeName, $expiresAt, $plaintext);
@@ -122,7 +123,7 @@ final class SignedTokenUrl
         return [$scheme.'://'.ltrim($baseUrl, '/'), $scheme];
     }
 
-    private static function sign(string $routeName, CarbonInterface $expiresAt, string $plaintext): string
+    private static function sign(string $routeName, CarbonInterface $expiresAt, #[SensitiveParameter] string $plaintext): string
     {
         return URL::temporarySignedRoute($routeName, $expiresAt, ['token' => $plaintext]);
     }

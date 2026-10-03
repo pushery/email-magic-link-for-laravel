@@ -13,7 +13,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
-    <title>@yield('title', __('email-magic-link::messages.sign_in')) &raquo; {{ config('app.name') }}</title>
+    {{-- Before any stylesheet, so a CDN one never receives this URL, which can carry the token. --}}
+    <meta name="referrer" content="same-origin">
+    <title>@yield('title', __('email-magic-link::messages.sign_in')) &raquo; {{ $emlConfig->applicationName() }}</title>
 
     {{-- The application's per-response CSP nonce, or null when it has no policy.
          Resolved once here and handed to every tag on this page that a strict
@@ -124,7 +126,11 @@
          a bare Livewire one. Under 'strict-dynamic' the nonce is the only thing that
          grants a tag, so that one would be blocked and Alpine would never boot.
          Passing null is byte-identical to passing nothing (`null ?? Vite::cspNonce()`
-         still applies), so a host without a policy renders byte-identically. --}}
+         still applies), so a host without a policy renders byte-identically.
+
+         On every screen, the two that render no Alpine of their own included: the request
+         and confirmation cards carry none, but `ui.header_view` and `ui.footer_view` are
+         the host's, and whatever they hold may need both scripts. --}}
     @wirekitScripts($emlNonce)
     @livewireScripts(['nonce' => $emlNonce])
 </body>

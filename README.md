@@ -17,14 +17,14 @@
 [![PHPStan](https://img.shields.io/badge/PHPStan-max-blue.svg)](https://phpstan.org)
 [![Code Style](https://img.shields.io/badge/code%20style-pint-orange.svg)](https://laravel.com/docs/pint)
 
-![Databases](https://img.shields.io/badge/tested%20on-PostgreSQL%20%2B%20MySQL-336791.svg)
+![Databases](https://img.shields.io/badge/tested%20on-PostgreSQL%2018%20%2B%20MySQL%208.4-336791.svg)
 ![Mutation](https://img.shields.io/badge/mutation-%E2%89%A593%25-blueviolet.svg)
 
 Passwordless email authentication for Laravel — magic links and one-time codes — that works **standalone** or alongside **Laravel Fortify**.
 
 Plenty of packages send a magic link. This one is built around two properties most of them get wrong:
 
-- **A correct, no-bypass Fortify two-factor handoff.** A user with two-factor authentication enabled is handed to Fortify's own challenge in a not-yet-authenticated state; the login completes inside Fortify only after the code is verified. There is no path that signs a two-factor user in without the second factor.
+- **A correct, no-bypass Fortify two-factor handoff.** A user with two-factor authentication enabled is handed to Fortify's own challenge in a not-yet-authenticated state; the login completes inside Fortify only after the code is verified. Unless you turn the handoff off yourself, no path signs a two-factor user in without the second factor.
 - **Scanner-safe and prefetch-safe link consumption.** The emailed link is a signed, inert `GET` that only renders a confirmation page. The single-use token is spent solely by an explicit `POST`, so SafeLinks, Mimecast, Proofpoint and browser prefetch cannot burn the link before the human clicks "Sign in".
 
 ## Installation
@@ -33,7 +33,7 @@ Plenty of packages send a magic link. This one is built around two properties mo
 composer require pushery/email-magic-link-for-laravel
 ```
 
-Requires PHP `^8.4` and Laravel `^13.0`. Laravel Fortify (`^1.0`) is optional and only needed for the two-factor handoff. There are no third-party runtime dependencies.
+Requires PHP `^8.4` and Laravel `^13.0`. Laravel Fortify (`^1.39`) is optional and only needed for the two-factor handoff. Beyond the framework, the package requires only `nesbot/carbon` and `symfony/http-foundation`, both of which every Laravel application already installs.
 
 ## Documentation
 

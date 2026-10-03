@@ -27,6 +27,15 @@ use Illuminate\Support\Str;
 final readonly class MagicLinkConfig
 {
     /**
+     * The most rows one purge chunk may hold. The delete binds every id of its chunk, and
+     * each engine has a ceiling on the parameters of one prepared statement: 65,535 on
+     * PostgreSQL and MySQL, 32,766 in SQLite's default build since 3.32. Past the ceiling
+     * every purge fails at the same statement and the expired rows keep growing. The margin
+     * below the lowest ceiling leaves room for bindings a host model's global scopes add.
+     */
+    public const int MAX_PRUNE_CHUNK = 30_000;
+
+    /**
      * @param  Repository|Closure(): Repository  $config  the repository, or how to find the current
      *                                                    one. A long-lived worker swaps the
      *                                                    repository in for every request; a
@@ -50,6 +59,29 @@ final readonly class MagicLinkConfig
             'both' => 'both',
             default => 'link',
         };
+    }
+
+    /**
+     * The name the screens and the mail give this application.
+     *
+     * `app.name`, and when that is blank the host of `app.url`. Every catalog sentence takes
+     * the name as a proper noun ("Sign in to :app", "Dein Anmeldecode für :app"), and a host
+     * reads as one in every language, which a translated common noun does not wherever the
+     * sentence declines it. With no host either, `localhost`, the host Laravel itself assumes
+     * without an `APP_URL`.
+     */
+    public function applicationName(): string
+    {
+        $name = $this->repository()->get('app.name');
+
+        if (is_string($name) && Str::trim($name) !== '') {
+            return $name;
+        }
+
+        $url = $this->repository()->get('app.url');
+        $host = is_string($url) ? parse_url($url, PHP_URL_HOST) : null;
+
+        return is_string($host) ? $host : 'localhost';
     }
 
     public function ttl(): int
@@ -106,6 +138,16 @@ final readonly class MagicLinkConfig
     public function codeAlphabetCharacters(): array
     {
         return array_values(array_unique(mb_str_split($this->codeAlphabet())));
+    }
+
+    /**
+     * Whether every character of the alphabet is a digit, which is what lets the code
+     * field ask for the numeric keyboard. Derived here, beside the case folding, so no
+     * view derives a property of the alphabet on its own.
+     */
+    public function codeAlphabetIsNumeric(): bool
+    {
+        return ctype_digit($this->codeAlphabet());
     }
 
     /**
@@ -408,12 +450,15 @@ final readonly class MagicLinkConfig
      * Rows deleted per statement by the purge. One unbounded DELETE holds a row lock
      * on everything it removes until commit; on a table that grew for months that is
      * minutes of contention with the claims that are running at the same time.
+     *
+     * A value above MAX_PRUNE_CHUNK is held to it rather than replaced by the default: the
+     * host asked for large chunks, and the ceiling is the largest one every engine accepts.
      */
     public function pruneChunk(): int
     {
         $chunk = $this->int($this->repository()->get('email-magic-link.prune.chunk'), 1000);
 
-        return $chunk > 0 ? $chunk : 1000;
+        return $chunk > 0 ? min($chunk, self::MAX_PRUNE_CHUNK) : 1000;
     }
 
     public function invalidResponseAbortStatus(): int
@@ -526,6 +571,24 @@ final readonly class MagicLinkConfig
         $class = Str::trim($class);
 
         return $class === '' ? null : $class;
+    }
+
+    /**
+     * The size of the main heading on the WireKit screens, or null for WireKit's own size of a
+     * level-one heading. The level stays 1; only the size moves. WireKit checks the value against
+     * its sizes when the heading renders, so it is passed on as given, trimmed.
+     */
+    public function uiHeadingSize(): ?string
+    {
+        $size = $this->repository()->get('email-magic-link.ui.heading_size');
+
+        if (! is_string($size)) {
+            return null;
+        }
+
+        $size = Str::trim($size);
+
+        return $size === '' ? null : $size;
     }
 
     /**

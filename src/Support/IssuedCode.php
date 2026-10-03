@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace EmailMagicLink\Support;
 
 use Carbon\CarbonInterface;
+use SensitiveParameter;
 
 /**
  * A freshly minted one-time code, ready to deliver over any channel.
@@ -15,7 +16,7 @@ use Carbon\CarbonInterface;
 final readonly class IssuedCode
 {
     public function __construct(
-        public string $code,
+        #[SensitiveParameter] public string $code,
         public CarbonInterface $expiresAt,
         public int $expiresInMinutes,
     ) {}

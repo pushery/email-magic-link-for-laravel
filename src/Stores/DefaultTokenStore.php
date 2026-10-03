@@ -12,12 +12,14 @@ use EmailMagicLink\Support\ClaimResult;
 use EmailMagicLink\Support\IssuanceLock;
 use EmailMagicLink\Support\IssuedToken;
 use EmailMagicLink\Support\MagicLinkConfig;
+use EmailMagicLink\Support\PurgeChunkIsolation;
 use EmailMagicLink\Support\TokenHasher;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
+use SensitiveParameter;
 
 /**
  * Eloquent-backed token store.
@@ -47,7 +49,7 @@ final readonly class DefaultTokenStore implements TokenStore
         private IssuanceLock $lock,
     ) {}
 
-    public function issue(Authenticatable $user, string $guard, string $channel, ?int $maxUses = null, ?string $passphrase = null): IssuedToken
+    public function issue(Authenticatable $user, string $guard, string $channel, ?int $maxUses = null, #[SensitiveParameter] ?string $passphrase = null): IssuedToken
     {
         $userId = $this->identifierOf($user);
 
@@ -64,7 +66,7 @@ final readonly class DefaultTokenStore implements TokenStore
     /**
      * @param  'link'|'code'  $channel
      */
-    private function write(string $userId, string $guard, string $channel, ?int $maxUses, ?string $passphrase): IssuedToken
+    private function write(string $userId, string $guard, string $channel, ?int $maxUses, #[SensitiveParameter] ?string $passphrase): IssuedToken
     {
         $now = Carbon::now();
 
@@ -109,7 +111,7 @@ final readonly class DefaultTokenStore implements TokenStore
         return new IssuedToken($plaintext, $record);
     }
 
-    public function claimLink(string $token, ?string $passphrase = null): ClaimResult
+    public function claimLink(#[SensitiveParameter] string $token, #[SensitiveParameter] ?string $passphrase = null): ClaimResult
     {
         // The whole read-check-claim-read runs in a transaction, and the reason is the
         // READ side rather than the write. Connection::getReadPdo() hands back the read
@@ -171,12 +173,12 @@ final readonly class DefaultTokenStore implements TokenStore
         });
     }
 
-    public function requiresPassphrase(string $token): bool
+    public function requiresPassphrase(#[SensitiveParameter] string $token): bool
     {
         return $this->findLinkByHash($this->resolveHash($token))?->requiresPassphrase() ?? false;
     }
 
-    public function claimCode(Authenticatable $user, string $code, string $guard): ClaimResult
+    public function claimCode(Authenticatable $user, #[SensitiveParameter] string $code, string $guard): ClaimResult
     {
         // The whole read-check-claim runs under a row lock so the attempt gate is
         // evaluated against fresh state: concurrent guesses cannot each pass a
@@ -234,8 +236,13 @@ final readonly class DefaultTokenStore implements TokenStore
         $chunk = $this->config->pruneChunk();
         $now = Carbon::now();
         $deleted = 0;
+        $isolation = PurgeChunkIsolation::for($this->connection());
 
         do {
+            // READ COMMITTED on MySQL, so the chunk's select does not lock the index gaps that
+            // every claim and every new link has to write into. PurgeChunkIsolation says why.
+            $isolation->beforeChunk();
+
             // Two statements rather than one, and the SECOND word is what matters: the purge
             // claims its chunk with `for update skip locked`, so it NEVER waits on a row
             // somebody else is holding. A statement that never waits cannot be one end of a
@@ -356,28 +363,38 @@ final readonly class DefaultTokenStore implements TokenStore
         return $connection->update($sql, $bindings) === 1;
     }
 
-    private function findLinkByHash(string $hash): ?MagicLinkToken
+    private function findLinkByHash(string $hash, bool $latest = false): ?MagicLinkToken
     {
         // Pinned to the write connection: the confirm page asks whether a link wants a
         // passphrase in a request of its own, after the one that issued the row, and on a
         // lagging replica the answer would be "no" for a link that does. The claim callers hold
         // a transaction and would reach the write PDO anyway; stating it here keeps the
         // property on the lookup rather than on whoever calls it.
-        return MagicLinkToken::model()::query()
+        $query = MagicLinkToken::model()::query()
             ->useWritePdo()
             ->where('token_hash', $hash)
-            ->where('channel', 'link')
-            ->first();
+            ->where('channel', 'link');
+
+        // `$latest` asks for the row as last committed rather than as the transaction's
+        // snapshot shows it. Under MySQL's REPEATABLE READ the first plain read of a
+        // transaction fixes its snapshot, and every later plain read answers from it; a
+        // locking read is the one that sees past it, on PostgreSQL as well.
+        return ($latest ? $query->sharedLock() : $query)->first();
     }
 
-    private function passphraseMatches(?string $passphrase, string $hash): bool
+    private function passphraseMatches(#[SensitiveParameter] ?string $passphrase, string $hash): bool
     {
         return is_string($passphrase) && $passphrase !== '' && Hash::check($passphrase, $hash);
     }
 
     private function classifyLinkFailure(string $hash, CarbonInterface $now): ClaimFailure
     {
-        $row = $this->findLinkByHash($hash);
+        // The latest row, not the snapshot. The claim's first read fixed the snapshot, and a
+        // concurrent claim that spent the link and committed after it is exactly why the
+        // update missed. Read from the snapshot the row still looked unspent and unexpired,
+        // and the loser of a double click on MySQL was reported as NotFound: the reason a
+        // host reads as an invented token.
+        $row = $this->findLinkByHash($hash, latest: true);
 
         return match (true) {
             ! $row instanceof MagicLinkToken => ClaimFailure::NotFound,
@@ -422,7 +439,7 @@ final readonly class DefaultTokenStore implements TokenStore
      * exists, and everything downstream keeps working with a single hash: the atomic
      * claim, the classifier and the passphrase lookup are untouched.
      */
-    private function resolveHash(string $plaintext): string
+    private function resolveHash(#[SensitiveParameter] string $plaintext): string
     {
         $candidates = $this->hasher->candidates($plaintext);
 

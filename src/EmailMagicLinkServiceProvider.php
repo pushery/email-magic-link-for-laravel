@@ -24,6 +24,7 @@ use EmailMagicLink\Contracts\UserLookup;
 use EmailMagicLink\Eligibility\AlwaysEligible;
 use EmailMagicLink\Exceptions\InvitationsMisconfiguredException;
 use EmailMagicLink\Http\Middleware\NoIndex;
+use EmailMagicLink\Http\Middleware\SameOriginReferrer;
 use EmailMagicLink\Http\Responses\DefaultInvalidLinkResponder;
 use EmailMagicLink\Lookups\AddressMatchingUserLookup;
 use EmailMagicLink\Lookups\DefaultUserLookup;
@@ -428,9 +429,9 @@ final class EmailMagicLinkServiceProvider extends ServiceProvider
     private function registerRoutes(MagicLinkConfig $config): void
     {
         if (! $this->app->routesAreCached()) {
-            // NoIndex is appended here rather than listed in `routes.middleware`, so a
-            // host that overrides that key cannot drop it by accident.
-            Route::middleware([...$config->routeMiddleware(), NoIndex::class])
+            // NoIndex and SameOriginReferrer are appended here rather than listed in
+            // `routes.middleware`, so a host that overrides that key cannot drop them by accident.
+            Route::middleware([...$config->routeMiddleware(), NoIndex::class, SameOriginReferrer::class])
                 ->prefix($config->routePrefix())
                 ->group(__DIR__.'/../routes/email-magic-link.php');
         }

@@ -34,17 +34,21 @@ final class PurgeExpiredTokensCommand extends Command implements Isolatable
     {
         // The query log is an array that only ever grows, and this command is the one
         // place in the package that issues an unbounded number of statements: two per
-        // chunk, a locking select and a delete that binds every id of the chunk, so a
-        // table of ten million rows is twenty thousand log entries at the default chunk
-        // of 1000. Measured at roughly 25 kB per chunk, most of it the delete's bindings
-        // -- on the order of 250 MB held for the whole run, for a log nobody reads.
+        // chunk, a locking select and a delete that binds every id of the chunk (three on
+        // MySQL, where each chunk first sets its isolation level), so a table of ten million
+        // rows is twenty thousand log entries at the default chunk of 1000, thirty thousand
+        // on MySQL. Measured at
+        // roughly 25 kB per chunk, most of it the delete's bindings -- on the order of
+        // 250 MB held for the whole run, for a log nobody reads.
         //
         // Off by default, so a stock installation was never affected. It is on for any
         // host that calls enableQueryLog() somewhere in a scheduled context -- which is
         // exactly the context this command runs in, and exactly the host least likely to
         // notice. Telescope and Debugbar are not among them: they record queries through
         // the QueryExecuted event, never turn this log on, and are not touched by the
-        // switch below.
+        // switch below. Telescope keeps its own entry for every statement until the
+        // command ends, though: measured at about 1.3 MB of peak memory per 100,000 rows,
+        // so a run over millions of rows belongs on a process with Telescope switched off.
         //
         // Restored rather than left off: the connection is shared, and a command that
         // silently disarms someone's query log for the rest of the process would be a

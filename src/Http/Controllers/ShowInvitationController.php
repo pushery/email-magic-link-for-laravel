@@ -15,6 +15,7 @@ use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\URL;
+use SensitiveParameter;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -46,7 +47,7 @@ final readonly class ShowInvitationController
         private InvitationStore $store,
     ) {}
 
-    public function __invoke(Request $request, string $token): Response|View
+    public function __invoke(Request $request, #[SensitiveParameter] string $token): Response|View
     {
         // A tampered or expired signature is NotFound as far as the visitor is
         // concerned: telling those apart is telling them whether the token was ever real.

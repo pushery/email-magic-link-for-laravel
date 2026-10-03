@@ -13,10 +13,12 @@ use EmailMagicLink\Support\IssuanceLock;
 use EmailMagicLink\Support\IssuedInvitationToken;
 use EmailMagicLink\Support\MagicLinkConfig;
 use EmailMagicLink\Support\NormalizedEmail;
+use EmailMagicLink\Support\PurgeChunkIsolation;
 use EmailMagicLink\Support\TokenHasher;
 use Illuminate\Contracts\Database\Query\Builder;
 use Illuminate\Database\Connection;
 use Illuminate\Support\Carbon;
+use SensitiveParameter;
 
 /**
  * Eloquent-backed invitation store.
@@ -65,11 +67,16 @@ final readonly class DefaultInvitationStore implements InvitationStore
             $record->revoked_at = null;
             $record->save();
 
-            // INSERT FIRST, then revoke everything below this row's id. On InnoDB that
-            // order needs no gap locks: the second writer waits on the first writer's
-            // uncommitted index entry. On PostgreSQL it is NOT sufficient on its own --
-            // the UPDATE's snapshot excludes an uncommitted INSERT and has nothing to
-            // wait on -- which is what the lock around this transaction is for.
+            // INSERT FIRST, then revoke everything below this row's id. On InnoDB the second
+            // writer then waits on the first writer's uncommitted index entry, and the first
+            // never reads the second's: measured on MySQL 8.0.36 with 5,000 invitations, the
+            // revoke runs as an intersection of the (email, guard) index with the primary-key
+            // range below the new id. That is a property of the plan rather than of the
+            // statement; a plan that filtered on the id instead would make each writer wait on
+            // the other, which InnoDB ends as a deadlock. On PostgreSQL the order is NOT
+            // sufficient on its own -- the UPDATE's snapshot excludes an uncommitted INSERT
+            // and has nothing to wait on. The lock around this transaction is what holds on
+            // both engines.
             //
             // Revoking first and inserting after is the obvious order and the wrong one --
             // two concurrent invites would each revoke what they saw and then both insert,
@@ -90,7 +97,7 @@ final readonly class DefaultInvitationStore implements InvitationStore
         }));
     }
 
-    public function peek(string $token): InvitationClaimResult
+    public function peek(#[SensitiveParameter] string $token): InvitationClaimResult
     {
         $now = Carbon::now();
         $hash = $this->resolveHash($token);
@@ -111,7 +118,7 @@ final readonly class DefaultInvitationStore implements InvitationStore
             : InvitationClaimResult::failed($this->classify($hash, $now));
     }
 
-    public function claim(string $token): InvitationClaimResult
+    public function claim(#[SensitiveParameter] string $token): InvitationClaimResult
     {
         return $this->connection()->transaction(function () use ($token): InvitationClaimResult {
             $now = Carbon::now();
@@ -146,9 +153,14 @@ final readonly class DefaultInvitationStore implements InvitationStore
 
         $chunk = $this->config->pruneChunk();
         $deleted = 0;
+        $isolation = PurgeChunkIsolation::for($this->connection());
 
         // Chunked for the same reason as the sign-in store's purge: bounded lock time.
         do {
+            // At READ COMMITTED on MySQL, for the same reason as the sign-in store's purge: the
+            // chunk's select must not lock the index gaps new invitations are written into.
+            $isolation->beforeChunk();
+
             // Two statements rather than one, and the SECOND word is what matters: the purge
             // claims its chunk with `for update skip locked`, so it NEVER waits on a row
             // somebody else is holding. A statement that never waits cannot be one end of a
@@ -302,7 +314,7 @@ final readonly class DefaultInvitationStore implements InvitationStore
      * exists, and everything downstream keeps working with a single hash: the atomic
      * claim, the classifier and the passphrase lookup are untouched.
      */
-    private function resolveHash(string $plaintext): string
+    private function resolveHash(#[SensitiveParameter] string $plaintext): string
     {
         $candidates = $this->hasher->candidates($plaintext);
 

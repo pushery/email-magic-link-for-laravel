@@ -12,6 +12,7 @@ use EmailMagicLink\Support\MagicLinkConfig;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
+use SensitiveParameter;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -39,7 +40,7 @@ final readonly class ConfirmMagicLinkController
         private TokenStore $store,
     ) {}
 
-    public function __invoke(Request $request, string $token): Response|View
+    public function __invoke(Request $request, #[SensitiveParameter] string $token): Response|View
     {
         // An expired or tampered link gets the refusal every dead token gets, and the
         // failure event, rather than the `signed` middleware's bare 403.

@@ -6,7 +6,7 @@
     <x-wirekit::card>
         <x-wirekit::card.body>
             <x-wirekit::stack>
-                <x-wirekit::heading :level="1">{{ __('email-magic-link::messages.heading', ['app' => config('app.name')]) }}</x-wirekit::heading>
+                <x-wirekit::heading :level="1" :size="app(\EmailMagicLink\Support\MagicLinkConfig::class)->uiHeadingSize()">{{ __('email-magic-link::messages.heading', ['app' => app(\EmailMagicLink\Support\MagicLinkConfig::class)->applicationName()]) }}</x-wirekit::heading>
                 <x-wirekit::text>{{ __('email-magic-link::messages.confirm_intro') }}</x-wirekit::text>
 
                 @error('email')

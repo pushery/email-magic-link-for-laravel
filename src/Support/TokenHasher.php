@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace EmailMagicLink\Support;
 
+use SensitiveParameter;
+
 /**
  * Keyed hashing for token secrets.
  *
@@ -38,7 +40,7 @@ final readonly class TokenHasher
         $this->keys = array_values(array_unique(array_filter([$key, ...$previousKeys], static fn (string $candidate): bool => $candidate !== '')));
     }
 
-    public function hash(string $plaintext): string
+    public function hash(#[SensitiveParameter] string $plaintext): string
     {
         return $this->hashWith($plaintext, $this->keys[0] ?? '');
     }
@@ -53,7 +55,7 @@ final readonly class TokenHasher
      *
      * @return list<string>
      */
-    public function candidates(string $plaintext): array
+    public function candidates(#[SensitiveParameter] string $plaintext): array
     {
         if (count($this->keys) < 2) {
             return [$this->hash($plaintext)];
@@ -62,7 +64,7 @@ final readonly class TokenHasher
         return array_map(fn (string $key): string => $this->hashWith($plaintext, $key), $this->keys);
     }
 
-    public function matches(string $plaintext, string $expectedHash): bool
+    public function matches(#[SensitiveParameter] string $plaintext, string $expectedHash): bool
     {
         $matched = false;
 
@@ -76,7 +78,7 @@ final readonly class TokenHasher
         return $matched;
     }
 
-    private function hashWith(string $plaintext, string $key): string
+    private function hashWith(#[SensitiveParameter] string $plaintext, #[SensitiveParameter] string $key): string
     {
         return hash_hmac('sha256', $plaintext, $key);
     }

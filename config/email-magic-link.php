@@ -430,6 +430,16 @@ return [
          * screens do not read this key.
          */
         'html_class' => null,
+
+        /*
+         * The size of the main heading on each WireKit screen, one of WireKit's heading sizes
+         * (`sm` to `5xl`), or null for the size WireKit gives a level-one heading. The level
+         * stays 1, because each screen has one main heading; this only lets the card match the
+         * headings of a host's own forms. WireKit checks the value as it renders: an unknown
+         * size is logged and drawn at its fallback size. The plain Blade screens do not read
+         * this key.
+         */
+        'heading_size' => null,
     ],
 
     /*
@@ -567,7 +577,10 @@ return [
     |
     | "chunk" is how many rows one DELETE removes. The purge loops until nothing is
     | left, so the total is the same; what changes is how long any one statement
-    | holds its row locks against the sign-ins happening at the same time.
+    | holds its row locks against the sign-ins happening at the same time. A value
+    | above 30,000 is held to 30,000: the DELETE binds every id of its chunk, and a
+    | database refuses a statement past its parameter ceiling (32,766 on SQLite,
+    | 65,535 on PostgreSQL and MySQL).
     |
     | Under multi-tenancy the scheduled entry runs on the central connection with no
     | tenant context. Leave "schedule" off there and run the command through your

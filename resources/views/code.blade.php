@@ -21,9 +21,13 @@
             @error('email') aria-invalid="true" aria-describedby="email-error" @enderror>
 
         <label for="code" class="eml-code-label">{{ __('email-magic-link::messages.code_label') }}</label>
-        @php($emlNumeric = ctype_digit(app(\EmailMagicLink\Support\MagicLinkConfig::class)->codeAlphabet()))
+        {{-- Capitals from the keyboard only where the server folds to them. A mixed alphabet is
+             compared as typed, so a capital the keyboard chose is a wrong character, and a
+             lower-case one is folded downward: both keep the case the person types. --}}
+        @php($emlConfig = app(\EmailMagicLink\Support\MagicLinkConfig::class))
+        @php($emlNumeric = $emlConfig->codeAlphabetIsNumeric())
         <input id="code" name="code" type="text" inputmode="{{ $emlNumeric ? 'numeric' : 'text' }}"
-            @unless ($emlNumeric) autocapitalize="characters" spellcheck="false" @endunless
+            @unless ($emlNumeric) autocapitalize="{{ $emlConfig->codeAlphabetCaseFolding() === 'upper' ? 'characters' : 'off' }}" spellcheck="false" @endunless
             autocomplete="one-time-code" required autofocus
             @error('code') aria-invalid="true" aria-describedby="code-error" @enderror>
 

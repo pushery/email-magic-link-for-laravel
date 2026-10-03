@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace EmailMagicLink\Support;
 
 use EmailMagicLink\Models\MagicLinkToken;
+use SensitiveParameter;
 
 /**
  * A freshly issued token: the plaintext secret to deliver, plus its stored row.
@@ -15,7 +16,7 @@ use EmailMagicLink\Models\MagicLinkToken;
 final readonly class IssuedToken
 {
     public function __construct(
-        public string $plaintext,
+        #[SensitiveParameter] public string $plaintext,
         public MagicLinkToken $record,
     ) {}
 }

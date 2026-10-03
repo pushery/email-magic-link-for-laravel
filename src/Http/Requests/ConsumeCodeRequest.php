@@ -8,6 +8,7 @@ use EmailMagicLink\Support\MagicLinkConfig;
 use EmailMagicLink\Support\NormalizedEmail;
 use Illuminate\Foundation\Http\FormRequest;
 use Override;
+use SensitiveParameter;
 
 /**
  * Validates a one-time code submission (email + code).
@@ -62,7 +63,7 @@ final class ConsumeCodeRequest extends FormRequest
      * everywhere else, and the byte-wise function mangles a non-ASCII alphabet
      * instead of folding it.
      */
-    private function normalizeCode(string $code): string
+    private function normalizeCode(#[SensitiveParameter] string $code): string
     {
         $stripped = preg_replace('/\s+/u', '', $code) ?? $code;
 

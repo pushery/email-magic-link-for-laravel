@@ -20,6 +20,7 @@ use Illuminate\Auth\EloquentUserProvider;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\URL;
+use SensitiveParameter;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -54,7 +55,7 @@ final readonly class AcceptInvitationController
         private AuthManager $auth,
     ) {}
 
-    public function __invoke(Request $request, string $token): Response
+    public function __invoke(Request $request, #[SensitiveParameter] string $token): Response
     {
         // Before anything is spent: the token is the whole credential, so accepting a bare
         // one would let an invitation minted for one host be spent at another. The binding

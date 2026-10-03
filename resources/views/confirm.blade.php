@@ -3,7 +3,7 @@
 @section('title', __('email-magic-link::messages.confirm_title'))
 
 @section('content')
-    <h1>{{ __('email-magic-link::messages.heading', ['app' => config('app.name')]) }}</h1>
+    <h1>{{ __('email-magic-link::messages.heading', ['app' => app(\EmailMagicLink\Support\MagicLinkConfig::class)->applicationName()]) }}</h1>
     <p>{{ __('email-magic-link::messages.confirm_intro') }}</p>
 
     @error('email')

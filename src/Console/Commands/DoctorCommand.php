@@ -6,15 +6,22 @@ namespace EmailMagicLink\Console\Commands;
 
 use EmailMagicLink\Contracts\ScriptNonce;
 use EmailMagicLink\EmailMagicLinkServiceProvider;
+use EmailMagicLink\Models\Invitation;
+use EmailMagicLink\Models\MagicLinkToken;
 use EmailMagicLink\Support\AutoScriptNonce;
 use EmailMagicLink\Support\MagicLinkConfig;
+use Illuminate\Cache\DatabaseStore;
 use Illuminate\Console\Command;
+use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\Http\Kernel as KernelContract;
+use Illuminate\Database\Connection;
 use Illuminate\Foundation\Http\Kernel as HttpKernel;
 use Illuminate\Http\Middleware\TrustHosts;
 use Illuminate\Routing\UrlGenerator;
+use Illuminate\Translation\Translator;
+use InvalidArgumentException;
 use ReflectionProperty;
 
 /**
@@ -35,6 +42,9 @@ use ReflectionProperty;
  */
 final class DoctorCommand extends Command
 {
+    /** The section that explains the link-origin advice, printed in full so a terminal can open it. */
+    public const string LINK_ORIGIN_DOCS = 'https://docs.pushery.com/email-magic-link-for-laravel/security-model#the-host-in-the-emailed-link';
+
     protected $signature = 'email-magic-link:doctor';
 
     protected $description = 'Compare the published config against the one this version ships.';
@@ -52,6 +62,8 @@ final class DoctorCommand extends Command
             $this->reportScriptNonce($config);
             $this->reportLinkOrigin($app);
             $this->reportPruneSchedule($app);
+            $this->reportIssueLock($app);
+            $this->reportFallbackLocale($app);
 
             return self::SUCCESS;
         }
@@ -99,6 +111,8 @@ final class DoctorCommand extends Command
         $this->reportScriptNonce($config);
         $this->reportLinkOrigin($app);
         $this->reportPruneSchedule($app);
+        $this->reportIssueLock($app);
+        $this->reportFallbackLocale($app);
 
         // Reporting, never gating: this runs in a deploy pipeline and a drifted
         // config is a thing to read, not a thing to fail a release on. `unknown`
@@ -131,6 +145,73 @@ final class DoctorCommand extends Command
     }
 
     /**
+     * Report a fallback locale this package has no strings for.
+     *
+     * Laravel tries the requested locale and then `app.fallback_locale`, and nothing in
+     * between. When neither has a bundle, every string of the screens and the mail renders as
+     * its key, "email-magic-link::messages.heading" and the like, for every visitor whose
+     * locale the package does not ship. A published copy under lang/vendor counts as a bundle.
+     */
+    private function reportFallbackLocale(Application $app): void
+    {
+        $fallback = $app->make(Repository::class)->get('app.fallback_locale');
+
+        if (! is_string($fallback) || $app->make(Translator::class)->has('email-magic-link::messages.sign_in', $fallback, false)) {
+            return;
+        }
+
+        $this->line("Fallback    {$fallback} has no strings of this package.");
+        $this->line('            A visitor whose locale has no bundle either sees every text as');
+        $this->line('            its key. Fall back to a locale the package ships, or publish the');
+        $this->line("            language files and add {$fallback}.");
+    }
+
+    /**
+     * Report an issuance lock that would end the caller's transaction on PostgreSQL.
+     *
+     * The database cache store takes a lock with an INSERT and, when the key is taken, an
+     * UPDATE on the same connection. Inside a transaction on PostgreSQL the failed INSERT
+     * aborts the transaction, so an invite() or issueLink() called within one fails at once
+     * with SQLSTATE 25P02 when another issue for the same subject holds the lock, instead of
+     * waiting for it, and the caller's transaction cannot be used any further. Measured with
+     * laravel/framework 13.34 on PostgreSQL 18.4: the same lock on a connection of its own
+     * waits and times out as usual, and the transaction stays usable. The store's
+     * `lock_connection` setting exists for exactly that.
+     */
+    private function reportIssueLock(Application $app): void
+    {
+        $name = $app->make(MagicLinkConfig::class)->lockStore();
+
+        try {
+            $store = $app->make(CacheFactory::class)->store($name)->getStore();
+        } catch (InvalidArgumentException $e) {
+            // The framework's own words name the store, whether it came from lock_store or is
+            // the default one.
+            $this->line('Issue lock  '.$e->getMessage());
+            $this->line('            Issuing a credential fails until it is. See email-magic-link.lock_store.');
+
+            return;
+        }
+
+        if (! $store instanceof DatabaseStore) {
+            return;
+        }
+
+        $connection = $store->getLockConnection();
+        $tables = [MagicLinkToken::resolve()->getConnection()->getName(), Invitation::resolve()->getConnection()->getName()];
+
+        if (! $connection instanceof Connection || $connection->getDriverName() !== 'pgsql' || ! in_array($connection->getName(), $tables, true)) {
+            return;
+        }
+
+        $this->line("Issue lock  the database cache store, on the PostgreSQL connection \"{$connection->getName()}\" the tables use.");
+        $this->line('            An invite() or issueLink() inside a transaction of yours on that connection');
+        $this->line('            fails at once with SQLSTATE 25P02 while another issue for the same address');
+        $this->line('            holds the lock, and your transaction is aborted. Give the store a');
+        $this->line('            lock_connection of its own, or point email-magic-link.lock_store elsewhere.');
+    }
+
+    /**
      * Report WHERE the host of an emailed link comes from.
      *
      * Laravel builds every URL from a forced origin when one is set and from the
@@ -158,7 +239,8 @@ final class DoctorCommand extends Command
         $this->line('Link origin the request\'s Host header, unrestricted.');
         $this->line('            The host in every emailed link is whatever the request that asked');
         $this->line('            for it carried. Restrict it with the TrustHosts middleware or force');
-        $this->line('            the origin from app.url. See "The host in the emailed link".');
+        $this->line('            the origin from app.url. See "The host in the emailed link":');
+        $this->line('            '.self::LINK_ORIGIN_DOCS);
     }
 
     private function originIsForced(Application $app): bool

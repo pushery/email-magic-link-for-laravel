@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace EmailMagicLink\Support;
 
 use EmailMagicLink\Models\MagicLinkToken;
+use SensitiveParameter;
 
 /**
  * Builds the signed, single-use confirmation URL for an issued link token.
@@ -24,7 +25,7 @@ final class ConfirmationUrl
      *                                over that final host, so the link verifies
      *                                only when visited there — never an attacker's.
      */
-    public static function for(MagicLinkToken $record, string $plaintext, ?string $baseUrl = null): string
+    public static function for(MagicLinkToken $record, #[SensitiveParameter] string $plaintext, ?string $baseUrl = null): string
     {
         return SignedTokenUrl::for('email-magic-link.confirm', $record->expires_at, $plaintext, $baseUrl);
     }

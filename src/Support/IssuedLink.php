@@ -11,7 +11,8 @@ use Carbon\CarbonInterface;
  *
  * The URL points at the inert, signed confirmation page (a GET that changes
  * nothing); the single-use token is spent only when the user submits that page.
- * Deliver `url` verbatim — never the consume endpoint, and never prefetch it.
+ * Deliver `url` verbatim, never the consume endpoint: a scanner or a link preview
+ * that follows the URL spends nothing.
  */
 final readonly class IssuedLink
 {

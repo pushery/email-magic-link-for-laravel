@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace EmailMagicLink\Support;
 
 use EmailMagicLink\Models\Invitation;
+use SensitiveParameter;
 
 /**
  * A freshly issued invitation, as the store hands it back: the plaintext secret
@@ -16,7 +17,7 @@ use EmailMagicLink\Models\Invitation;
 final readonly class IssuedInvitationToken
 {
     public function __construct(
-        public string $plaintext,
+        #[SensitiveParameter] public string $plaintext,
         public Invitation $record,
     ) {}
 }

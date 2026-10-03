@@ -11,6 +11,7 @@ use EmailMagicLink\Exceptions\UnknownGuardException;
 use EmailMagicLink\Exceptions\UserNotInGuardException;
 use Illuminate\Auth\AuthManager;
 use Illuminate\Contracts\Auth\Authenticatable;
+use SensitiveParameter;
 
 /**
  * Default issuer: mints links and codes through the same hashed-at-rest token
@@ -25,7 +26,7 @@ final readonly class DefaultMagicLinkIssuer implements MagicLinkIssuer
         private AuthManager $auth,
     ) {}
 
-    public function issueLink(Authenticatable $user, ?string $guard = null, ?int $maxUses = null, ?string $passphrase = null, ?string $baseUrl = null): IssuedLink
+    public function issueLink(Authenticatable $user, ?string $guard = null, ?int $maxUses = null, #[SensitiveParameter] ?string $passphrase = null, ?string $baseUrl = null): IssuedLink
     {
         $resolvedGuard = $this->prepare($user, $guard);
 

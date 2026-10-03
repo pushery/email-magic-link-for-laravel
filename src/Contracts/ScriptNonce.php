@@ -18,9 +18,8 @@ namespace EmailMagicLink\Contracts;
  * The default implementation reads the `csp-nonce` container binding spatie/laravel-csp
  * registers and falls back to a global `csp_nonce()` for hosts that define one, so
  * spatie/laravel-csp works with no configuration; see `AutoScriptNonce`. Point
- * `ui.script_nonce` at your
- * own implementation when the nonce lives somewhere else — a request attribute, a
- * middleware-set container binding, your own helper.
+ * `ui.script_nonce` at your own implementation when the nonce lives somewhere else: a
+ * request attribute, a middleware-set container binding, your own helper.
  *
  * A class-string rather than a closure on purpose: `config:cache` cannot serialize
  * a closure, so a closure here would work in development and fatal on deploy.

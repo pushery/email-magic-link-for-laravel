@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace EmailMagicLink\Notifications;
 
+use EmailMagicLink\Support\MagicLinkConfig;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeEncrypted;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use SensitiveParameter;
 
 /**
  * Delivers a magic link or one-time code over the mail channel.
@@ -37,7 +39,7 @@ class MagicLinkNotification extends Notification implements ShouldBeEncrypted, S
     public function __construct(
         public readonly string $channel,
         public readonly ?string $actionUrl,
-        public readonly ?string $code,
+        #[SensitiveParameter] public readonly ?string $code,
         public readonly int $expiresInMinutes,
         public readonly int $uses = 1,
     ) {}
@@ -52,8 +54,7 @@ class MagicLinkNotification extends Notification implements ShouldBeEncrypted, S
 
     public function toMail(object $notifiable): MailMessage
     {
-        $application = config('app.name');
-        $application = is_string($application) && $application !== '' ? $application : 'this application';
+        $application = app(MagicLinkConfig::class)->applicationName();
 
         return $this->channel === 'code'
             ? $this->codeMessage($application)

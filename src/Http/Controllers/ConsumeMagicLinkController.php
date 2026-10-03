@@ -9,6 +9,7 @@ use EmailMagicLink\Http\Controllers\Concerns\CompletesMagicLinkLogin;
 use EmailMagicLink\Support\ClaimFailure;
 use EmailMagicLink\Support\LinkSignature;
 use Illuminate\Http\Request;
+use SensitiveParameter;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -21,7 +22,7 @@ final class ConsumeMagicLinkController
 {
     use CompletesMagicLinkLogin;
 
-    public function __invoke(Request $request, string $token, TokenStore $store): Response
+    public function __invoke(Request $request, #[SensitiveParameter] string $token, TokenStore $store): Response
     {
         // The signature binds spending the token to the host the link was minted for, and
         // it is checked before the token is touched: a failed check spends nothing.

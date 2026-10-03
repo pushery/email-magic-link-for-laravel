@@ -2,13 +2,16 @@
      has no bundle for (and the host published none), the strings fall back, and a `lang`
      that still names the requested locale sends a screen reader to the wrong voice. --}}
 @php($emlLocale = app('translator')->has('email-magic-link::messages.sign_in', app()->getLocale(), false) ? app()->getLocale() : (string) config('app.fallback_locale', 'en'))
+@php($emlConfig = app(\EmailMagicLink\Support\MagicLinkConfig::class))
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', $emlLocale) }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
-    <title>@yield('title', __('email-magic-link::messages.sign_in')) &raquo; {{ config('app.name') }}</title>
+    {{-- Before any stylesheet, so a CDN one never receives this URL, which can carry the token. --}}
+    <meta name="referrer" content="same-origin">
+    <title>@yield('title', __('email-magic-link::messages.sign_in')) &raquo; {{ $emlConfig->applicationName() }}</title>
 
     {{-- The application's per-response CSP nonce, or null when it has no policy.
          Under a strict policy a block without it is blocked, and the block below IS the
@@ -95,7 +98,6 @@
         }
     </style>
 </head>
-@php($emlConfig = app(\EmailMagicLink\Support\MagicLinkConfig::class))
 <body>
     {{-- The consumer's two slots, above and below the card. Both are null by default and
          render nothing; `ui.header_view` is where a wordmark belongs and `ui.footer_view`

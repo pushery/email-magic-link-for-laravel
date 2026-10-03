@@ -4,6 +4,39 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.32.0] - 2026-10-03
+
+### Added
+
+- **`email-magic-link:doctor` names a lock store that cannot serve a transaction on PostgreSQL.** The `database` cache store takes its lock with an `INSERT` and, when the key is taken, an `UPDATE` on the same connection, and PostgreSQL aborts a transaction at the failed `INSERT`. An `invite()` or `issueLink()` called within `DB::transaction()` on that connection fails at once with SQLSTATE `25P02` while another issue for the same address holds the lock, instead of waiting for it, and the transaction cannot go on. The doctor reports that combination, and the configuration guide shows the fix: a second connection named in the store's `lock_connection`. It also reports a lock store that is not defined.
+- **`email-magic-link:doctor` names a fallback locale the package has no strings for.** Laravel tries the requested locale and then `app.fallback_locale`, nothing in between. When the package ships neither, every text of the screens and the mail renders as its key, and the doctor now says so.
+- **`ui.heading_size` sets the size of the main heading on the WireKit screens.** The heading stays a level-one heading, which WireKit draws at `2xl`; a host whose own forms use smaller headings can now match them, for example with `'xl'`. Without the key the screens render exactly as before. WireKit checks the value: an unknown size is logged and drawn at its fallback size.
+
+### Fixed
+
+- **A very large `prune.chunk` no longer makes every purge fail.** The purge deletes each chunk with a statement that binds every id, and a database refuses a prepared statement past its parameter ceiling: 65,535 on PostgreSQL and MySQL, 32,766 in SQLite's default build. With a chunk above that and as many expired rows, every run failed at the same statement and the table kept growing. The chunk is now held to 30,000.
+- **On MySQL, the loser of two concurrent claims of one link is reported as already consumed.** The reason travels in `MagicLinkConsumptionFailed`. The claim reads the link once before it tries to spend it, and under MySQL's default REPEATABLE READ that read fixes what the rest of the transaction sees: when a second click spent the link in between, the failure was classified from the old view, where the link still looked unspent, and came out as `ClaimFailure::NotFound`, the reason an invented token gets. The classification now reads the row as last committed. PostgreSQL already reported `AlreadyConsumed`.
+- **On MySQL, a running purge no longer makes sign-ins and new links wait.** At the default REPEATABLE READ, InnoDB locks the index gaps a locking read scans as well as the rows it returns, and each purge chunk's select held the `expires_at` and `consumed_at` indexes to their ends: every claim of a link or code and every new link or invitation waited until the chunk committed. Each chunk now runs at READ COMMITTED, where it locks only the rows it deletes. A server that writes its binary log as statements keeps the default level, because InnoDB refuses writes at READ COMMITTED there, and so does a purge called inside a transaction of your own. The purge still never waits on a row somebody else holds. PostgreSQL is unchanged.
+- **`invite()` no longer revokes an address's live invitation when it cannot build the new link.** Writing an invitation revokes the one the address held, and the link was built only afterwards. With the invitation route missing, as after a route cache made while invitations were off, the old invitation was revoked, the new one never sent, and the new token's plaintext passed through the URL generator into the error report. The issuer now asks for the route before it writes anything and throws `InvitationsMisconfiguredException`, which names the route cache as the usual cause.
+- **A code alphabet with both cases no longer gets capitals from the phone keyboard.** The plain code field asked for capitals (`autocapitalize="characters"`) on every alphabet that is not all digits, while the server folds case only for an alphabet written in one case. With a mixed alphabet the keyboard's capitals were wrong characters, and every such attempt counted toward the lockout. The field now asks for capitals only where the server folds to them and leaves the case alone otherwise.
+- **`email-magic-link:doctor` gives the address of the section its link-origin advice names.** It referred to "The host in the emailed link" without saying where that heading is; it now prints the link into the security model.
+- **A blank `app.name` no longer puts English into a translated mail.** The mail called the application "this application" when `app.name` was empty, so a German mail read "Bei this application anmelden". It now uses the host of `app.url`, and `localhost` when that has none either. The heading and the title of the sign-in screens, which showed no name at all in that case, use the same one.
+- **Brazilian Portuguese is Brazilian.** The `pt-BR` and `pt_BR` bundles served the European base catalog ("Introduza", "Enviámos"); they now carry their own strings ("Digite", "Enviamos"). One French message also used a straight apostrophe where every other one uses the typographic one.
+- **The plain request form no longer points a screen reader at an error it left out.** While a resend was held back, the email field still named the error paragraph in `aria-describedby`, although the countdown had replaced that paragraph. The field now names it only while the paragraph is on the page.
+
+### Security
+
+- **Pages at a URL that carries a token no longer depend on your referrer policy.** The confirmation and invitation pages live at a URL whose path is the credential, and under a loosened policy a stylesheet from a CDN (`ui.styles`) or a link to another site receives that URL: `unsafe-url` sends it always, `no-referrer-when-downgrade` on every HTTPS request. Every response of the package's routes now sets `Referrer-Policy: same-origin`, and both bundled layouts repeat it in a meta tag before anything the page loads. Requests to your own origin keep the header, so `redirect()->back()` works as before.
+- **Every parameter that receives a token, a code, a passphrase or the signing key is marked `#[\SensitiveParameter]`.** PHP then replaces its value in a stack trace, so an exception thrown below one of these methods no longer carries the credential into an error report or a log. Frames of the framework the package calls into are outside its reach and still show what they were given.
+
+### Documentation
+
+- **The documentation no longer promises a sign-in request that cannot be timed.** The installation page said the request endpoint "returns in constant time", and the controller's own description said the caller "can never observe" whether an account exists, while the security model already declined to claim a constant-time endpoint. Measured in-process over 1,000 interleaved requests per address on PostgreSQL 18 and MySQL 8.0 with the `database` queue, a known address answers about 1.4 ms later than an unknown one, and a wrong code for an address with a live code 1.3 to 2.1 ms later. All three now say so, and name what bounds it: the resend guard counts every request for an address before any lookup, five an hour by default.
+- **The configuration page names the keys that are read only once.** The routes, the scheduled purge and `fortify.mode` are read at boot. A queue worker runs every job in one application, so the issuance lock, the keys tokens are hashed with and the classes named for the swappable collaborators keep the values of the first job that builds them. Under Octane every request builds them anew, so a value your middleware sets reaches them.
+- **The purge guide says what Telescope costs a large purge.** Telescope keeps an entry for every statement until the command ends: over 100,000 expired tokens that was 255 entries, about 1.3 MB more peak memory and 3.3 s instead of 2.0 s. For a first purge over millions of rows, run the command with `TELESCOPE_ENABLED=false`.
+- **The two-factor pages name the two settings that turn the handoff off.** The security model, the README and the JSON page said that no path signs a two-factor user in without the second factor. Setting `fortify.mode` or `fortify.respect_two_factor` to `false` does exactly that, by your decision, and the pages now say so. The JSON page also says what `redirect` holds when Fortify's views are off, and that it is left out when neither challenge route exists.
+- **Several statements now match the code.** The README and the installation page named no runtime dependency beside the framework, while the package requires `nesbot/carbon` and `symfony/http-foundation`. The README asked for Fortify `^1.0` where the package is proven on `^1.39`, and its database badge now names the versions the suite runs on. The purge guide promised a schedule name `schedule:list` never shows, the configuration reference called a purge daily whose frequency is configurable, and the contract reference counted eleven interfaces of twelve.
+
 ## [0.31.0] - 2026-09-26
 
 ### Changed
@@ -1313,10 +1346,15 @@ public repository sees the difference.
   `TwoFactorChallengeRequired`).
 - Publishable configuration, migration, and views.
 
-[Unreleased]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.31.0...HEAD
+[Unreleased]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.32.0...HEAD
+[0.32.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.31.0...v0.32.0
 [0.31.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.30.0...v0.31.0
 [0.30.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.29.0...v0.30.0
 [0.29.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.28.0...v0.29.0
+[0.28.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.27.1...v0.28.0
+[0.27.1]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.27.0...v0.27.1
+[0.27.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.26.3...v0.27.0
+[0.26.3]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.26.2...v0.26.3
 [0.26.2]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.26.1...v0.26.2
 [0.26.1]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.26.0...v0.26.1
 [0.26.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.25.0...v0.26.0

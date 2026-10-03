@@ -6,6 +6,7 @@ namespace EmailMagicLink\Exceptions;
 
 use EmailMagicLink\Contracts\InvitationHandler;
 use RuntimeException;
+use Throwable;
 
 /**
  * Thrown at boot when invitations are on but cannot work.
@@ -37,6 +38,17 @@ final class InvitationsMisconfiguredException extends RuntimeException
             .'Point it at your acceptance screen; the package ships none, because one '
             .'carrying a password field would put credential handling inside a package '
             .'that handles none.',
+        );
+    }
+
+    public static function routeMissing(string $route, ?Throwable $previous = null): self
+    {
+        return new self(
+            "Invitations are enabled but the route [{$route}] is not registered, so no invitation link "
+            .'can be built. A route cache made while invitations were off is the usual cause: run '
+            .'php artisan route:cache again, or route:clear. Nothing was written, and the '
+            .'invitation the address already holds is still valid.',
+            previous: $previous,
         );
     }
 

@@ -40,7 +40,7 @@
     "require-dev": {
         "cweagans/composer-patches": "^1.7",
         "larastan/larastan": "3.12.2",
-        "laravel/ai": "^0.11.2",
+        "laravel/ai": "^1.0",
         "laravel/boost": "^2.9",
         "laravel/fortify": "^1.39",
         "laravel/mcp": "^1.0",
@@ -50,16 +50,17 @@
         "pestphp/pest": "^5.1",
         "pestphp/pest-plugin-agent": "^5.0",
         "pestphp/pest-plugin-browser": "^5.0",
-        "pestphp/pest-plugin-evals": "^5.0",
+        "pestphp/pest-plugin-evals": "^5.1",
         "pestphp/pest-plugin-laravel": "^5.0",
         "pestphp/pest-plugin-phpstan": "5.2.1",
         "pestphp/pest-plugin-rector": "5.0.4",
-        "pestphp/pest-plugin-type-coverage": "^5.0",
+        "pestphp/pest-plugin-type-coverage": "5.0.2",
         "phpstan/phpstan": "2.2.14",
         "predis/predis": "^3.2",
         "pushery/wirekit": "^2.54",
         "rector/rector": "2.6.7",
-        "spaze/phpstan-disallowed-calls": "4.14.0"
+        "spaze/phpstan-disallowed-calls": "4.14.0",
+        "tomasvotruba/type-coverage": "2.4.1"
     },
     "suggest": {
         "laravel/fortify": "Enables the no-bypass two-factor (TOTP) handoff: a magic-link user with confirmed 2FA completes Fortify's challenge before being logged in. Proven on ^1.39, the constraint the suite installs; with Laravel 13 no release below 1.34.1 installs at all.",

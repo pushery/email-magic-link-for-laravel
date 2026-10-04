@@ -227,6 +227,21 @@ final readonly class DefaultTokenStore implements TokenStore
         });
     }
 
+    public function revokeFor(Authenticatable $user, string $guard): int
+    {
+        // Setting consumed_at is what the claim refuses on, so a revoked token fails like a
+        // spent one, and a multi-use link loses its remaining uses with it. Expired rows are
+        // left out of the count: they open nothing already.
+        $now = Carbon::now();
+
+        return MagicLinkToken::model()::query()
+            ->where('user_id', $this->identifierOf($user))
+            ->where('guard', $guard)
+            ->whereNull('consumed_at')
+            ->where('expires_at', '>', $now)
+            ->update(['consumed_at' => $now]);
+    }
+
     public function purge(): int
     {
         // In chunks, the way the framework's own pruning idiom works: one unbounded

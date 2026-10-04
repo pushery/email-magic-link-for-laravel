@@ -78,7 +78,13 @@ final readonly class EntropyGuard
         $required = $safetyFactor * $maxAttempts;
 
         if ($keyspace < $required) {
-            $minLength = (int) ceil(log($required, $alphabetSize));
+            // The shortest length whose keyspace reaches the requirement, counted in whole
+            // numbers: a logarithm can land just above an exact power and name one too many.
+            $minLength = $length;
+
+            while ($alphabetSize ** $minLength < $required) {
+                $minLength++;
+            }
 
             $odds = $keyspace <= $maxAttempts
                 ? 'an attacker can exhaust the entire keyspace within the allowed attempts (near-certain success)'

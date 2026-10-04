@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use EmailMagicLink\Notifications\MagicLinkNotification;
 use EmailMagicLink\Support\EnvFlag;
+use EmailMagicLink\Support\EnvNumber;
 
 return [
 
@@ -49,9 +50,11 @@ return [
     |
     */
 
-    // Read raw, and turned into a number by the package with 900 as the fallback. A cast
-    // here made a set but empty EMAIL_MAGIC_LINK_TTL a lifetime of 0, which refuses to boot.
-    'ttl' => env('EMAIL_MAGIC_LINK_TTL', 900),
+    // A whole number of seconds of at least 1. An empty, mistyped, zero or negative
+    // EMAIL_MAGIC_LINK_TTL keeps the shipped 900 rather than becoming a lifetime of 0.
+    // The third argument names the variable, so that `php artisan email-magic-link:doctor`
+    // can report a value that was set and could not be used. The other numbers read the same way.
+    'ttl' => EnvNumber::atLeastOne(env('EMAIL_MAGIC_LINK_TTL'), 900, 'EMAIL_MAGIC_LINK_TTL'),
 
     'link_ttl' => env('EMAIL_MAGIC_LINK_LINK_TTL'),
 
@@ -98,7 +101,9 @@ return [
 
     'code_alphabet' => 'ABCDEFGHJKMNPQRSTUVWXYZ23456789',
 
-    'max_attempts_per_token' => 5,
+    // A whole number of at least 1, so a mistyped value cannot remove the lockout. Raising
+    // it is checked against the code's keyspace at boot like any other setting.
+    'max_attempts_per_token' => EnvNumber::atLeastOne(env('EMAIL_MAGIC_LINK_MAX_ATTEMPTS_PER_TOKEN'), 5, 'EMAIL_MAGIC_LINK_MAX_ATTEMPTS_PER_TOKEN'),
 
     /*
     |--------------------------------------------------------------------------
@@ -186,6 +191,10 @@ return [
     | default users are resolved through that guard's configured provider.
     | Provide a "user_lookup" class implementing the UserLookup contract to fully
     | control resolution (custom columns, multi-tenancy, soft-deletes, and so on).
+    | Whatever it queries, the account has to answer to "email": the package
+    | checks that attribute against the submitted address before it uses the
+    | account, so a model whose address lives in another column needs an
+    | "email" accessor.
     |
     | When the Fortify two-factor handoff is enabled, "guard" must resolve to the
     | same provider as "fortify.guard" so Fortify can re-resolve the challenged
@@ -294,6 +303,29 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Staying signed in
+    |--------------------------------------------------------------------------
+    |
+    | When enabled, the confirmation screen and the code form offer a "Stay
+    | signed in" checkbox, unchecked by default. Ticking it sets Laravel's
+    | remember cookie, so the sign-in outlives the session lifetime: for 400
+    | days, unless the guard sets "remember" (in minutes) in config/auth.php.
+    | Laravel keeps the cookie's token in the user's remember_token column, so
+    | the user table of every guard the package signs in on needs one, and
+    | php artisan email-magic-link:doctor names a table without it.
+    | With the Fortify two-factor handoff the choice reaches Fortify as
+    | "login.remember".
+    | Disabled, no screen shows the checkbox and a submitted "remember" field
+    | has no effect. Accepting an invitation never sets the cookie.
+    |
+    */
+
+    'remember' => [
+        'enabled' => filter_var(env('EMAIL_MAGIC_LINK_REMEMBER', false), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? false,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | API token exchange
     |--------------------------------------------------------------------------
     |
@@ -317,8 +349,9 @@ return [
     | — or the class-string of your own EmailMagicLink\Contracts\
     | InvalidLinkResponder implementation for full control.
     |
-    |   redirect  back to the sign-in form (or "redirect_to") with the generic
-    |             error flashed and the email re-prefilled (the default)
+    |   redirect  back to the form the request came from, the sign-in form or
+    |             the code form (or "redirect_to"), with the generic error
+    |             flashed and the email re-prefilled (the default)
     |   view      render "view" (it receives a `message` variable)
     |   abort     abort() with "abort_status", using your app's error page
     |   json      return the {message, error} envelope to every client
@@ -504,10 +537,22 @@ return [
         'invitation_view' => 'email-magic-link:invitation-view',
     ],
 
+    // Each value is a whole number of at least 1. A variable that is not a number, or is below 1,
+    // keeps the shipped value, so a mistyped one cannot switch a limit off. A fraction above 1
+    // counts by its whole part.
     'limits' => [
-        'request' => ['max' => 5, 'per_minutes' => 1],
-        'consume' => ['max' => 10, 'per_minutes' => 1],
-        'invitation_view' => ['max' => 30, 'per_minutes' => 1],
+        'request' => [
+            'max' => EnvNumber::atLeastOne(env('EMAIL_MAGIC_LINK_REQUEST_MAX'), 5, 'EMAIL_MAGIC_LINK_REQUEST_MAX'),
+            'per_minutes' => EnvNumber::atLeastOne(env('EMAIL_MAGIC_LINK_REQUEST_PER_MINUTES'), 1, 'EMAIL_MAGIC_LINK_REQUEST_PER_MINUTES'),
+        ],
+        'consume' => [
+            'max' => EnvNumber::atLeastOne(env('EMAIL_MAGIC_LINK_CONSUME_MAX'), 10, 'EMAIL_MAGIC_LINK_CONSUME_MAX'),
+            'per_minutes' => EnvNumber::atLeastOne(env('EMAIL_MAGIC_LINK_CONSUME_PER_MINUTES'), 1, 'EMAIL_MAGIC_LINK_CONSUME_PER_MINUTES'),
+        ],
+        'invitation_view' => [
+            'max' => EnvNumber::atLeastOne(env('EMAIL_MAGIC_LINK_INVITATION_VIEW_MAX'), 30, 'EMAIL_MAGIC_LINK_INVITATION_VIEW_MAX'),
+            'per_minutes' => EnvNumber::atLeastOne(env('EMAIL_MAGIC_LINK_INVITATION_VIEW_PER_MINUTES'), 1, 'EMAIL_MAGIC_LINK_INVITATION_VIEW_PER_MINUTES'),
+        ],
     ],
 
     /*
@@ -551,7 +596,7 @@ return [
 
         'window' => [
             'minutes' => 60,
-            'max_sends' => 5,
+            'max_sends' => EnvNumber::atLeastOne(env('EMAIL_MAGIC_LINK_RESEND_MAX_SENDS'), 5, 'EMAIL_MAGIC_LINK_RESEND_MAX_SENDS'),
         ],
 
         'store' => null,
@@ -635,8 +680,9 @@ return [
 
     'invitations' => [
         'enabled' => filter_var(env('EMAIL_MAGIC_LINK_INVITATIONS_ENABLED', false), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? false,
-        // Read raw for the same reason as "ttl": an empty value must not become 0.
-        'ttl' => env('EMAIL_MAGIC_LINK_INVITATION_TTL', 604800),
+        // Read like "ttl": a value that is not a number, or is below 1, keeps the shipped week, and
+        // a fraction above 1 counts by its whole part.
+        'ttl' => EnvNumber::atLeastOne(env('EMAIL_MAGIC_LINK_INVITATION_TTL'), 604800, 'EMAIL_MAGIC_LINK_INVITATION_TTL'),
         'store' => null,
         'handler' => null,
         'view' => null,

@@ -31,6 +31,9 @@ return [
     // Confirmation passphrase gate.
     'passphrase_label' => 'Phrase secrète',
 
+    // "Stay signed in" on the confirmation screen and the code form.
+    'remember_label' => 'Rester connecté',
+
     // Invalid link page.
     'invalid_title' => 'Demande de connexion invalide',
 

@@ -40,10 +40,10 @@
     "require-dev": {
         "cweagans/composer-patches": "^1.7",
         "larastan/larastan": "3.12.2",
-        "laravel/ai": "^1.0",
-        "laravel/boost": "^2.9",
+        "laravel/ai": "^1.0.1",
+        "laravel/boost": "^2.10.1",
         "laravel/fortify": "^1.39",
-        "laravel/mcp": "^1.0",
+        "laravel/mcp": "^1.0.1",
         "laravel/pao": "^1.1",
         "laravel/pint": "^1.30",
         "orchestra/testbench": "^11.2",
@@ -52,10 +52,10 @@
         "pestphp/pest-plugin-browser": "^5.0",
         "pestphp/pest-plugin-evals": "^5.1",
         "pestphp/pest-plugin-laravel": "^5.0",
-        "pestphp/pest-plugin-phpstan": "5.2.1",
+        "pestphp/pest-plugin-phpstan": "5.2.2",
         "pestphp/pest-plugin-rector": "5.0.4",
         "pestphp/pest-plugin-type-coverage": "5.0.2",
-        "phpstan/phpstan": "2.2.14",
+        "phpstan/phpstan": "2.2.16",
         "predis/predis": "^3.2",
         "pushery/wirekit": "^2.54",
         "rector/rector": "2.6.7",
@@ -63,7 +63,7 @@
         "tomasvotruba/type-coverage": "2.4.1"
     },
     "suggest": {
-        "laravel/fortify": "Enables the no-bypass two-factor (TOTP) handoff: a magic-link user with confirmed 2FA completes Fortify's challenge before being logged in. Proven on ^1.39, the constraint the suite installs; with Laravel 13 no release below 1.34.1 installs at all.",
+        "laravel/fortify": "Enables the no-bypass two-factor (TOTP) handoff: a magic-link user whose two-factor authentication Fortify considers enabled completes Fortify's challenge before being logged in. Proven on ^1.39, the constraint the suite installs; with Laravel 13 no release below 1.34.1 installs at all.",
         "pushery/wirekit": "Renders the sign-in screens with WireKit components when installed; the package auto-detects it and falls back to plain Blade otherwise. The screens need 2.54 or newer, and each number below is the release that made the screen correct rather than merely newer: the one-time-code field needs the alphabet prop (2.22) to accept a non-numeric code at all, its case-folding validation pattern (2.26) to accept that code in lower case without scripting, its group prop (2.53) to break a long code on a boundary the code actually has instead of wherever the width runs out, and its justify prop (2.54) to center the row of boxes in the card. Only the version pinned in require-dev is installed by the suite, so a release between that floor and the pin meets the stated requirement without a run behind it."
     },
     "autoload": {
@@ -93,8 +93,8 @@
         "format:test": "pint --test",
         "rector": "rector process",
         "rector:test": "rector process --dry-run",
-        "mutate": "@php -d pcov.directory=src vendor/bin/pest --mutate --everything --covered-only --clear-cache --exclude-group=browser --min=93",
-        "mutate:detect": "@php -d pcov.directory=src vendor/bin/pest --mutate --everything --covered-only --exclude-group=browser --parallel --processes=4 --min=93",
+        "mutate": "@php -d memory_limit=${MUTATION_MEMORY_LIMIT:--1} -d pcov.directory=src vendor/bin/pest --mutate --everything --covered-only --clear-cache --exclude-group=browser --min=93",
+        "mutate:detect": "@php -d memory_limit=${MUTATION_MEMORY_LIMIT:--1} -d pcov.directory=src vendor/bin/pest --mutate --everything --covered-only --exclude-group=browser --parallel --processes=4 --min=93",
         "qa": [
             "@format:test",
             "@rector:test",

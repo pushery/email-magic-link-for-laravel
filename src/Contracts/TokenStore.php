@@ -50,6 +50,13 @@ interface TokenStore
     public function claimCode(Authenticatable $user, string $code, string $guard): ClaimResult;
 
     /**
+     * Spend every open link and code of the user on the guard, so none of them signs
+     * anybody in any more. Returns how many were open; tokens of other users and other
+     * guards are left alone, and a spent or expired token is not counted.
+     */
+    public function revokeFor(Authenticatable $user, string $guard): int;
+
+    /**
      * Delete expired and consumed tokens. Returns the number removed.
      */
     public function purge(): int;

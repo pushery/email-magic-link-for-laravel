@@ -71,6 +71,7 @@ decide the shape of the integration:
 | `max_uses` | Bounded multi-use links; `1` is single-use |
 | `guard` / `guards` | Which auth guard to sign in to; `guards` is an allowlist |
 | `routes.*` | Prefix, middleware, and the post-login redirect |
+| `remember.enabled` | Offer "Stay signed in" on the confirmation screen and the code form; off by default, and off means a posted `remember` field changes nothing. The cookie lasts 400 days unless the guard sets `remember`, in minutes, in `config/auth.php`. Each guard's user table needs the `remember_token` column, or a ticked sign-in fails after the link or code is spent |
 | `api.enabled` | Adds the JSON contract for first-party SPA/mobile clients |
 | `invalid_response.via` | What an expired or invalid link renders: `redirect`, `view`, `abort`, `json`, or your own `InvalidLinkResponder` class-string |
 | `fortify.mode` | `auto` (bridge on when Fortify is installed), plus `respect_two_factor` |
@@ -94,11 +95,15 @@ browser flow under the `web` middleware group:
 | `POST` | `/magic-link/code` | `email-magic-link.code.consume` |
 | `GET` | `/magic-link/resend-countdown.js` | `email-magic-link.resend-countdown-script` |
 
-Both routes that spend a credential are signed: the `POST` to `email-magic-link.consume` and
-the `POST` to `email-magic-link.invitation.accept`. They share their URI with the `GET` that
-leads to them, so the signature on the emailed link verifies the `POST` too. A published view
-must render the `$action` it is handed rather than rebuilding it from the route name — a bare
-`route('email-magic-link.consume', ...)` carries no signature and is refused with 403.
+The two routes that spend a token from a link are signed: the `POST` to
+`email-magic-link.consume` and the `POST` to `email-magic-link.invitation.accept`. They share
+their URI with the `GET` that leads to them, so the signature on the emailed link verifies the
+`POST` too. The third route that spends a credential, the `POST` to
+`email-magic-link.code.consume`, carries no signature: the code it checks is the secret.
+
+A published view must render the `$action` it is handed rather than rebuilding it from the
+route name — a bare `route('email-magic-link.consume', ...)` carries no signature and is
+refused with 403.
 
 ```blade
 <a href="{{ route('email-magic-link.request.form') }}">Sign in without a password</a>
@@ -114,9 +119,12 @@ single-use token before the person ever sees it. Do not "simplify" the flow by
 consuming on `GET` — that removes the property the package exists for.
 
 **Two-factor.** `fortify.mode` defaults to `auto`, so with Laravel Fortify
-installed the bridge activates by itself: a user with *confirmed* TOTP is handed
-to Fortify's own challenge (`fortify.challenge_route`) in a not-yet-authenticated
-state. There is no path that signs such a user in without the second factor.
+installed the bridge activates by itself: a user whose two-factor authentication is
+enabled by Fortify's own verdict is handed to Fortify's own challenge
+(`fortify.challenge_route`) in a not-yet-authenticated state. With Fortify's `confirm`
+option on, as the config `fortify:install` publishes sets it, that means confirmed TOTP;
+with it off, a stored secret alone counts. There is no path that signs such a user in
+without the second factor.
 
 **Issue a credential yourself** when it should travel over SMS, chat, or the
 application's own transactional email instead of the bundled notification:
@@ -131,6 +139,10 @@ $code = EmailMagicLink::issueCode($user);              // one-time code, nothing
 
 `issueLink()` also takes `guard`, `passphrase` and `baseUrl`; `issueCode()` takes
 `guard`. Both return a value object carrying the credential and its expiry.
+
+`EmailMagicLink::revokeFor($user)` spends every open link and code a person holds on a
+guard. Call it whenever an account's address changes, or a link sent to the old address keeps
+signing in until it expires.
 
 **Housekeeping.** Spent and expired tokens must be purged or the table grows
 unbounded. Either let the package register the schedule:
@@ -189,9 +201,14 @@ token is consumed when the recipient submits that page, and they then land on
 
 - it is **not** a session-less channel — a consumed link authenticates a session;
 - it does **not** redirect to a resource of your choosing — point `redirect_to` at
-  the resource, or send the recipient onward once they arrive authenticated.
+  the resource, or send the recipient onward once they arrive authenticated;
+- a user with two-factor authentication passes Fortify's challenge first and arrives
+  through Fortify's redirect instead: the intended URL, else Fortify's `home` path.
 
-Deliver `$link->url` verbatim, and never prefetch it.
+Deliver `$link->url` verbatim, and never prefetch it. If the mail or job that carries it is
+queued, give that class `Illuminate\Contracts\Queue\ShouldBeEncrypted`, as the bundled
+notification has: the URL is a working credential, and Laravel's default queue is a table in
+the same database, `failed_jobs` included.
 
 Swap the resolution of an email address to a user (multi-tenant lookups, soft
 deletes, custom columns) by binding the contract:
@@ -200,6 +217,11 @@ deletes, custom columns) by binding the contract:
 // config/email-magic-link.php
 'user_lookup' => App\Auth\TenantUserLookup::class,
 ```
+
+Whatever the lookup queries, the model has to answer to `email`: the package checks that
+attribute against the submitted address and refuses the account otherwise, answering exactly as
+for an unknown address, so no mail goes out. When the address lives in another column, add an
+`email` accessor to the model that returns it.
 
 The same pattern applies to `token_store`, `captcha` and `invalid_response.via`
 — each takes the class-string of a published contract under
@@ -231,10 +253,13 @@ $invitation = app(EmailMagicLink\Contracts\InvitationIssuer::class)
 Mail::to('newcomer@example.com')->send(new YouAreInvited($invitation->url));
 ```
 
+A queued `YouAreInvited` needs `ShouldBeEncrypted` too: the invitation URL is a credential.
+
 The handler's `accept()` runs inside the transaction that spends the token: create the
 account, set the password, return the user to sign them in (or `null` to accept without a
 session). Two routes register while it is on: `GET|POST /magic-link/invitation/{token}`.
-`revoke($email)` withdraws every open invitation for an address.
+`revoke($email)` withdraws every open invitation for an address on the default guard; pass the
+guard to reach another one: `revoke($email, 'admin')`.
 
 ### Multi-tenancy
 

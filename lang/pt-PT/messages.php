@@ -39,6 +39,9 @@ return [
     // Confirmation passphrase gate.
     'passphrase_label' => 'Frase de acesso',
 
+    // "Stay signed in" on the confirmation screen and the code form.
+    'remember_label' => 'Manter a sessão iniciada',
+
     // Invalid link page.
     'invalid_title' => 'Pedido de acesso inválido',
 

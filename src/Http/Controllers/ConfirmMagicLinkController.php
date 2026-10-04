@@ -54,6 +54,7 @@ final readonly class ConfirmMagicLinkController
             'token' => $token,
             'action' => $request->fullUrl(),
             'requiresPassphrase' => $this->store->requiresPassphrase($token),
+            'offerRemember' => $this->config->rememberEnabled(),
         ]);
     }
 }

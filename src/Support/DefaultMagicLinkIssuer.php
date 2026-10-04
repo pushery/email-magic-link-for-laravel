@@ -48,6 +48,14 @@ final readonly class DefaultMagicLinkIssuer implements MagicLinkIssuer
         return new IssuedCode($issued->plaintext, $issued->record->expires_at, $this->minutesFor('code'));
     }
 
+    public function revokeFor(Authenticatable $user, ?string $guard = null): int
+    {
+        // Neither narrowed to the guards that are open today nor refused while the channel is
+        // off: revoking closes something and opens nothing, and a token left open would work
+        // again the moment the channel came back on.
+        return $this->store->revokeFor($user, $guard ?? $this->config->guard());
+    }
+
     /**
      * Validate the request and return the guard to issue against. Nothing is
      * persisted until every check here has passed, so a rejected request mints

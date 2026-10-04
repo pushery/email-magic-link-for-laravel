@@ -34,7 +34,7 @@ This package's security model rests on a few invariants, all covered by the test
 
 - The emailed `GET` link is inert; the single-use token is consumed only on an explicit `POST`.
 - Token consumption is atomic — two concurrent requests can never both succeed.
-- A magic-link user with confirmed two-factor authentication is routed through Fortify's challenge and is never logged in without the second factor.
+- A magic-link user whose two-factor authentication Fortify considers enabled is routed through Fortify's challenge and is never logged in without the second factor.
 - The request endpoint is enumeration-resistant.
 - Code mode is protected by a boot-time entropy guardrail.
 

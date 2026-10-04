@@ -47,4 +47,17 @@ interface MagicLinkIssuer
      * @param  string|null  $guard  An allowed guard, or null for the default.
      */
     public function issueCode(Authenticatable $user, ?string $guard = null): IssuedCode;
+
+    /**
+     * Spend every open link and code the user holds on the guard, and return how many
+     * were open.
+     *
+     * Call it when an account's address changes: a link sent to the old address would
+     * otherwise still sign in until it expires. A revoked link then fails exactly like
+     * one that was already used.
+     *
+     * @param  string|null  $guard  The guard to revoke on, or null for the default. Not
+     *                              limited to the allowed guards.
+     */
+    public function revokeFor(Authenticatable $user, ?string $guard = null): int;
 }

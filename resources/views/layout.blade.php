@@ -88,13 +88,15 @@
         button[aria-disabled="true"] { opacity: 0.6; cursor: default; }
         fieldset { border: 0; padding: 0; margin: 0 0 1rem; }
         fieldset label { display: flex; align-items: center; gap: 0.5rem; margin: 0; }
+        /* The checkbox sits inside its label, so the whole row is the target. */
+        .eml-remember { display: flex; align-items: center; gap: 0.5rem; margin: 1rem 0 0; }
         a.button { display: inline-block; width: auto; text-decoration: none; box-sizing: border-box; }
         /* A class, not a style attribute: `style-src-attr` is never satisfied by a nonce. */
         .eml-code-label { margin-top: 1rem; }
         /* Touch floors: 44 px targets and rows where a thumb lands, as the WireKit path has. */
         @media (pointer: coarse) {
-            input:not([type="radio"]), button, a.button { min-height: 2.75rem; }
-            fieldset label { min-height: 2.75rem; }
+            input:not([type="radio"]):not([type="checkbox"]), button, a.button { min-height: 2.75rem; }
+            fieldset label, .eml-remember { min-height: 2.75rem; }
         }
     </style>
 </head>

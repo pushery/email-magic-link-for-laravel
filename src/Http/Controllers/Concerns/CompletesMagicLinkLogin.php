@@ -68,7 +68,12 @@ trait CompletesMagicLinkLogin
 
         event(new MagicLinkVerified($user, $request));
 
-        return app(MagicLinkAuthenticator::class)->authenticate($request, $user, $token->guard, false);
+        // The person's choice counts only where the host offers it: with the switch off, a
+        // "remember" field a client sends anyway changes nothing. The two-factor handoff
+        // carries the same value on to Fortify as `login.remember`.
+        $remember = app(MagicLinkConfig::class)->rememberEnabled() && $request->boolean('remember');
+
+        return app(MagicLinkAuthenticator::class)->authenticate($request, $user, $token->guard, $remember);
     }
 
     protected function resolveUser(MagicLinkToken $token): ?Authenticatable

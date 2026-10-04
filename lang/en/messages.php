@@ -31,6 +31,9 @@ return [
     // Confirmation passphrase gate.
     'passphrase_label' => 'Passphrase',
 
+    // "Stay signed in" on the confirmation screen and the code form.
+    'remember_label' => 'Stay signed in',
+
     // Invalid link page.
     'invalid_title' => 'Sign-in request invalid',
 

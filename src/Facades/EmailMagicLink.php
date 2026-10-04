@@ -16,6 +16,7 @@ use Override;
  *
  * @method static IssuedLink issueLink(Authenticatable $user, ?string $guard = null, ?int $maxUses = null, ?string $passphrase = null, ?string $baseUrl = null)
  * @method static IssuedCode issueCode(Authenticatable $user, ?string $guard = null)
+ * @method static int revokeFor(Authenticatable $user, ?string $guard = null)
  *
  * @see MagicLinkIssuer
  */

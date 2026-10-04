@@ -8,15 +8,23 @@ use EmailMagicLink\Contracts\ScriptNonce;
 use EmailMagicLink\EmailMagicLinkServiceProvider;
 use EmailMagicLink\Models\Invitation;
 use EmailMagicLink\Models\MagicLinkToken;
+use EmailMagicLink\Stores\DefaultTokenStore;
 use EmailMagicLink\Support\AutoScriptNonce;
+use EmailMagicLink\Support\EnvNumber;
 use EmailMagicLink\Support\MagicLinkConfig;
 use Illuminate\Cache\DatabaseStore;
 use Illuminate\Console\Command;
+use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\Http\Kernel as KernelContract;
 use Illuminate\Database\Connection;
+use Illuminate\Database\ConnectionResolverInterface;
+use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Http\Kernel as HttpKernel;
 use Illuminate\Http\Middleware\TrustHosts;
 use Illuminate\Routing\UrlGenerator;
@@ -64,6 +72,8 @@ final class DoctorCommand extends Command
             $this->reportPruneSchedule($app);
             $this->reportIssueLock($app);
             $this->reportFallbackLocale($app);
+            $this->reportSetAsideEnvironment($app);
+            $this->reportRememberColumn($app);
 
             return self::SUCCESS;
         }
@@ -113,6 +123,8 @@ final class DoctorCommand extends Command
         $this->reportPruneSchedule($app);
         $this->reportIssueLock($app);
         $this->reportFallbackLocale($app);
+        $this->reportSetAsideEnvironment($app);
+        $this->reportRememberColumn($app);
 
         // Reporting, never gating: this runs in a deploy pipeline and a drifted
         // config is a thing to read, not a thing to fail a release on. `unknown`
@@ -121,27 +133,57 @@ final class DoctorCommand extends Command
     }
 
     /**
-     * Report a purge schedule that was asked for and is not registered.
+     * Report a purge that nothing schedules.
      *
-     * `prune.schedule` asks the package to schedule the purge. A host that called
+     * Every request writes a token row, and without a purge the token table grows without
+     * bound. `prune.schedule` asks the package to schedule it, and a host that called
      * ignoreMigrations() without saying its tables exist gets no entry, because the
      * provider cannot tell a copy migrated under another name from tables that were
-     * declined. Nothing else says so, and the token table then grows without bound.
+     * declined. With the switch off, which is how the package ships, the host schedules
+     * the command itself, and one that never did is told so here. A purge run outside the
+     * scheduler, from a cron line or a job of the host's, is invisible to this check.
+     *
+     * Two hosts are left alone, because the line would claim what the command cannot know:
+     * one that declined the package's tables, where the provider schedules nothing either,
+     * and one whose token store is its own rather than the bundled one or a subclass of it,
+     * whose purge() may have nothing to do.
      */
     private function reportPruneSchedule(Application $app): void
     {
-        $wanted = $app->make(MagicLinkConfig::class)->pruneSchedule();
-        $registered = EmailMagicLinkServiceProvider::$runsMigrations
-            || EmailMagicLinkServiceProvider::$tablesMigratedElsewhere;
+        $config = $app->make(MagicLinkConfig::class);
 
-        if (! $wanted || $registered) {
+        if ($config->pruneSchedule()) {
+            if (! EmailMagicLinkServiceProvider::$runsMigrations && ! EmailMagicLinkServiceProvider::$tablesMigratedElsewhere) {
+                $this->line('Purge       requested by prune.schedule, and NOT scheduled.');
+                $this->line('            ignoreMigrations() was called without tablesExist: true, so the');
+                $this->line('            package cannot tell whether its tables exist. Pass it if they do,');
+                $this->line('            or schedule email-magic-link:purge yourself.');
+            }
+
             return;
         }
 
-        $this->line('Purge       requested by prune.schedule, and NOT scheduled.');
-        $this->line('            ignoreMigrations() was called without tablesExist: true, so the');
-        $this->line('            package cannot tell whether its tables exist. Pass it if they do,');
-        $this->line('            or schedule email-magic-link:purge yourself.');
+        $store = $config->tokenStore();
+
+        if ($store !== null && ! is_a($store, DefaultTokenStore::class, true)) {
+            return;
+        }
+
+        if (! EmailMagicLinkServiceProvider::$runsMigrations && ! EmailMagicLinkServiceProvider::$tablesMigratedElsewhere) {
+            return;
+        }
+
+        // Any entry whose command names the purge counts, so one under a tenancy runner does too.
+        foreach ($app->make(Schedule::class)->events() as $event) {
+            if (str_contains((string) $event->command, 'email-magic-link:purge')) {
+                return;
+            }
+        }
+
+        $this->line('Purge       nothing in the scheduler runs email-magic-link:purge, so spent');
+        $this->line('            and expired tokens are never deleted. Set prune.schedule to true,');
+        $this->line('            or schedule the command yourself. A purge you run outside the');
+        $this->line('            scheduler, from a cron line or a job, is fine; then ignore this.');
     }
 
     /**
@@ -151,12 +193,24 @@ final class DoctorCommand extends Command
      * between. When neither has a bundle, every string of the screens and the mail renders as
      * its key, "email-magic-link::messages.heading" and the like, for every visitor whose
      * locale the package does not ship. A published copy under lang/vendor counts as a bundle.
+     *
+     * An empty or missing fallback is no fallback at all: the translator then tries the
+     * requested locale alone, and Translator::has() would read an empty locale as the current
+     * one. A blank APP_FALLBACK_LOCALE reaches the configuration as exactly that empty string.
      */
     private function reportFallbackLocale(Application $app): void
     {
         $fallback = $app->make(Repository::class)->get('app.fallback_locale');
 
-        if (! is_string($fallback) || $app->make(Translator::class)->has('email-magic-link::messages.sign_in', $fallback, false)) {
+        if (! is_string($fallback) || $fallback === '') {
+            $this->line('Fallback    app.fallback_locale is empty, so there is no fallback locale.');
+            $this->line('            A visitor whose locale has no bundle of this package sees every');
+            $this->line('            text as its key. Set it to a locale the package ships.');
+
+            return;
+        }
+
+        if ($app->make(Translator::class)->has('email-magic-link::messages.sign_in', $fallback, false)) {
             return;
         }
 
@@ -164,6 +218,138 @@ final class DoctorCommand extends Command
         $this->line('            A visitor whose locale has no bundle either sees every text as');
         $this->line('            its key. Fall back to a locale the package ships, or publish the');
         $this->line("            language files and add {$fallback}.");
+    }
+
+    /**
+     * Report an EMAIL_MAGIC_LINK_* number that is set and could not be used.
+     *
+     * The shipped config keeps its own value when such a variable is not a number of at least 1,
+     * so a typo cannot switch a limit off. The value in effect is then the shipped one, which
+     * reads exactly like a setting that was applied. The config is evaluated here once more, and
+     * EnvNumber lists each variable it had to set aside on the way.
+     *
+     * A cached configuration loads no .env file, so only variables of the process environment
+     * are seen then, and the report says so.
+     */
+    private function reportSetAsideEnvironment(Application $app): void
+    {
+        EnvNumber::clearSetAside();
+        $this->load(__DIR__.'/../../../config/email-magic-link.php');
+
+        foreach (EnvNumber::setAside() as $variable => $entry) {
+            $this->line("Environment {$variable} is \"{$entry['value']}\", which is not a number of at least 1.");
+            $this->line("            The shipped config keeps {$entry['default']} for it. Correct the value to apply it.");
+        }
+
+        if ($app->bound('config_loaded_from_cache') && $app->make('config_loaded_from_cache') === true) {
+            $this->line('Environment The configuration is cached, so only the process environment was read here.');
+            $this->line('            Values from .env are checked after php artisan config:clear.');
+        }
+    }
+
+    /**
+     * Report a guard whose users cannot be kept signed in.
+     *
+     * A ticked "Stay signed in" signs in through Auth::login($user, true), and Laravel then saves
+     * a remember token through the guard's user provider, into the column the model names, which
+     * is remember_token unless the model says otherwise. A table without that column fails the
+     * save with a database error, and by then the link or code has been spent. Nobody can tick
+     * the box while remember.enabled is off, so the check runs only while it is on, for every
+     * guard the package signs in on.
+     *
+     * The two providers the framework ships are read, eloquent through its model and database
+     * through its table. A guard with any other provider, or a table this command cannot read, is
+     * named as not checked, because silence would read as a pass.
+     */
+    private function reportRememberColumn(Application $app): void
+    {
+        $config = $app->make(MagicLinkConfig::class);
+
+        if (! $config->rememberEnabled()) {
+            return;
+        }
+
+        foreach ($config->allowedGuards() as $guard) {
+            $target = $this->rememberTarget($app->make(Repository::class), $guard);
+
+            if ($target === null) {
+                $this->line("Remember    the guard \"{$guard}\" has no eloquent or database provider this command");
+                $this->line('            can read, so its table was not checked for the column a remembered sign-in needs.');
+
+                continue;
+            }
+
+            [$connection, $table, $column] = $target;
+
+            if ($column === '') {
+                $this->line("Remember    the user model of the guard \"{$guard}\" names no remember token column, so a");
+                $this->line('            ticked "Stay signed in" keeps nobody signed in past the session.');
+
+                continue;
+            }
+
+            try {
+                $schema = $app->make(DatabaseManager::class)->connection($connection)->getSchemaBuilder();
+                $exists = $schema->hasTable($table);
+                $present = $exists && $schema->hasColumn($table, $column);
+            } catch (InvalidArgumentException|QueryException $e) {
+                $this->line("Remember    the table \"{$table}\" of the guard \"{$guard}\" could not be read: {$e->getMessage()}");
+                $this->line('            Whether it has the column a remembered sign-in needs was not checked.');
+
+                continue;
+            }
+
+            if (! $exists) {
+                $this->line("Remember    the table \"{$table}\" of the guard \"{$guard}\" does not exist on this connection,");
+                $this->line('            so it was not checked for the column a remembered sign-in needs.');
+
+                continue;
+            }
+
+            if ($present) {
+                continue;
+            }
+
+            $this->line("Remember    the table \"{$table}\" of the guard \"{$guard}\" has no {$column} column.");
+            $this->line('            remember.enabled offers "Stay signed in", and a ticked box then fails the');
+            $this->line('            sign-in with a database error, after the link or code is spent. Add the');
+            $this->line('            column, or turn remember.enabled off.');
+        }
+    }
+
+    /**
+     * Where a guard's user provider saves a remember token: the connection, the table and the
+     * column. Null when the provider is not one of the two the framework ships, and for a guard
+     * the auth configuration does not define.
+     *
+     * @return array{?string, string, string}|null
+     */
+    private function rememberTarget(Repository $repository, string $guard): ?array
+    {
+        $name = $repository->get("auth.guards.{$guard}.provider");
+        $provider = is_string($name) ? $repository->get("auth.providers.{$name}") : null;
+        $provider = is_array($provider) ? $provider : [];
+
+        $driver = $provider['driver'] ?? null;
+        $table = $provider['table'] ?? null;
+
+        if ($driver === 'database' && is_string($table)) {
+            $connection = $provider['connection'] ?? null;
+
+            return [is_string($connection) ? $connection : null, $table, 'remember_token'];
+        }
+
+        $model = $provider['model'] ?? null;
+
+        if ($driver === 'eloquent' && is_string($model) && is_subclass_of($model, Model::class)) {
+            $instance = new $model;
+
+            if ($instance instanceof Authenticatable) {
+                return [$instance->getConnectionName(), $instance->getTable(), $instance->getRememberTokenName()];
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -177,6 +363,10 @@ final class DoctorCommand extends Command
      * laravel/framework 13.34 on PostgreSQL 18.4: the same lock on a connection of its own
      * waits and times out as usual, and the transaction stays usable. The store's
      * `lock_connection` setting exists for exactly that.
+     *
+     * The transaction that aborts is the caller's, so the lock is reported on the connections
+     * the package's tables use and on the application's default, where DB::transaction()
+     * opens it. The two differ once the models are mapped to a connection of their own.
      */
     private function reportIssueLock(Application $app): void
     {
@@ -199,12 +389,15 @@ final class DoctorCommand extends Command
 
         $connection = $store->getLockConnection();
         $tables = [MagicLinkToken::resolve()->getConnection()->getName(), Invitation::resolve()->getConnection()->getName()];
+        $default = $app->make(ConnectionResolverInterface::class)->getDefaultConnection();
 
-        if (! $connection instanceof Connection || $connection->getDriverName() !== 'pgsql' || ! in_array($connection->getName(), $tables, true)) {
+        if (! $connection instanceof Connection || $connection->getDriverName() !== 'pgsql' || ! in_array($connection->getName(), [...$tables, $default], true)) {
             return;
         }
 
-        $this->line("Issue lock  the database cache store, on the PostgreSQL connection \"{$connection->getName()}\" the tables use.");
+        $where = in_array($connection->getName(), $tables, true) ? 'the tables use' : "that is your application's default";
+
+        $this->line("Issue lock  the database cache store, on the PostgreSQL connection \"{$connection->getName()}\" {$where}.");
         $this->line('            An invite() or issueLink() inside a transaction of yours on that connection');
         $this->line('            fails at once with SQLSTATE 25P02 while another issue for the same address');
         $this->line('            holds the lock, and your transaction is aborted. Give the store a');

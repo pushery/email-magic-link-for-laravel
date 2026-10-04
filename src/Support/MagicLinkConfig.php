@@ -390,6 +390,15 @@ final readonly class MagicLinkConfig
         };
     }
 
+    /**
+     * Whether the confirmation screen and the code form offer "Stay signed in", and
+     * whether a submitted choice reaches the authenticator at all.
+     */
+    public function rememberEnabled(): bool
+    {
+        return $this->bool($this->repository()->get('email-magic-link.remember.enabled'), false);
+    }
+
     public function apiEnabled(): bool
     {
         return $this->bool($this->repository()->get('email-magic-link.api.enabled'), false);

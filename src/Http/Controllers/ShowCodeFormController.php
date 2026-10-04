@@ -29,6 +29,7 @@ final readonly class ShowCodeFormController
         return $this->views->make($this->config->view('code'), [
             'email' => is_string($email) ? $email : '',
             'guard' => is_string($guard) ? $guard : '',
+            'offerRemember' => $this->config->rememberEnabled(),
         ]);
     }
 }

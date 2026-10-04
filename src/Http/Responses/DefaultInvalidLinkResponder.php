@@ -55,11 +55,11 @@ final readonly class DefaultInvalidLinkResponder implements InvalidLinkResponder
             ? redirect()->to($target)
             : redirect()->route($failureRoute);
 
-        // Flash only what the forms re-prefill -- the email and the guard -- so a
-        // retry keeps them without putting them in the URL. An allowlist, never a
-        // denylist: the consume form posts a passphrase and the host's acceptance
-        // form posts a password, and `except('code')` would write both into the session
-        // store in the clear. The next secret field cannot land there either.
+        // Flash only what the forms re-prefill -- the email, the guard and the "Stay
+        // signed in" choice -- so a retry keeps them without putting them in the URL. An
+        // allowlist, never a denylist: the consume form posts a passphrase and the host's
+        // acceptance form posts a password, and `except('code')` would write both into the
+        // session store in the clear. The next secret field cannot land there either.
         // The code form keys the generic failure on the CODE field: an unknown email and
         // a wrong code still produce a byte-identical response (both come through here),
         // but the field marked invalid is the one that was wrong.
@@ -67,6 +67,6 @@ final readonly class DefaultInvalidLinkResponder implements InvalidLinkResponder
 
         return $redirect
             ->withErrors([$field => $message])
-            ->withInput($request->only(['email', 'guard']));
+            ->withInput($request->only(['email', 'guard', 'remember']));
     }
 }

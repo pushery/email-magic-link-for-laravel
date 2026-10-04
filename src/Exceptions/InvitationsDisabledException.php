@@ -29,7 +29,7 @@ final class InvitationsDisabledException extends RuntimeException
     public static function channelOff(): self
     {
         return new self(
-            'Invitations are disabled because the whole email-magic-link channel is '
+            'Invitations are disabled because the whole email-magic-link channel is off '
             .'(email-magic-link.enabled = false). Enable it before issuing invitations.',
         );
     }

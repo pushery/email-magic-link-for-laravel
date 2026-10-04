@@ -85,7 +85,7 @@ equivalent mutant.
 `resources/boost/skills/email-magic-link-for-laravel/SKILL.md` ships in the Composer dist, and
 Laravel Boost hands it to the agents working inside a consuming application. It covers adoption
 only: install, configure, apply the public API. Package internals belong on the documentation
-portal and in `CLAUDE.md`, and a rule about how to write the skill belongs here, not in it.
+portal, and a rule about how to write the skill belongs here, not in it.
 
 ## Pull request expectations
 

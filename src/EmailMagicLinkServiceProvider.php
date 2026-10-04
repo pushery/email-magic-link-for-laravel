@@ -49,7 +49,9 @@ use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\Foundation\CachesConfiguration;
+use Illuminate\Contracts\Http\Kernel as KernelContract;
 use Illuminate\Foundation\Console\AboutCommand;
+use Illuminate\Foundation\Http\Kernel as HttpKernel;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
@@ -271,6 +273,7 @@ final class EmailMagicLinkServiceProvider extends ServiceProvider
 
         $this->registerRateLimiters();
         $this->registerRoutes($config);
+        $this->wrapRouteMiddleware();
         $this->registerPruneSchedule($config);
     }
 
@@ -424,6 +427,26 @@ final class EmailMagicLinkServiceProvider extends ServiceProvider
         $copies = glob($this->app->databasePath('migrations/*_create_magic_link_tokens_table.php'));
 
         return is_array($copies) && $copies !== [];
+    }
+
+    /**
+     * Put NoIndex and SameOriginReferrer first in the HTTP kernel's middleware priority.
+     *
+     * Laravel sorts the middleware of a route by that priority. The session and CSRF middleware of
+     * the `web` group and ThrottleRequests are listed in it and these two are not, so without this
+     * the CSRF check and a route's throttle run outside them, and the 419 or 429 they answer with
+     * leaves without either header. First in the list, the two wrap every middleware of the
+     * package's routes. It is set apart from the route registration because it applies to cached
+     * routes as well, and after the kernel is resolved because a console process never builds it.
+     */
+    private function wrapRouteMiddleware(): void
+    {
+        $this->callAfterResolving(KernelContract::class, static function (KernelContract $kernel): void {
+            if ($kernel instanceof HttpKernel) {
+                $kernel->prependToMiddlewarePriority(SameOriginReferrer::class);
+                $kernel->prependToMiddlewarePriority(NoIndex::class);
+            }
+        });
     }
 
     private function registerRoutes(MagicLinkConfig $config): void

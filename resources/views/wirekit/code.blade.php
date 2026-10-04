@@ -70,6 +70,16 @@
                         :error="$errors->first('code')"
                     />
 
+                    {{-- Kept across a refused code: the refusal flashes the choice back with the email. --}}
+                    @if ($offerRemember ?? false)
+                        <x-wirekit::checkbox
+                            name="remember"
+                            value="1"
+                            :checked="old('remember') === '1'"
+                            :label="__('email-magic-link::messages.remember_label')"
+                        />
+                    @endif
+
                     <x-wirekit::button type="submit">{{ __('email-magic-link::messages.sign_in') }}</x-wirekit::button>
                 </x-wirekit::stack>
             </x-wirekit::stack>

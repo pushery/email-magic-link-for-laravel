@@ -16,6 +16,9 @@
             <label for="passphrase">{{ __('email-magic-link::messages.passphrase_label') }}</label>
             <input type="password" name="passphrase" id="passphrase" autocomplete="off" required autofocus>
         @endif
+        @if ($offerRemember ?? false)
+            <label class="eml-remember"><input type="checkbox" name="remember" value="1"> {{ __('email-magic-link::messages.remember_label') }}</label>
+        @endif
         <button type="submit">{{ __('email-magic-link::messages.sign_in') }}</button>
     </form>
 @endsection

@@ -39,6 +39,11 @@
             <p class="error" id="email-error">{{ $message }}</p>
         @enderror
 
+        {{-- Kept across a refused code: the refusal flashes the choice back with the email. --}}
+        @if ($offerRemember ?? false)
+            <label class="eml-remember"><input type="checkbox" name="remember" value="1" @checked(old('remember') === '1')> {{ __('email-magic-link::messages.remember_label') }}</label>
+        @endif
+
         <button type="submit">{{ __('email-magic-link::messages.sign_in') }}</button>
     </form>
 @endsection

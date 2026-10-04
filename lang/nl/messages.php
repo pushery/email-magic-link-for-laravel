@@ -31,6 +31,9 @@ return [
     // Confirmation passphrase gate.
     'passphrase_label' => 'Wachtwoordzin',
 
+    // "Stay signed in" on the confirmation screen and the code form.
+    'remember_label' => 'Ingelogd blijven',
+
     // Invalid link page.
     'invalid_title' => 'Inlogaanvraag ongeldig',
 

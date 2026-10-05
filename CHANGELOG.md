@@ -4,6 +4,17 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.33.1] - 2026-10-05
+
+### 🐛 Fixed
+
+- **`email-magic-link:doctor` reads a remember token name of `null` as no column.** A user model whose `getRememberTokenName()` returns `null`, a common way to switch remember tokens off for a users table without the column, was told to add a column with no name, and PHP reported a deprecation on the way. The command now says what it already said for an empty name: a ticked "Stay signed in" keeps nobody signed in past the session.
+
+### 📚 Documentation
+
+- **`SECURITY.md` answers in words and says how to keep dependencies current.** The supported-versions table reads Yes and No instead of emoji codes. The section on dependency updates now says that this package declares version ranges rather than a lock file, so the versions in your application come from your own `composer.lock`: `composer update` keeps them current, and `composer audit` checks them against the known advisories.
+- **`CONTRIBUTING.md` says where a pull request goes.** The public repository is a mirror of each release, so a pull request is not merged there: an accepted change is carried into the development repository and arrives with the next release. The quality bar runs there too, so the guide no longer lists commands that a clone of the mirror cannot run.
+
 ## [0.33.0] - 2026-10-04
 
 ### Added
@@ -1385,7 +1396,8 @@ public repository sees the difference.
   `TwoFactorChallengeRequired`).
 - Publishable configuration, migration, and views.
 
-[Unreleased]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.33.0...HEAD
+[Unreleased]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.33.1...HEAD
+[0.33.1]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.33.0...v0.33.1
 [0.33.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.32.0...v0.33.0
 [0.32.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.31.0...v0.32.0
 [0.31.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.30.0...v0.31.0

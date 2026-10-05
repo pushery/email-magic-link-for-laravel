@@ -93,8 +93,8 @@
         "format:test": "pint --test",
         "rector": "rector process",
         "rector:test": "rector process --dry-run",
-        "mutate": "@php -d memory_limit=${MUTATION_MEMORY_LIMIT:--1} -d pcov.directory=src vendor/bin/pest --mutate --everything --covered-only --clear-cache --exclude-group=browser --min=93",
-        "mutate:detect": "@php -d memory_limit=${MUTATION_MEMORY_LIMIT:--1} -d pcov.directory=src vendor/bin/pest --mutate --everything --covered-only --exclude-group=browser --parallel --processes=4 --min=93",
+        "mutate": "@php -d memory_limit=${MUTATION_MEMORY_LIMIT:--1} -d pcov.directory=. -d pcov.exclude='~/(vendor|tests|workbench)/~' vendor/bin/pest --mutate --everything --covered-only --clear-cache --exclude-group=browser --min=93",
+        "mutate:detect": "@php -d memory_limit=${MUTATION_MEMORY_LIMIT:--1} -d pcov.directory=. -d pcov.exclude='~/(vendor|tests|workbench)/~' vendor/bin/pest --mutate --everything --covered-only --exclude-group=browser --parallel --processes=4 --min=93",
         "qa": [
             "@format:test",
             "@rector:test",

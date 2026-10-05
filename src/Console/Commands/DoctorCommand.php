@@ -281,7 +281,10 @@ final class DoctorCommand extends Command
 
             [$connection, $table, $column] = $target;
 
-            if ($column === '') {
+            // blank(), not an empty-string test: the framework reads the name with empty() and saves no
+            // token under it, and a model that opts out for a table without the column returns null,
+            // which the contract's docblock does not admit.
+            if (blank($column)) {
                 $this->line("Remember    the user model of the guard \"{$guard}\" names no remember token column, so a");
                 $this->line('            ticked "Stay signed in" keeps nobody signed in past the session.');
 

@@ -9,6 +9,7 @@ use EmailMagicLink\Contracts\TokenStore;
 use EmailMagicLink\Models\Invitation;
 use EmailMagicLink\Models\MagicLinkToken;
 use EmailMagicLink\Support\MagicLinkConfig;
+use EmailMagicLink\Support\TableLookup;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Console\Isolatable;
 use Illuminate\Database\Connection;
@@ -104,6 +105,8 @@ final class PurgeExpiredTokensCommand extends Command implements Isolatable
     {
         $model = Invitation::resolve();
 
-        return $model->getConnection()->getSchemaBuilder()->hasTable($model->getTable());
+        // Where a query on the model's connection finds the table, which on PostgreSQL is along the
+        // search_path; the schema builder alone reads current_schema() and would skip the purge.
+        return TableLookup::exists($model->getTable(), $model->getConnectionName());
     }
 }

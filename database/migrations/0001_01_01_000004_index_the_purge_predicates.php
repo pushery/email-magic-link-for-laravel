@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use EmailMagicLink\Support\TableLookup;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -103,7 +104,7 @@ return new class extends Migration
      */
     private function add(string $table, string $column): void
     {
-        if (! Schema::hasTable($table) || Schema::hasIndex($table, [$column])) {
+        if (! TableLookup::exists($table) || Schema::hasIndex(TableLookup::qualified($table), [$column])) {
             return;
         }
 
@@ -114,7 +115,7 @@ return new class extends Migration
 
     private function drop(string $table, string $column): void
     {
-        if (! Schema::hasTable($table) || ! Schema::hasIndex($table, [$column])) {
+        if (! TableLookup::exists($table) || ! Schema::hasIndex(TableLookup::qualified($table), [$column])) {
             return;
         }
 

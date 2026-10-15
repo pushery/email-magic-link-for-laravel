@@ -4,6 +4,22 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.33.2] - 2026-10-15
+
+A security release for the rate limits, which now count an IPv6 host by its /64, together with the purge and the doctor finding their tables on a PostgreSQL connection with a schema per tenant.
+
+### 🐛 Fixed
+
+- **The purge and the doctor find their tables on a PostgreSQL connection with a schema per tenant.** With `search_path` set to `tenant, public` and the tables in `public`, Laravel's schema builder looks only in `current_schema()`, the tenant schema, while every query walks the whole path. `email-magic-link:purge` took the invitations table for absent and kept every expired invitation, and `email-magic-link:doctor` reported the user table of a guard as missing. Both now look a table up the way a query finds it, and so does the migration that indexes the purge predicates.
+
+### 🔒 Security
+
+- **An IPv6 host counts as one source on the rate limits.** Each limiter's per-source axis counted the raw address, and an ordinary IPv6 connection is a whole /64 that a host can send from at any address in it, so one host could multiply that axis at will and try many addresses or tokens. The axis now counts an IPv6 address by its /64, an IPv4 address as it is, and an IPv4 address written as IPv6 as that IPv4 address. A limiter redefined by the application with `RateLimiter::for()` keeps its own keys.
+
+### 📚 Documentation
+
+- **The WireKit suggestion says what the screens need.** Its last sentence told the Packagist page how the suite installs WireKit instead of what a consumer needs. The floor, 2.54 with the release behind each number, stays.
+
 ## [0.33.1] - 2026-10-05
 
 ### 🐛 Fixed
@@ -1396,7 +1412,8 @@ public repository sees the difference.
   `TwoFactorChallengeRequired`).
 - Publishable configuration, migration, and views.
 
-[Unreleased]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.33.1...HEAD
+[Unreleased]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.33.2...HEAD
+[0.33.2]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.33.1...v0.33.2
 [0.33.1]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.33.0...v0.33.1
 [0.33.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.32.0...v0.33.0
 [0.32.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.31.0...v0.32.0

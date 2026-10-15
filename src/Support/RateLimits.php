@@ -77,9 +77,10 @@ final readonly class RateLimits
             //
             // The IP is deliberately NOT hashed: it is not the subject, it is already in every
             // access log the request touches, and an operator reading a limiter key needs to be
-            // able to recognize a hostile source.
+            // able to recognize a hostile source. It is counted as a source, an IPv6 address by
+            // its /64, which a host can send from as a whole (ClientSource).
             Limit::perMinutes($limit['per_minutes'], $limit['max'])->by('eml:req:email:'.hash('sha256', $email)),
-            Limit::perMinutes($limit['per_minutes'], $limit['max'])->by('eml:req:ip:'.($request->ip())),
+            Limit::perMinutes($limit['per_minutes'], $limit['max'])->by('eml:req:ip:'.ClientSource::of($request->ip())),
         ];
     }
 
@@ -91,7 +92,7 @@ final readonly class RateLimits
         $limit = $this->config->consumeLimit();
 
         return [
-            Limit::perMinutes($limit['per_minutes'], $limit['max'])->by('eml:con:ip:'.($request->ip())),
+            Limit::perMinutes($limit['per_minutes'], $limit['max'])->by('eml:con:ip:'.ClientSource::of($request->ip())),
             Limit::perMinutes($limit['per_minutes'], $limit['max'])->by('eml:con:id:'.$this->discriminator($request)),
         ];
     }
@@ -106,7 +107,7 @@ final readonly class RateLimits
         $limit = $this->config->invitationViewLimit();
 
         return [
-            Limit::perMinutes($limit['per_minutes'], $limit['max'])->by('eml:inv:ip:'.($request->ip())),
+            Limit::perMinutes($limit['per_minutes'], $limit['max'])->by('eml:inv:ip:'.ClientSource::of($request->ip())),
             Limit::perMinutes($limit['per_minutes'], $limit['max'])->by('eml:inv:id:'.$this->discriminator($request)),
         ];
     }

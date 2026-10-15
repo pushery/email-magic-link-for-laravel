@@ -47,7 +47,7 @@
         "laravel/pao": "^1.1",
         "laravel/pint": "^1.30",
         "orchestra/testbench": "^11.2",
-        "pestphp/pest": "^5.1",
+        "pestphp/pest": "^5.1 <5.3.1",
         "pestphp/pest-plugin-agent": "^5.0",
         "pestphp/pest-plugin-browser": "^5.0",
         "pestphp/pest-plugin-evals": "^5.1",
@@ -64,7 +64,7 @@
     },
     "suggest": {
         "laravel/fortify": "Enables the no-bypass two-factor (TOTP) handoff: a magic-link user whose two-factor authentication Fortify considers enabled completes Fortify's challenge before being logged in. Proven on ^1.39, the constraint the suite installs; with Laravel 13 no release below 1.34.1 installs at all.",
-        "pushery/wirekit": "Renders the sign-in screens with WireKit components when installed; the package auto-detects it and falls back to plain Blade otherwise. The screens need 2.54 or newer, and each number below is the release that made the screen correct rather than merely newer: the one-time-code field needs the alphabet prop (2.22) to accept a non-numeric code at all, its case-folding validation pattern (2.26) to accept that code in lower case without scripting, its group prop (2.53) to break a long code on a boundary the code actually has instead of wherever the width runs out, and its justify prop (2.54) to center the row of boxes in the card. Only the version pinned in require-dev is installed by the suite, so a release between that floor and the pin meets the stated requirement without a run behind it."
+        "pushery/wirekit": "Renders the sign-in screens with WireKit components when installed; the package auto-detects it and falls back to plain Blade otherwise. The screens need 2.54 or newer, and each number below is the release that made the screen correct rather than merely newer: the one-time-code field needs the alphabet prop (2.22) to accept a non-numeric code at all, its case-folding validation pattern (2.26) to accept that code in lower case without scripting, its group prop (2.53) to break a long code on a boundary the code actually has instead of wherever the width runs out, and its justify prop (2.54) to center the row of boxes in the card."
     },
     "autoload": {
         "psr-4": {

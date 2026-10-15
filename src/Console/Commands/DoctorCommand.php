@@ -12,6 +12,7 @@ use EmailMagicLink\Stores\DefaultTokenStore;
 use EmailMagicLink\Support\AutoScriptNonce;
 use EmailMagicLink\Support\EnvNumber;
 use EmailMagicLink\Support\MagicLinkConfig;
+use EmailMagicLink\Support\TableLookup;
 use Illuminate\Cache\DatabaseStore;
 use Illuminate\Console\Command;
 use Illuminate\Console\Scheduling\Schedule;
@@ -293,8 +294,10 @@ final class DoctorCommand extends Command
 
             try {
                 $schema = $app->make(DatabaseManager::class)->connection($connection)->getSchemaBuilder();
-                $exists = $schema->hasTable($table);
-                $present = $exists && $schema->hasColumn($table, $column);
+                // Looked up the way a query finds the table: on PostgreSQL along the search_path,
+                // where the schema builder alone reads current_schema().
+                $exists = TableLookup::exists($table, $connection);
+                $present = $exists && $schema->hasColumn(TableLookup::qualified($table, $connection), $column);
             } catch (InvalidArgumentException|QueryException $e) {
                 $this->line("Remember    the table \"{$table}\" of the guard \"{$guard}\" could not be read: {$e->getMessage()}");
                 $this->line('            Whether it has the column a remembered sign-in needs was not checked.');

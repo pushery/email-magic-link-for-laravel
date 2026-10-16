@@ -12,7 +12,7 @@ use Illuminate\Http\Response;
  *
  * A route rather than a published asset: a package that publishes assets is a
  * package whose script is missing on every host that never ran the publish command,
- * and the whole point of moving this out of the page is to make it work WITHOUT the
+ * and the whole point of moving this out of the page is to make it work without the
  * host doing anything. There is no build step and no `dist/` -- see
  * `ResendCountdownScript` for why the source sits in a constant.
  *
@@ -25,12 +25,12 @@ final class ResendCountdownScriptController
     {
         return new Response(ResendCountdownScript::contents(), 200, [
             'Content-Type' => 'application/javascript; charset=utf-8',
-            // PRIVATE, not public, and that is a correctness point rather than a
+            // Private, not public, and that is a correctness point rather than a
             // conservative default. This route runs inside the host's route middleware
             // group -- `web` by default -- so the response leaves with a session cookie
             // and an XSRF cookie attached, exactly like every other page of the package.
             // `public` invites a shared cache to store it, and a shared cache that stores
-            // a response WITH its Set-Cookie headers can hand one visitor's session
+            // a response with its Set-Cookie headers can hand one visitor's session
             // cookie to the next. Conformant caches strip it; "conformant" is not a thing
             // an authentication package gets to assume about somebody else's proxy.
             //

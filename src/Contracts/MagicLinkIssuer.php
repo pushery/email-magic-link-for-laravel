@@ -9,7 +9,7 @@ use EmailMagicLink\Support\IssuedLink;
 use Illuminate\Contracts\Auth\Authenticatable;
 
 /**
- * Issues magic links and one-time codes for a known user WITHOUT sending mail.
+ * Issues magic links and one-time codes for a known user without sending mail.
  *
  * Use it to mint a credential and deliver it over any channel — SMS, chat, an
  * existing email, a queued job. The returned secret is single-use and hashed at

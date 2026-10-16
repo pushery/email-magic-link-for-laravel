@@ -69,8 +69,8 @@ final class SendMagicLinkController
         // Escalating cooldown + rolling cap, keyed on the submitted email alone
         // (never on whether it resolves to a user), so it stays enumeration-safe.
         //
-        // `resend.enabled` is checked HERE, not inside the guard. It is the switch
-        // for THIS endpoint, which is what its name and documentation promise. Inside
+        // `resend.enabled` is checked here, not inside the guard. It is the switch
+        // for this endpoint, which is what its name and documentation promise. Inside
         // the guard it would disarm every key, including the host application's own:
         // the contract invites hosts to inject the guard for their own mail
         // endpoints, so disabling magic-link throttling would silently disable, say,
@@ -105,11 +105,11 @@ final class SendMagicLinkController
 
         if ($user instanceof Authenticatable && $route !== null) {
             try {
-                // NOT $store->issue(...) directly, and the wrapper is the whole fix for
+                // Not $store->issue(...) directly, and the wrapper is the whole fix for
                 // the timing half of the enumeration hole the catch below closes for the
                 // status half.
                 //
-                // The lock is taken only for an address that RESOLVES, so every millisecond
+                // The lock is taken only for an address that resolves, so every millisecond
                 // spent queueing for it is an answer to "does this account exist" -- and the
                 // attacker produces the contention himself by sending two requests at once.
                 // Waiting out the budget instead, measured: 827 ms for a known contended
@@ -121,7 +121,7 @@ final class SendMagicLinkController
                 // IssuanceLock::withoutWaiting() for why the two paths differ.
                 $issued = $lock->withoutWaiting(fn (): IssuedToken => $store->issue($user, $guard, $channel));
 
-                // The notification is queued, and a worker renders it under ITS locale unless
+                // The notification is queued, and a worker renders it under its locale unless
                 // the request's travels with it. The mail route is an anonymous notifiable
                 // with no locale preference of its own, so this is the only place the
                 // request's language can be captured.
@@ -132,12 +132,12 @@ final class SendMagicLinkController
             } catch (LockTimeoutException) {
                 // A concurrent request for this same address is mid-issuance and outlasted
                 // the wait budget. Falling through to the ordinary response is not
-                // swallowing the problem: that other request IS sending the credential, so
+                // swallowing the problem: that other request is sending the credential, so
                 // "we have sent you a link if the address exists" stays true.
                 //
                 // Letting it surface instead would cost twice. It is a 500 on a path that
                 // works, and -- worse -- it is a 500 that only ever happens for an address
-                // that RESOLVES TO A USER, on an endpoint whose whole design is to answer
+                // that resolves to a user, on an endpoint whose whole design is to answer
                 // identically either way. The lock would have handed an enumeration oracle
                 // to anyone willing to send two requests at once.
                 //

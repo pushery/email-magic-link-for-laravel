@@ -58,8 +58,8 @@ final class IssuanceLock
     private ?int $blockOverride = null;
 
     /**
-     * @param  int  $blockSeconds  How long a competing writer QUEUES before giving up.
-     * @param  int  $holdSeconds  How long the lock is HELD -- the work budget. See run().
+     * @param  int  $blockSeconds  How long a competing writer queues before giving up.
+     * @param  int  $holdSeconds  How long the lock is held -- the work budget. See run().
      * @param  string|null  $store  The cache store to lock in, or null for the default.
      */
     public function __construct(
@@ -110,7 +110,7 @@ final class IssuanceLock
     /**
      * The lock name for a subject.
      *
-     * Public because a caller has to hash the SAME subject the row is keyed on -- the
+     * Public because a caller has to hash the same subject the row is keyed on -- the
      * normalized address, not the raw input -- and a test has to be able to name the lock it
      * holds.
      */
@@ -131,15 +131,15 @@ final class IssuanceLock
 
         // A LockTimeoutException propagates rather than being swallowed, and that is the
         // deliberate half. Falling through to an unserialized write is exactly the outcome this
-        // exists to prevent. The CALLER decides what it means: the programmatic issuers let it
+        // exists to prevent. The caller decides what it means: the programmatic issuers let it
         // surface, because their caller asked for a credential and did not get one.
         //
-        // SendMagicLinkController is the one caller that must NOT let it surface: the endpoint
+        // SendMagicLinkController is the one caller that must not let it surface: the endpoint
         // answers identically for a known and an unknown address by design, and a 500 that can
-        // only happen for an address that RESOLVES is an enumeration oracle for anyone willing
+        // only happen for an address that resolves is an enumeration oracle for anyone willing
         // to send two requests at once. It catches the exception.
         // Zero is a real budget rather than a disabled one: `Lock::block()` tests the
-        // deadline BEFORE it sleeps, so a zero budget makes exactly one attempt and throws --
+        // deadline before it sleeps, so a zero budget makes exactly one attempt and throws --
         // 0 ms against a held lock. If that order inverted upstream, a zero budget would cost
         // one sleep interval and reopen the timing channel.
         return $lock->block($this->blockOverride ?? $this->blockSeconds, $callback);
@@ -172,10 +172,10 @@ final class IssuanceLock
             );
         }
 
-        // THE WORK BUDGET AND THE WAIT BUDGET ARE DIFFERENT NUMBERS, and deriving one from
+        // The work budget and the wait budget are different numbers, and deriving one from
         // the other stops the lock from locking, silently. The critical section is a
         // database transaction; the wait is how long a competitor queues for it. With one
-        // number for both, a transaction slower than the wait releases the lock UNDER ITSELF:
+        // number for both, a transaction slower than the wait releases the lock under itself:
         // the key expires, a second writer's `SET .. EX .. NX` succeeds, and the first never
         // finds out, because release() is a compare-and-del whose 0 is discarded by
         // Lock::block()'s finally. Two live credentials, no log, no exception.
@@ -184,7 +184,7 @@ final class IssuanceLock
         // under load also shortens the TTL, over a transaction that gets no faster.
         $lock = $store->lock($name, max(1, $this->holdSeconds));
 
-        // A LOCK THAT CANNOT SAY NO IS WORSE THAN NO LOCK, because it reads as protection.
+        // A lock that cannot say no is worse than no lock, because it reads as protection.
         // NullStore IS a LockProvider -- the check above is exactly the condition it satisfies
         // -- and its NoLock::acquire() returns true every time: two acquires on one name are
         // both true. A host on CACHE_STORE=null would have no serialization at all and no way

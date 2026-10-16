@@ -37,7 +37,7 @@ use ReflectionProperty;
  * Reports what a published config file does not know about.
  *
  * A host that ran `vendor:publish` freezes its copy at that version. The recursive
- * merge means those keys still take effect — but the FILE never mentions them, so
+ * merge means those keys still take effect — but the file never mentions them, so
  * an operator reading it cannot see that a subsystem exists, let alone tune it.
  *
  * A published copy can lag far behind: 33 dot-keys against the package's 56 is a copy
@@ -481,7 +481,7 @@ final class DoctorCommand extends Command
      *
      * `AutoScriptNonce` deliberately falls back to null instead of throwing, because
      * an exception would take down the sign-in screen over a progressive
-     * enhancement. The price is that a nonce which cannot be resolved produces NO
+     * enhancement. The price is that a nonce which cannot be resolved produces no
      * signal at all: the tags ship without the attribute, a strict policy blocks
      * them, and the symptom is a screen without its styles, with nothing logged.
      *
@@ -490,11 +490,11 @@ final class DoctorCommand extends Command
      * warning with it. This command is already the place someone reads when they
      * have a question.
      *
-     * It reports the SOURCE, not the value, and that is a correctness point
+     * It reports the source, not the value, and that is a correctness point
      * rather than caution. The nonce is scoped per request; a console command either
      * cannot resolve the binding at all or resolves one that no response will ever
      * carry. Printing it would show a value that is real and useless. Whether the
-     * SOURCE exists is the same question in the console as in a request, so that is
+     * source exists is the same question in the console as in a request, so that is
      * what gets answered.
      */
     private function reportScriptNonce(Repository $config): void
@@ -545,7 +545,7 @@ final class DoctorCommand extends Command
     /**
      * The keys a config file defines, flattened to dot notation.
      *
-     * A LIST is one value, not a set of numeric sub-keys — the same rule the merge
+     * A list is one value, not a set of numeric sub-keys — the same rule the merge
      * uses. Without it, `guards => ['web', 'admin']` would report `guards.0` and
      * `guards.1` as separate keys, and a host with a different number of entries
      * would show phantom "missing" keys on every run.

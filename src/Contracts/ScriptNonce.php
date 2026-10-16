@@ -12,7 +12,7 @@ namespace EmailMagicLink\Contracts;
  * carry, so they render unstyled under a strict `style-src`; the `<link>` and `<script>`
  * tags WireKit and Livewire write; and, only under a policy built on 'strict-dynamic',
  * which ignores 'self', the resend countdown's script, a same-origin file since 0.22.0.
- * All of it is blocked SILENTLY, which is what makes this worth a seam: nothing on the
+ * All of it is blocked silently, which is what makes this worth a seam: nothing on the
  * page reports it, and the user sees a broken screen rather than an error.
  *
  * The default implementation reads the `csp-nonce` container binding spatie/laravel-csp

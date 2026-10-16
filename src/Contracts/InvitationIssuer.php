@@ -7,11 +7,11 @@ namespace EmailMagicLink\Contracts;
 use EmailMagicLink\Support\IssuedInvitation;
 
 /**
- * Issues invitations for an email address WITHOUT sending mail.
+ * Issues invitations for an email address without sending mail.
  *
  * The counterpart to MagicLinkIssuer, and the difference is the addressee: a magic
  * link signs in somebody who already exists, so it is issued for a resolved user.
- * An invitation is issued for an ADDRESS, which may have no account behind it — that
+ * An invitation is issued for an address, which may have no account behind it — that
  * is the whole point, and it is why this cannot be a method on the other contract.
  *
  * Deliver the returned URL over any channel you like. The raw token exists only
@@ -21,7 +21,7 @@ interface InvitationIssuer
 {
     /**
      * Issue an invitation, superseding any earlier unaccepted one for the same
-     * address and guard.
+     * address, guard and scope.
      *
      * @param  string|null  $guard  An allowed guard, or null for the default.
      * @param  array<string, mixed>|null  $context  Whatever was decided in advance —
@@ -35,12 +35,17 @@ interface InvitationIssuer
      *                                domain) instead of the app's. The signature
      *                                binds to that host, so the link verifies only
      *                                there.
+     * @param  string|null  $scope  Who the invitation belongs to beyond its guard, such
+     *                              as the tenant that sent it. An invitation in one scope
+     *                              never supersedes or revokes one in another; without a
+     *                              scope it supersedes the unscoped ones only.
      */
-    public function invite(string $email, ?string $guard = null, ?array $context = null, ?string $invitedBy = null, ?string $baseUrl = null): IssuedInvitation;
+    public function invite(string $email, ?string $guard = null, ?array $context = null, ?string $invitedBy = null, ?string $baseUrl = null, ?string $scope = null): IssuedInvitation;
 
     /**
-     * Revoke every unaccepted invitation for the address and guard. Returns the
-     * number revoked; an already accepted invitation is left alone.
+     * Revoke every unaccepted invitation for the address and guard, in the given scope
+     * or, without one, in every scope. Returns the number revoked; an already accepted
+     * invitation is left alone.
      */
-    public function revoke(string $email, ?string $guard = null): int;
+    public function revoke(string $email, ?string $guard = null, ?string $scope = null): int;
 }

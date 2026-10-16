@@ -4,6 +4,18 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.34.0] - 2026-10-16
+
+Invitations can carry a scope, such as the tenant that sent them, so one tenant re-inviting an address no longer withdraws the invitation another tenant sent it. The two invitation contracts take the scope as a new last parameter, which breaks a class outside the package that implements one of them.
+
+### ⚠️ Breaking
+
+- **`InvitationStore::issue()` and `revoke()` and `InvitationIssuer::invite()` and `revoke()` take a last parameter, `?string $scope = null`.** A class outside the package that implements one of the two contracts needs the parameter in its signature, or PHP refuses the class. Calls are unaffected: the parameter is last and optional.
+
+### ✨ Added
+
+- **An invitation can carry a scope, such as the tenant that sent it.** `invite(..., scope: 'workspace-7')` supersedes only the open invitations of its own scope, so one tenant re-inviting an address no longer withdraws the invitation another tenant sent it, and `revoke(..., scope: ...)` withdraws only that scope's. The scope comes back as `AcceptedInvitation::$scope` and `IssuedInvitation::$scope`, and the acceptance view receives `$scope`. An invitation without a scope supersedes the unscoped ones only, and a revoke without one still withdraws every scope's, so an application that never names a scope behaves as before. A migration adds the nullable `scope` column, and a scope is stored once it has run.
+
 ## [0.33.2] - 2026-10-15
 
 A security release for the rate limits, which now count an IPv6 host by its /64, together with the purge and the doctor finding their tables on a PostgreSQL connection with a schema per tenant.
@@ -1412,7 +1424,8 @@ public repository sees the difference.
   `TwoFactorChallengeRequired`).
 - Publishable configuration, migration, and views.
 
-[Unreleased]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.33.2...HEAD
+[Unreleased]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.34.0...HEAD
+[0.34.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.33.2...v0.34.0
 [0.33.2]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.33.1...v0.33.2
 [0.33.1]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.33.0...v0.33.1
 [0.33.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.32.0...v0.33.0

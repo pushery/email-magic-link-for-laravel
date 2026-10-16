@@ -49,7 +49,7 @@ final class ConsumeCodeRequest extends FormRequest
     }
 
     /**
-     * Strip whitespace, then fold case ONLY in the direction the alphabet writes.
+     * Strip whitespace, then fold case only in the direction the alphabet writes.
      *
      * Folding used to be an unconditional `strtoupper`. That is convenient for the
      * shipped alphabet (upper-case only, so the reader may type lower) and it is

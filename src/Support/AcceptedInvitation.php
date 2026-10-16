@@ -17,6 +17,8 @@ final readonly class AcceptedInvitation
      * @param  array<string, mixed>|null  $context  What the inviter decided in advance.
      *                                              Possibly a week old — check it against
      *                                              current state before acting on it.
+     * @param  string|null  $scope  The scope the invitation was issued in, such as the tenant
+     *                              that sent it; null for an invitation issued without one.
      */
     public function __construct(
         public int $id,
@@ -24,5 +26,6 @@ final readonly class AcceptedInvitation
         public string $guard,
         public ?array $context,
         public ?string $invitedBy,
+        public ?string $scope = null,
     ) {}
 }

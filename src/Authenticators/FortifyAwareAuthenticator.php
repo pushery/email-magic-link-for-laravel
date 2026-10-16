@@ -112,7 +112,7 @@ final readonly class FortifyAwareAuthenticator implements MagicLinkAuthenticator
     private function hasEnabledTwoFactor(Authenticatable $user): bool
     {
         // Fortify's own verdict, so the magic link challenges exactly the users the
-        // password login challenges. With `confirm` on, that is a secret AND a
+        // password login challenges. With `confirm` on, that is a secret and a
         // confirmed_at, which keeps a user mid-setup out of the challenge; with
         // `confirm` off -- Fortify's shipped feature registration -- it is a secret
         // alone, and confirmed_at is never written. Deriving the verdict from

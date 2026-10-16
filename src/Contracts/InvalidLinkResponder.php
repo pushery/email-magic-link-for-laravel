@@ -14,7 +14,7 @@ use Symfony\Component\HttpFoundation\Response;
  * Swap the default via the `invalid_response.via` config to a class-string of
  * your own implementation for full control over branding and behavior.
  *
- * Implementations MUST NOT vary the response by *why* the token failed — an
+ * Implementations must not vary the response by *why* the token failed — an
  * unknown token and an expired one must be indistinguishable — so the flow stays
  * enumeration-resistant. The single generic message is passed in already
  * translated; do not re-derive it from the request.

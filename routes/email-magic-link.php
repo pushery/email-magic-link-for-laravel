@@ -90,7 +90,7 @@ if ($config->invitationsEnabled()) {
     // token learns nothing. It bounds what a replayed valid link costs, a store lookup
     // and the host's own acceptance view on every call.
     //
-    // Its OWN limiter, though, not the consume one. Sharing that budget would mean
+    // Its own limiter, though, not the consume one. Sharing that budget would mean
     // looking at an invitation spends the allowance accepting it needs -- and behind
     // one egress address, everyone else's sign-in too.
     Route::get('magic-link/invitation/{token}', ShowInvitationController::class)

@@ -14,12 +14,13 @@ use Override;
  * A single issued invitation.
  *
  * Only the keyed hash of the secret is stored. The row is the unit the atomic
- * single-use claim operates on, and it is addressed by EMAIL rather than by user:
+ * single-use claim operates on, and it is addressed by email rather than by user:
  * the recipient may have no account yet, which is the whole point.
  *
  * @property int $id
  * @property string $email
  * @property string $guard
+ * @property string|null $scope
  * @property string $token_hash
  * @property array<string, mixed>|null $context
  * @property string|null $invited_by
@@ -46,6 +47,7 @@ class Invitation extends Model
     protected $fillable = [
         'email',
         'guard',
+        'scope',
         'token_hash',
         'context',
         'invited_by',

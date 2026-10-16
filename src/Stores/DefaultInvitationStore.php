@@ -27,7 +27,7 @@ final readonly class DefaultInvitationStore implements InvitationStore
 {
     /**
      * How the purge claims its chunk. `skip locked` is the load-bearing half: it makes the
-     * purge the one statement in this package that never WAITS on a row lock, and a
+     * purge the one statement in this package that never waits on a row lock, and a
      * statement that never waits cannot be one end of a deadlock cycle.
      *
      * Duplicated in the sibling store rather than shared, and pinned against it by
@@ -44,21 +44,24 @@ final readonly class DefaultInvitationStore implements InvitationStore
         private IssuanceLock $lock,
     ) {}
 
-    public function issue(string $email, string $guard, ?array $context = null, ?string $invitedBy = null, ?int $ttl = null): IssuedInvitationToken
+    public function issue(string $email, string $guard, ?array $context = null, ?string $invitedBy = null, ?int $ttl = null, ?string $scope = null): IssuedInvitationToken
     {
         $normalized = $this->normalize($email);
 
-        // Serialized per address and guard, on the NORMALIZED address -- the same value
+        // Serialized per address and guard, on the normalized address -- the same value
         // the row is keyed on, so two spellings of one mailbox cannot slip past each
         // other. See IssuanceLock for why the statement order below is not enough on its
-        // own.
-        return $this->lock->run('invite', $normalized, $guard, fn (): IssuedInvitationToken => $this->connection()->transaction(function () use ($normalized, $guard, $context, $invitedBy, $ttl): IssuedInvitationToken {
+        // own. The scope stays out of the lock's key: two scopes of one address then take
+        // turns, which costs nothing, and the revoke below never meets a writer it was not
+        // already serialized with.
+        return $this->lock->run('invite', $normalized, $guard, fn (): IssuedInvitationToken => $this->connection()->transaction(function () use ($normalized, $guard, $context, $invitedBy, $ttl, $scope): IssuedInvitationToken {
             $now = Carbon::now();
             $plaintext = $this->generateToken();
 
             $record = Invitation::resolve();
             $record->email = $normalized;
             $record->guard = $guard;
+            $record->scope = $scope;
             $record->token_hash = $this->hasher->hash($plaintext);
             $record->context = $context;
             $record->invited_by = $invitedBy;
@@ -67,14 +70,14 @@ final readonly class DefaultInvitationStore implements InvitationStore
             $record->revoked_at = null;
             $record->save();
 
-            // INSERT FIRST, then revoke everything below this row's id. On InnoDB the second
+            // Insert first, then revoke everything below this row's id. On InnoDB the second
             // writer then waits on the first writer's uncommitted index entry, and the first
             // never reads the second's: measured on MySQL 8.0.36 with 5,000 invitations, the
             // revoke runs as an intersection of the (email, guard) index with the primary-key
             // range below the new id. That is a property of the plan rather than of the
             // statement; a plan that filtered on the id instead would make each writer wait on
-            // the other, which InnoDB ends as a deadlock. On PostgreSQL the order is NOT
-            // sufficient on its own -- the UPDATE's snapshot excludes an uncommitted INSERT
+            // the other, which InnoDB ends as a deadlock. On PostgreSQL the order is not
+            // sufficient on its own -- the update's snapshot excludes an uncommitted INSERT
             // and has nothing to wait on. The lock around this transaction is what holds on
             // both engines.
             //
@@ -83,15 +86,24 @@ final readonly class DefaultInvitationStore implements InvitationStore
             // leaving two live links for one address -- the race this ordering exists to
             // prevent.
             //
-            // Already ACCEPTED rows are left alone: they are a record of something that
-            // happened, not an open door.
-            Invitation::model()::query()
+            // Already accepted rows are left alone: they are a record of something that
+            // happened, not an open door. And only the rows of this scope go, an unscoped
+            // invitation superseding the unscoped ones: one tenant re-inviting an address must
+            // not withdraw the invitation another tenant sent it.
+            $superseded = Invitation::model()::query()
                 ->where('email', $normalized)
                 ->where('guard', $guard)
                 ->where('id', '<', $record->id)
                 ->whereNull('accepted_at')
-                ->whereNull('revoked_at')
-                ->update(['revoked_at' => $now]);
+                ->whereNull('revoked_at');
+
+            if ($scope === null) {
+                $superseded->whereNull('scope');
+            } else {
+                $superseded->where('scope', $scope);
+            }
+
+            $superseded->update(['revoked_at' => $now]);
 
             return new IssuedInvitationToken($plaintext, $record);
         }));
@@ -136,14 +148,22 @@ final readonly class DefaultInvitationStore implements InvitationStore
         });
     }
 
-    public function revoke(string $email, string $guard): int
+    public function revoke(string $email, string $guard, ?string $scope = null): int
     {
-        return Invitation::model()::query()
+        $open = Invitation::model()::query()
             ->where('email', $this->normalize($email))
             ->where('guard', $guard)
             ->whereNull('accepted_at')
-            ->whereNull('revoked_at')
-            ->update(['revoked_at' => Carbon::now()]);
+            ->whereNull('revoked_at');
+
+        // Without a scope every scope's invitations go. Revoking closes something and opens
+        // nothing, so the wide reading is the safe one, and it is what an operator closing an
+        // address needs; a tenant names its own scope.
+        if ($scope !== null) {
+            $open->where('scope', $scope);
+        }
+
+        return $open->update(['revoked_at' => Carbon::now()]);
     }
 
     public function purge(): int
@@ -161,8 +181,8 @@ final readonly class DefaultInvitationStore implements InvitationStore
             // chunk's select must not lock the index gaps new invitations are written into.
             $isolation->beforeChunk();
 
-            // Two statements rather than one, and the SECOND word is what matters: the purge
-            // claims its chunk with `for update skip locked`, so it NEVER waits on a row
+            // Two statements rather than one, and the second word is what matters: the purge
+            // claims its chunk with `for update skip locked`, so it never waits on a row
             // somebody else is holding. A statement that never waits cannot be one end of a
             // deadlock cycle, whatever order the other end takes its locks in.
             //
@@ -177,7 +197,7 @@ final readonly class DefaultInvitationStore implements InvitationStore
             // always afford to come back later, which is exactly why it should be the one
             // that yields.
             //
-            // The lock has to be held across BOTH statements, hence the transaction. Taken in
+            // The lock has to be held across both statements, hence the transaction. Taken in
             // autocommit the locks would drop the moment the select returned, and the delete
             // would be back to waiting on whatever moved in between.
             $removed = $this->connection()->transaction(function () use ($now, $retainUntil, $chunk): int {
@@ -239,7 +259,7 @@ final readonly class DefaultInvitationStore implements InvitationStore
         $bindings = [$now, $now, $hash, $now];
 
         if ($connection->getDriverName() === 'pgsql') {
-            // Explicit `false`: select() defaults to the READ connection, and this is an
+            // Explicit `false`: select() defaults to the read connection, and this is an
             // UPDATE. The caller holds a transaction, so it would resolve to the write PDO
             // anyway -- but stating it here keeps the safety a property of this statement
             // rather than of whoever calls it.

@@ -12,7 +12,7 @@ namespace EmailMagicLink\Support;
  * through, so an inline countdown could not run there at all. A same-origin file
  * satisfies a plain `script-src 'self'` with no nonce and no host action.
  *
- * WHY THE SOURCE LIVES IN A PHP CONSTANT rather than a `.js` file. This package
+ * Why the `SOURCE` lives in a PHP constant rather than a `.js` file. This package
  * deliberately has no client-asset path: no npm, no build step, no `dist/`, and no
  * publishable assets, so `resources/` carries only `views/` and `boost/`. Every
  * alternative reintroduces one of those, and each brings a way to be absent at

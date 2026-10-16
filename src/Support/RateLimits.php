@@ -14,7 +14,7 @@ use Illuminate\Http\Request;
  *
  * The request endpoint is throttled per email and per IP; the consume endpoint
  * per IP and per token (keyed by the token hash, never the raw token); the
- * invitation display the same way as consume but out of its OWN budget.
+ * invitation display the same way as consume but out of its own budget.
  *
  * Every bucket prefix here is distinct (`eml:req:`, `eml:con:`, `eml:inv:`), and
  * that is the whole point of the third one: a shared prefix is a shared budget,
@@ -42,7 +42,7 @@ final readonly class RateLimits
      * provider: a consumer copying three RateLimiter::for() lines by hand silently
      * loses a fourth limiter added later, and finds out as a 500 in production.
      *
-     * The limiter is resolved from the CONTAINER at call time, never through the
+     * The limiter is resolved from the container at call time, never through the
      * facade. The facade caches the first instance it resolved, so after the
      * `forgetInstance()` above it would register these limiters on the discarded
      * object -- while the throttle middleware, container-constructed, receives the
@@ -75,7 +75,7 @@ final readonly class RateLimits
             // under a key that survives as long as the window. The address is the more
             // identifying of the two subjects, and it is hashed like the token.
             //
-            // The IP is deliberately NOT hashed: it is not the subject, it is already in every
+            // The IP is deliberately not hashed: it is not the subject, it is already in every
             // access log the request touches, and an operator reading a limiter key needs to be
             // able to recognize a hostile source. It is counted as a source, an IPv6 address by
             // its /64, which a host can send from as a whole (ClientSource).

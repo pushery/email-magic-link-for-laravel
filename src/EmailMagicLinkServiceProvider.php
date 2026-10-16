@@ -296,15 +296,15 @@ final class EmailMagicLinkServiceProvider extends ServiceProvider
             return;
         }
 
-        // The config flag above answers whether the consumer WANTS the purge. This one
-        // answers whether it CAN run at all. A consumer that called ignoreMigrations() may
+        // The config flag above answers whether the consumer wants the purge. This one
+        // answers whether it can run at all. A consumer that called ignoreMigrations() may
         // have declined the tables, and the command would then hit a relation that does not
         // exist -- a non-zero exit on every scheduled run, and with schedule monitoring one entry
         // in the error tracker per run. Or it may migrate a copy under another name, and then
         // dropping the purge throws away what prune.schedule asked for, in silence. Only the
         // host knows which, and says so with ignoreMigrations(tablesExist: true); the doctor
         // command reports a schedule that was asked for and dropped. Read from flags rather
-        // than from the schema: this runs at BOOT, and asking the database there would put
+        // than from the schema: this runs at boot, and asking the database there would put
         // a query on every request to answer a question about a nightly job.
         if (! self::$runsMigrations && ! self::$tablesMigratedElsewhere) {
             return;
@@ -342,7 +342,7 @@ final class EmailMagicLinkServiceProvider extends ServiceProvider
      * Laravel's own mergeConfigFrom, but recursive — so a published config is a
      * starting point rather than a ceiling.
      *
-     * The shallow version supplies missing TOP-LEVEL keys only, so a host that ran
+     * The shallow version supplies missing top-level keys only, so a host that ran
      * `vendor:publish` once never receives a key added later inside a block it
      * already has. It gets `null` instead of the shipped default, silently. See
      * ConfigMerger for why the recursion stops at lists.
@@ -461,7 +461,7 @@ final class EmailMagicLinkServiceProvider extends ServiceProvider
     }
 
     /**
-     * The pairing of limiter NAME to limiter closure lives on RateLimits, not here.
+     * The pairing of limiter name to limiter closure lives on RateLimits, not here.
      *
      * It has to be reachable after boot: an application that swaps its cache per
      * tenant discards the RateLimiter singleton, and every named limiter goes with
@@ -482,7 +482,7 @@ final class EmailMagicLinkServiceProvider extends ServiceProvider
                 PurgeExpiredTokensCommand::class,
             ]);
 
-            // Every group is registered TWICE: under its own tag, and under the
+            // Every group is registered twice: under its own tag, and under the
             // umbrella tag `email-magic-link`. The umbrella is a convenience, not the
             // only way: `vendor:publish --tag` takes several tags, and `--provider`
             // publishes every group of a provider, tagged or not. But one tag is easier
@@ -502,7 +502,7 @@ final class EmailMagicLinkServiceProvider extends ServiceProvider
             // user_id is a plain string column, on purpose.
             //
             // The rewrite has a cost, and boot() pays it: a copy with a fresh prefix is
-            // a DIFFERENT migration by name, so the bundled file and its copy would both
+            // a different migration by name, so the bundled file and its copy would both
             // be pending for one table. See migrationsArePublished().
             $this->publishesMigrations([
                 __DIR__.'/../database/migrations' => database_path('migrations'),

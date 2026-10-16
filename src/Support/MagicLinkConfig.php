@@ -154,7 +154,7 @@ final readonly class MagicLinkConfig
      * How a submitted code must be folded before it is compared, derived from the
      * configured alphabet rather than assumed.
      *
-     * `null` means DO NOT FOLD. That is the case for an alphabet that writes both
+     * `null` means do not fold. That is the case for an alphabet that writes both
      * cases: there `a` and `A` are two different characters, the generator mints
      * both, and folding either way destroys codes that can then never be redeemed
      * -- silently, looking exactly like an expired code while the attempt counter
@@ -175,7 +175,7 @@ final readonly class MagicLinkConfig
         $alphabet = $this->codeAlphabet();
 
         // The same derivation the rendered field uses to decide whether it may widen
-        // its validation pattern. Keeping ONE copy is the point: a field that accepts a
+        // its validation pattern. Keeping one copy is the point: a field that accepts a
         // case the request then folds away, or the reverse, is exactly the drift two
         // independent derivations produce.
         $hasUpper = preg_match('/\p{Lu}/u', $alphabet) === 1;
@@ -189,7 +189,7 @@ final readonly class MagicLinkConfig
     }
 
     /**
-     * The alphabet as it EXISTS AT COMPARISON TIME, which is what the entropy
+     * The alphabet as it exists at comparison time, which is what the entropy
      * guardrail must certify.
      *
      * Under a fold, characters collapse into one another, so counting the
@@ -529,22 +529,22 @@ final readonly class MagicLinkConfig
     }
 
     /**
-     * A view rendered ABOVE the card on every screen this package draws, or null for none.
+     * A view rendered above the card on every screen this package draws, or null for none.
      *
      * The confirm screen is the one place a person decides, out of an e-mail, whether to sign in
      * here, and this package draws it without knowing the host's wordmark or language switcher.
      * Every other screen of a host application has both. A screen whose entire purpose is a trust
      * decision is the worst one to strip of the marks that earn it.
      *
-     * A SLOT RATHER THAN A `view` OVERRIDE PER SCREEN, and the choice is deliberate. An override
+     * A slot rather than a `view` override per screen, and the choice is deliberate. An override
      * hands the consumer the whole screen — the form, the CSRF field, the token handling — so
      * every later change to any of that has to be carried by hand into every fork, and a
      * security-shaped surface becomes theirs to maintain for the sake of a wordmark. Two slots
      * keep the screen here and give away exactly the two places where the consumer has something
      * to say.
      *
-     * A NAME THAT RESOLVES TO NOTHING IS DROPPED, NOT THROWN. `invalid_response.view` lets a
-     * bad name throw, and for an error page that is defensible. This one renders on the SIGN-IN
+     * A name that resolves to nothing is dropped, not thrown. `invalid_response.view` lets a
+     * bad name throw, and for an error page that is defensible. This one renders on the sign-in
      * path: a typo there would lock every user out of the application rather than spoil a screen.
      * The miss is logged at `warning` with the key, because silence would leave a consumer
      * looking at an unchanged page with nothing to read.
@@ -554,7 +554,7 @@ final readonly class MagicLinkConfig
         return $this->existingView('email-magic-link.ui.header_view');
     }
 
-    /** A view rendered BELOW the card on every screen this package draws, or null for none. */
+    /** A view rendered below the card on every screen this package draws, or null for none. */
     public function uiFooterView(): ?string
     {
         return $this->existingView('email-magic-link.ui.footer_view');
@@ -833,7 +833,7 @@ final readonly class MagicLinkConfig
     }
 
     /**
-     * How long a second issuance for the same subject WAITS for the first.
+     * How long a second issuance for the same subject waits for the first.
      *
      * A latency ceiling on the request path rather than a correctness knob: the waiter
      * holds a worker for this long. Giving up is answered with the endpoint's ordinary
@@ -910,7 +910,7 @@ final readonly class MagicLinkConfig
     }
 
     /**
-     * The host class that decides what acceptance MEANS -- setting a password, creating
+     * The host class that decides what acceptance means -- setting a password, creating
      * membership, granting roles. Returned raw rather than resolved so the boot guard can
      * name the class that is missing or does not implement the contract.
      */
@@ -922,7 +922,7 @@ final readonly class MagicLinkConfig
     }
 
     /**
-     * The host's acceptance view. A raw view NAME, not a resolved view: this package
+     * The host's acceptance view. A raw view name, not a resolved view: this package
      * bundles no acceptance screen, because one shipping with a password field would put
      * credential handling inside a package that deliberately owns none.
      */
@@ -988,7 +988,7 @@ final readonly class MagicLinkConfig
             return $default;
         }
 
-        // FILTER_NULL_ON_FAILURE, and the fallback is the DECLARED default rather than
+        // FILTER_NULL_ON_FAILURE, and the fallback is the declared default rather than
         // false. Without it every unreadable value answers false, so a typo does not
         // fail -- it turns the switch off. On `enabled` that closes an authentication
         // path and on `respect_two_factor` it stops a second factor from being honored,

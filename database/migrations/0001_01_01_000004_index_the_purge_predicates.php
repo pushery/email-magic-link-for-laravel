@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Indexes the columns the purge filters on, so its OR can be served by an index.
  *
- * Both purges are a disjunction, and PostgreSQL reaches for an index only when EVERY arm
+ * Both purges are a disjunction, and PostgreSQL reaches for an index only when every arm
  * of one is covered. An index on `expires_at` alone leaves the `consumed_at` arm without
  * one, so the planner falls back to reading the table, walking the primary key or scanning
  * all of it, however selective the predicate is. These are the missing arms.
@@ -34,14 +34,14 @@ use Illuminate\Support\Facades\Schema;
  *
  * So: free in the regime a short-lived sign-in link produces, where almost every row
  * qualifies and walking the primary key in id order finds a chunk in the first rows it
- * reads, and worth about TWENTY-FOUR times the runtime in the steady state.
+ * reads, and worth about twenty-four times the runtime in the steady state.
  *
  * Both sides are measured equally warm on purpose. A cold scan, paying for its reads,
  * against a warm bitmap scan would suggest a larger factor; a ratio between two differently
  * warmed measurements is not a ratio.
  *
  * The planner stops using them between 1% and 5% qualifying, measured: above that, the
- * primary key reaches a full chunk sooner. And the worst case for the unindexed side is NOT
+ * primary key reaches a full chunk sooner. And the worst case for the unindexed side is not
  * the smallest slice: while fewer than `chunk` rows qualify the LIMIT never engages, so the
  * scan reads the whole table however little it finds.
  *
@@ -49,13 +49,13 @@ use Illuminate\Support\Facades\Schema;
  * purge's earlier form, a single limited DELETE; its two indexes rest on the same argument.
  *
  * Plain indexes, not partial ones, and not for size: in that earlier measurement a partial
- * index produced the same BitmapOr and was far SMALLER (1368 kB against 16 kB on the 1%
+ * index produced the same BitmapOr and was far smaller (1368 kB against 16 kB on the 1%
  * fixture, against 8 kB in the steady state). It also does not save the
  * write cost below, because PostgreSQL counts a predicate's columns among the attributes
  * that block a heap-only update. What actually decides it: a partial index does not exist
  * on MySQL 8.4, and one schema file for both engines is worth more than a size win on one.
  *
- * WHAT THESE INDEXES COST. Without them, the claim path's UPDATE touches only unindexed
+ * What these indexes cost. Without them, the claim path's UPDATE touches only unindexed
  * columns and stays a heap-only tuple update. With an index on `consumed_at` it cannot.
  * Measured over 10,000 real claims, with a control updating only
  * never-indexed columns in the same row:
@@ -94,7 +94,7 @@ return new class extends Migration
      *
      * The invitations tables are optional: a host that declined them still has to be able to
      * run this migration. And a host that adopts them later runs the create-table migration
-     * AFTER this one is already recorded, so this one never runs again -- which is why the
+     * after this one is already recorded, so this one never runs again -- which is why the
      * create-table migration carries the same two indexes and this one skips what it finds.
      *
      * The per-index guard also survives a half-applied run. MySQL has no schema transactions,

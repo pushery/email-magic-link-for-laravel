@@ -15,7 +15,7 @@ return new class extends Migration
             // has no passphrase; when set it holds a hash of a shared secret, made with
             // the application's configured hasher, that must be entered on the
             // confirmation page before the link is consumed. It is a lightweight gate,
-            // NOT the Fortify two-factor path.
+            // not the Fortify two-factor path.
             $table->string('passphrase_hash')->nullable();
         });
     }

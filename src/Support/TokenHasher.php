@@ -12,7 +12,7 @@ use SensitiveParameter;
  * The application key is used as the HMAC key so a leaked database alone cannot
  * be used to forge or recognize tokens. The raw secret is never stored.
  *
- * Retired keys are carried alongside the current one, because the hash is what FINDS a
+ * Retired keys are carried alongside the current one, because the hash is what finds a
  * row. Laravel supports rotating `APP_KEY` gently -- the new key signs, the listed
  * previous ones still verify -- and this package's link signatures honor that list.
  * Its hashes honor it too: otherwise a rotation would quietly orphan every live token.
@@ -69,7 +69,7 @@ final readonly class TokenHasher
         $matched = false;
 
         // Every candidate is compared even after one matches. Returning early would make
-        // the answer's TIMING depend on which key was used, and the whole point of
+        // the answer's timing depend on which key was used, and the whole point of
         // hash_equals() here is that comparing a secret leaks nothing.
         foreach ($this->candidates($plaintext) as $candidate) {
             $matched = hash_equals($expectedHash, $candidate) || $matched;

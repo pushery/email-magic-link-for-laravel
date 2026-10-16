@@ -175,7 +175,7 @@ Sign in to a second guard, with codes instead of links, behind a custom prefix.
 ],
 ```
 
-Reach for `guards` only when ONE installation must serve several guards and the
+Reach for `guards` only when one installation must serve several guards and the
 request picks between them by submitting a `guard` field. An unlisted value falls
 back to `guard` silently rather than erroring, so the endpoint never reveals which
 guards exist:
@@ -259,7 +259,9 @@ The handler's `accept()` runs inside the transaction that spends the token: crea
 account, set the password, return the user to sign them in (or `null` to accept without a
 session). Two routes register while it is on: `GET|POST /magic-link/invitation/{token}`.
 `revoke($email)` withdraws every open invitation for an address on the default guard; pass the
-guard to reach another one: `revoke($email, 'admin')`.
+guard to reach another one: `revoke($email, 'admin')`. Where several tenants invite on their own,
+pass the tenant as `scope:` to `invite()` and `revoke()`: an invitation then supersedes and revokes
+only within its scope, and the handler reads it back as `$invitation->scope`.
 
 ### Multi-tenancy
 

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace EmailMagicLink\Support;
 
 /**
- * Why a sign-in REQUEST was refused before anything was issued.
+ * Why a sign-in request was refused before anything was issued.
  *
  * The consume side reports its failures through ClaimFailure; the request side
  * had no counterpart, so a captcha failure or a held-back resend produced a

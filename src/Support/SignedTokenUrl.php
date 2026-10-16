@@ -14,7 +14,7 @@ use SensitiveParameter;
  * another host.
  *
  * Extracted so the sign-in confirmation link and the invitation link are built by
- * the SAME code. The host override is the part worth centralizing: it signs on a
+ * the same code. The host override is the part worth centralizing: it signs on a
  * generator of its own that carries the tenant origin, so the shared `url` singleton
  * is never written to. Forcing the origin on the singleton and "restoring" it with
  * `forceRootUrl(null)` would be a reset, not a restore: it would wipe whatever origin or
@@ -64,7 +64,7 @@ final class SignedTokenUrl
      * A generator for one signing call, bound to another origin.
      *
      * Constructed rather than cloned: UrlGenerator::withKeyResolver() clones, but a
-     * clone keeps its RouteUrlGenerator pointing at the ORIGINAL instance, so an
+     * clone keeps its RouteUrlGenerator pointing at the original instance, so an
      * origin forced on the clone is ignored by route(). A fresh instance builds its
      * own RouteUrlGenerator against itself. The key resolver is the one the framework
      * installs on the live generator, so the signature verifies with the same keys.

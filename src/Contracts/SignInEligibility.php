@@ -13,7 +13,7 @@ use Illuminate\Contracts\Auth\Authenticatable;
  * what those words mean, and the package owns only the question. The default
  * binding allows everybody, so an install that says nothing lets every account in.
  *
- * The answer is consulted at BOTH ends of the flow, and the second one is the
+ * The answer is consulted at both ends of the flow, and the second one is the
  * half that is easy to miss. Gating only issuance leaves a window: a link handed
  * out a minute before an account was suspended is still a valid credential
  * afterwards, and it opens a session. So the check runs again on redemption,

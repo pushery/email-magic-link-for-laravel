@@ -60,7 +60,7 @@ final readonly class DefaultInvalidLinkResponder implements InvalidLinkResponder
         // allowlist, never a denylist: the consume form posts a passphrase and the host's
         // acceptance form posts a password, and `except('code')` would write both into the
         // session store in the clear. The next secret field cannot land there either.
-        // The code form keys the generic failure on the CODE field: an unknown email and
+        // The code form keys the generic failure on the code field: an unknown email and
         // a wrong code still produce a byte-identical response (both come through here),
         // but the field marked invalid is the one that was wrong.
         $field = $failureRoute === 'email-magic-link.code.form' ? 'code' : 'email';

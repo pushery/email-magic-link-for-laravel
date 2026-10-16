@@ -22,5 +22,6 @@ final readonly class IssuedInvitation
         public string $guard,
         public CarbonInterface $expiresAt,
         public int $expiresInMinutes,
+        public ?string $scope = null,
     ) {}
 }

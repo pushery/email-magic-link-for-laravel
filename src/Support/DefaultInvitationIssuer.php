@@ -24,7 +24,7 @@ final readonly class DefaultInvitationIssuer implements InvitationIssuer
         private MagicLinkConfig $config,
     ) {}
 
-    public function invite(string $email, ?string $guard = null, ?array $context = null, ?string $invitedBy = null, ?string $baseUrl = null): IssuedInvitation
+    public function invite(string $email, ?string $guard = null, ?array $context = null, ?string $invitedBy = null, ?string $baseUrl = null, ?string $scope = null): IssuedInvitation
     {
         $resolvedGuard = $this->prepare($guard);
 
@@ -40,7 +40,7 @@ final readonly class DefaultInvitationIssuer implements InvitationIssuer
             throw InvitationsMisconfiguredException::routeMissing(self::ROUTE, $e);
         }
 
-        $issued = $this->store->issue($email, $resolvedGuard, $context, $invitedBy);
+        $issued = $this->store->issue($email, $resolvedGuard, $context, $invitedBy, scope: $scope);
 
         return new IssuedInvitation(
             SignedTokenUrl::for(self::ROUTE, $issued->record->expires_at, $issued->plaintext, $baseUrl),
@@ -48,17 +48,18 @@ final readonly class DefaultInvitationIssuer implements InvitationIssuer
             $resolvedGuard,
             $issued->record->expires_at,
             (int) ceil($this->config->invitationTtl() / 60),
+            $issued->record->scope,
         );
     }
 
-    public function revoke(string $email, ?string $guard = null): int
+    public function revoke(string $email, ?string $guard = null, ?string $scope = null): int
     {
         // Not narrowed to the guards that are open today. Revoking closes something and
         // opens nothing, and after an operator closes a guard, its outstanding invitations
         // are exactly the ones that have to stay withdrawable.
         $this->assertEnabled();
 
-        return $this->store->revoke($email, $guard ?? $this->config->guard());
+        return $this->store->revoke($email, $guard ?? $this->config->guard(), $scope);
     }
 
     /**
@@ -66,7 +67,7 @@ final readonly class DefaultInvitationIssuer implements InvitationIssuer
      * persisted until every check here has passed, so a rejected request mints
      * no row.
      *
-     * Note what is deliberately ABSENT compared to the sign-in issuer: there is no
+     * Note what is deliberately absent compared to the sign-in issuer: there is no
      * assertUserBelongsToGuard(). That check re-resolves the user through the
      * guard's provider, and requiring it is precisely what makes an invitation to
      * somebody without an account impossible — the gap this whole feature exists to

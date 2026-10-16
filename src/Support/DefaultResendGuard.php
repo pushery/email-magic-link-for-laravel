@@ -23,7 +23,7 @@ use RuntimeException;
  * short cache lock so a burst of concurrent requests for one key cannot each
  * read the same window and slip past the cap.
  *
- * This guard ALWAYS guards. The `resend.enabled` switch is checked by the
+ * This guard always guards. The `resend.enabled` switch is checked by the
  * package's own request endpoint before it calls in — never here. Checked in
  * attempt() and peek(), it would be a global kill-switch: a host that injects this
  * contract for its own keys (the contract invites that, and names
@@ -40,7 +40,7 @@ final readonly class DefaultResendGuard implements ResendGuard
     private const string LOCK_PREFIX = 'eml:resend:lock:';
 
     /**
-     * How long a second evaluation WAITS for the first, and what a caller is told to wait
+     * How long a second evaluation waits for the first, and what a caller is told to wait
      * when the guard cannot get the lock at all -- the same question from the outside:
      * come back after roughly as long as the contention should last.
      */
@@ -205,9 +205,9 @@ final readonly class DefaultResendGuard implements ResendGuard
      */
     private function write(string $key, array $sends): void
     {
-        // The margin is the LOCK's TTL, not the wait budget, and the difference is the
+        // The margin is the lock's TTL, not the wait budget, and the difference is the
         // whole reason these are two constants: the record has to outlive the window it
-        // describes PLUS the longest anyone can be holding the lock over it. Padded with
+        // describes plus the longest anyone can be holding the lock over it. Padded with
         // the wait budget instead, a holder that runs long lets the record expire
         // mid-evaluation -- and a forgotten record reads as "no sends yet".
         $ttl = max($this->config->resendWindow()['seconds'], $this->config->resendCooldown()['max']) + self::LOCK_HOLD_SECONDS;

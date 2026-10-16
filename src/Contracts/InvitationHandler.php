@@ -9,7 +9,7 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Http\Request;
 
 /**
- * What accepting an invitation MEANS in your application.
+ * What accepting an invitation means in your application.
  *
  * This is the one seam the invitation flow has, and the package deliberately owns
  * nothing behind it. Setting a password, creating the account, making somebody a
@@ -23,7 +23,7 @@ use Illuminate\Http\Request;
  * it. Return null and the invitation is accepted without a session, which is what
  * you want when acceptance still has to be approved by somebody else.
  *
- * Runs INSIDE the transaction that spends the token: throw, and the acceptance is
+ * Runs inside the transaction that spends the token: throw, and the acceptance is
  * rolled back with it, so a half-created account cannot outlive a spent invitation.
  * Keep the work here short for the same reason.
  *

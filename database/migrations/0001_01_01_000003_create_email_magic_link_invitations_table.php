@@ -11,7 +11,7 @@ return new class extends Migration
     public function up(): void
     {
         // A separate table rather than a third channel on magic_link_tokens, and the
-        // reason is the addressee: an invitation is issued to an EMAIL, for someone who
+        // reason is the addressee: an invitation is issued to an email, for someone who
         // may have no account at all, while every row over there is bound to a user_id
         // that is indexed and NOT NULL. Widening that column would mean altering a
         // populated, indexed table in every application that already adopted the package.
@@ -24,6 +24,11 @@ return new class extends Migration
 
             $table->string('email');
             $table->string('guard');
+            // Who the invitation belongs to beyond its guard, such as the tenant that sent it.
+            // Supersession and revocation stay inside it. Carried here as well as in the scope
+            // migration, for the same reason as the indexes below: a consumer who adopts this
+            // table later never runs that migration again.
+            $table->string('scope')->nullable();
 
             // Keyed hash of the secret; the raw token exists only in the message that
             // carries it. UNIQUE rather than merely indexed, unlike magic_link_tokens: a
@@ -38,7 +43,7 @@ return new class extends Migration
 
             $table->timestamp('expires_at')->index();
             // Indexed here as well as in the purge-index migration, and that is not a
-            // duplicate. A consumer who declines the invitations tables and adopts them LATER
+            // duplicate. A consumer who declines the invitations tables and adopts them later
             // runs this migration after the other one is already recorded, so the other one
             // never runs again -- the two indexes the purge needs would never exist for them.
             // The later migration skips whatever it finds, so a fresh install gets them once.

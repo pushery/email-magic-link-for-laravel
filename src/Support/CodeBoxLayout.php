@@ -10,7 +10,7 @@ namespace EmailMagicLink\Support;
  * WireKit's otp-input takes a `group` prop (2.53 and later): the groups do not break inside, and a
  * row that does not fit breaks on a group boundary, so a code breaks where it has a boundary and
  * nowhere else. This class names the group size, and the one thing that is not WireKit's business:
- * how wide THIS package's card may grow so a desktop keeps the whole code in one row. A card width
+ * how wide this package's card may grow so a desktop keeps the whole code in one row. A card width
  * is a decision about the screen around the component, not about the component.
  *
  * The sizes are WireKit's: a box is `w-10` (2.5rem) and the gap `gap-2` (0.5rem).
@@ -22,7 +22,7 @@ final readonly class CodeBoxLayout
     private const float GAP_REM = 0.5;
 
     /**
-     * The gap BETWEEN groups, which is wider than the gap between boxes.
+     * The gap between groups, which is wider than the gap between boxes.
      *
      * That width is the visible separator — WireKit chose a gap over a glyph so a screen reader has
      * nothing extra to read out or hide. It matters here because it makes a grouped row wider than
@@ -58,7 +58,7 @@ final readonly class CodeBoxLayout
      * container stops at six boxes per row where three would fit. At the lengths that exist it
      * costs nothing: a group of six is 17.5rem, which fits the card this package widens for it.
      *
-     * Null below THREE boxes, and the number is WireKit's rather than a preference. Its
+     * Null below three boxes, and the number is WireKit's rather than a preference. Its
      * StrictnessGate clamps `group` to the range 2..length, so half of a two-box code is 1 and
      * would be refused, with an exception in strict mode and a logged warning otherwise, and
      * replaced by the length — a prop that says something and does nothing. Below three there is also nothing to say: half of two is a group per box, which

@@ -13,10 +13,10 @@ use Illuminate\Http\Request;
 /**
  * An invitation was spent and the handler ran to completion.
  *
- * Fired AFTER the transaction commits, so a listener can rely on the acceptance
+ * Fired after the transaction commits, so a listener can rely on the acceptance
  * having actually happened -- and so a slow listener cannot hold a database
  * transaction open. The dispatch site already sits outside the package's own
- * transaction; ShouldDispatchAfterCommit makes the promise hold when the HOST
+ * transaction; ShouldDispatchAfterCommit makes the promise hold when the host
  * wrapped the request in one (a transactional middleware, a test), which call
  * order alone could not. `$user` is whatever the handler returned: null means
  * the invitation was accepted without signing anybody in.

@@ -1,4 +1,4 @@
-{{-- The language the page SPEAKS, not the one that was asked for: on a locale this package
+{{-- The language the page speaks, not the one that was asked for: on a locale this package
      has no bundle for (and the host published none), the strings fall back, and a `lang`
      that still names the requested locale sends a screen reader to the wrong voice. --}}
 @php($emlLocale = app('translator')->has('email-magic-link::messages.sign_in', app()->getLocale(), false) ? app()->getLocale() : (string) config('app.fallback_locale', 'en'))
@@ -26,11 +26,11 @@
 
     {{-- WireKit's design tokens (the --color-wk-*, --padding-wk-*, --radius-wk-*
          … custom properties every component reads) ship in dist/wirekit.css and
-         are injected ONLY by this directive. Without it every var(--*-wk-*)
+         are injected only by this directive. Without it every var(--*-wk-*)
          resolves to nothing and the components render completely unstyled.
 
          The nonce argument exists since WireKit 2.22.0. Under a policy built on
-         'strict-dynamic' the nonce is the ONLY thing that grants a tag — same origin
+         'strict-dynamic' the nonce is the only thing that grants a tag — same origin
          is not enough — and that is the policy an auth page is most likely to carry.
          An empty expression is the directive's default, so a host without a policy
          renders byte-identically. --}}
@@ -84,7 +84,7 @@
         }
         .eml-shell { width: 100%; max-width: 24rem; padding: 2rem; box-sizing: border-box; }
         {{-- The card widens for a long code so a desktop keeps the whole thing in one row: how
-             wide THIS package's card may grow is a decision about the screen around the component.
+             wide this package's card may grow is a decision about the screen around the component.
              Where the code breaks is WireKit's `group` prop. --}}
         .eml-shell:has(.eml-otp) { max-width: {{ $emlCodeBoxes->cardMaxWidthRem() }}rem; }
     </style>
@@ -92,7 +92,7 @@
 <body>
     {{-- The consumer's two slots, above and below the card. Both are null by default and
          render nothing; `ui.header_view` is where a wordmark belongs and `ui.footer_view`
-         where a language switcher does. They sit OUTSIDE <main> on purpose: a brand mark and
+         where a language switcher does. They sit outside <main> on purpose: a brand mark and
          a locale control are not the main content of a sign-in screen. The body's grid stacks
          all three as centered rows, kept together by `align-content`, without either slot
          touching the card's width. --}}
@@ -105,8 +105,8 @@
     @if ($emlFooterView = $emlConfig->uiFooterView())
         @include($emlFooterView)
     @endif
-    {{-- ORDER IS LOAD-BEARING. @wirekitScripts registers WireKit's Alpine plugins
-         on the `alpine:init` event, and @livewireScripts is what BOOTS Alpine — so
+    {{-- ORDER IS load-bearing. @wirekitScripts registers WireKit's Alpine plugins
+         on the `alpine:init` event, and @livewireScripts is what boots Alpine — so
          WireKit has to come first or its plugins can miss the event they are waiting
          for. WireKit's own installer writes exactly this order into a layout, and its
          source says why. A missed plugin registration renders the screens styled all
@@ -118,9 +118,9 @@
          the one that starts; WireKit's `csp` bundle detects it, registers against it
          and never starts an Alpine of its own. See "WireKit screens" in the docs.
 
-         BOTH tags take the nonce, and the second one is easy to forget: WireKit
+         Both tags take the nonce, and the second one is easy to forget: WireKit
          emits its own <script>, and @livewireScripts emits Livewire's. Without an
-         argument Livewire falls back to Vite::cspNonce(), which is a DIFFERENT
+         argument Livewire falls back to Vite::cspNonce(), which is a different
          source than this package's ScriptNonce contract — so a host that resolves
          its nonce through us and not through Vite would get a nonced WireKit tag and
          a bare Livewire one. Under 'strict-dynamic' the nonce is the only thing that

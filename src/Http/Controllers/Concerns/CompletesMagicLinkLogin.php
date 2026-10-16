@@ -52,7 +52,7 @@ trait CompletesMagicLinkLogin
         // from the token's id. The row is spent either way, which is the fail-closed
         // direction, same as the guard check above.
         //
-        // Deliberately BEFORE the cooldown reset and the verified event. Announcing a
+        // Deliberately before the cooldown reset and the verified event. Announcing a
         // verification that yields no session would have hosts acting on a sign-in that
         // did not happen, and clearing the cooldown is observable: the next request for
         // this address would skip a throttle it is otherwise subject to, which is the

@@ -3,14 +3,14 @@
      enhancement only: with JavaScript off the button stays usable and the
      server simply holds the next request back again.
 
-     The script is an EXTERNAL same-origin file, not an inline block, and that is
+     The script is an external same-origin file, not an inline block, and that is
      a CSP decision rather than a tidiness one. Inline, it needed a nonce under any
      strict policy — and a host whose policy issues no nonces had nothing to pass
      through, so for them the countdown could not be made to run at all. A file
      from the app's own origin satisfies `script-src 'self'` with no host action.
 
      It still carries the nonce when there is one, and that is not belt-and-braces:
-     a policy built on 'strict-dynamic' IGNORES 'self', so under one the nonce is
+     a policy built on 'strict-dynamic' ignores 'self', so under one the nonce is
      the only thing that grants the tag. See the ScriptNonce contract. --}}
 @php($resendSeconds = (int) session('resend_retry_after'))
 @php($emlNonce = app(\EmailMagicLink\Contracts\ScriptNonce::class)->value())
@@ -35,7 +35,7 @@
         aria-label="{{ __('email-magic-link::messages.resend_countdown_label') }}"
         data-eml-resend
         data-seconds="{{ $resendSeconds }}"
-        {{-- Both forms, because the tick counts down THROUGH one: a single template
+        {{-- Both forms, because the tick counts down through one: a single template
              would have to bake a plural in and say "1 seconds" for a whole second, in
              every language. The script picks by the number it is about to render. --}}
         data-template-one="{{ trans_choice('email-magic-link::messages.resend_throttled', 1, ['seconds' => '__seconds__']) }}"

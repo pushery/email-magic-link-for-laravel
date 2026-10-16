@@ -32,7 +32,7 @@ final readonly class DefaultTokenStore implements TokenStore
 {
     /**
      * How the purge claims its chunk. `skip locked` is the load-bearing half: it makes the
-     * purge the one statement in this package that never WAITS on a row lock, and a
+     * purge the one statement in this package that never waits on a row lock, and a
      * statement that never waits cannot be one end of a deadlock cycle.
      *
      * Duplicated in the sibling store rather than shared, and pinned against it by
@@ -84,7 +84,7 @@ final readonly class DefaultTokenStore implements TokenStore
             : null;
 
         if ($channel === 'code') {
-            // Keep at most one active code per user PER GUARD so a claim is
+            // Keep at most one active code per user per guard so a claim is
             // unambiguous and issuing for one guard never clobbers another's code.
             MagicLinkToken::model()::query()
                 ->where('user_id', $userId)
@@ -114,7 +114,7 @@ final readonly class DefaultTokenStore implements TokenStore
     public function claimLink(#[SensitiveParameter] string $token, #[SensitiveParameter] ?string $passphrase = null): ClaimResult
     {
         // The whole read-check-claim-read runs in a transaction, and the reason is the
-        // READ side rather than the write. Connection::getReadPdo() hands back the read
+        // read side rather than the write. Connection::getReadPdo() hands back the read
         // connection unless a transaction is open, `sticky` is set after a prior write, or
         // the app forced read-on-write — and claiming a link satisfies none of those: it is
         // usually the first database work of the request. On a deployment with a read
@@ -128,7 +128,7 @@ final readonly class DefaultTokenStore implements TokenStore
             $now = Carbon::now();
             $hash = $this->resolveHash($token);
 
-            // Verify the passphrase BEFORE the atomic claim, so a wrong passphrase
+            // Verify the passphrase before the atomic claim, so a wrong passphrase
             // never spends a use of a multi-use link. A generic failure keeps the
             // response indistinguishable from an unknown or expired token.
             $existing = $this->findLinkByHash($hash);
@@ -258,8 +258,8 @@ final readonly class DefaultTokenStore implements TokenStore
             // every claim and every new link has to write into. PurgeChunkIsolation says why.
             $isolation->beforeChunk();
 
-            // Two statements rather than one, and the SECOND word is what matters: the purge
-            // claims its chunk with `for update skip locked`, so it NEVER waits on a row
+            // Two statements rather than one, and the second word is what matters: the purge
+            // claims its chunk with `for update skip locked`, so it never waits on a row
             // somebody else is holding. A statement that never waits cannot be one end of a
             // deadlock cycle, whatever order the other end takes its locks in.
             //
@@ -274,7 +274,7 @@ final readonly class DefaultTokenStore implements TokenStore
             // always afford to come back later, which is exactly why it should be the one
             // that yields.
             //
-            // The lock has to be held across BOTH statements, hence the transaction. Taken in
+            // The lock has to be held across both statements, hence the transaction. Taken in
             // autocommit the locks would drop the moment the select returned, and the delete
             // would be back to waiting on whatever moved in between.
             $removed = $this->connection()->transaction(function () use ($now, $chunk): int {
@@ -345,7 +345,7 @@ final readonly class DefaultTokenStore implements TokenStore
      * the counter below zero (the `uses_remaining > 0` guard fails the loser).
      * Returns true only for a claim that spent a use.
      *
-     * consumed_at is assigned BEFORE the decrement in the SET list on purpose:
+     * consumed_at is assigned before the decrement in the SET list on purpose:
      * MySQL evaluates SET left to right and lets a later clause see the updated
      * value, so the CASE must read uses_remaining while it still holds the
      * pre-decrement count. PostgreSQL and SQLite always read the old row values,
@@ -367,9 +367,9 @@ final readonly class DefaultTokenStore implements TokenStore
         $bindings = [$now, $now, $value, $channel, $now];
 
         if ($connection->getDriverName() === 'pgsql') {
-            // Explicit `false`: select() defaults to the READ connection, and this one is
+            // Explicit `false`: select() defaults to the read connection, and this one is
             // an UPDATE. Both callers hold a transaction, so getReadPdo() would return the
-            // write PDO anyway — but that makes the safety a property of the CALLER, and a
+            // write PDO anyway — but that makes the safety a property of the caller, and a
             // future third caller would inherit a silent write-to-replica instead of a
             // visible mistake.
             return $connection->select($sql.' returning id', $bindings, false) !== [];
@@ -429,7 +429,7 @@ final readonly class DefaultTokenStore implements TokenStore
         // The same canonical distinct-character set the entropy guardrail
         // certifies, so the generated distribution matches the proven keyspace.
         //
-        // EFFECTIVE, not configured: minting a character that the fold then collapses
+        // Effective, not configured: minting a character that the fold then collapses
         // produces a code that can never be redeemed -- the failure the fold exists to
         // prevent, arriving from the other side. The generator and
         // the guardrail must read the same set or one of them is describing an

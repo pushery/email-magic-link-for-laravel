@@ -1,4 +1,4 @@
-{{-- The language the page SPEAKS, not the one that was asked for: on a locale this package
+{{-- The language the page speaks, not the one that was asked for: on a locale this package
      has no bundle for (and the host published none), the strings fall back, and a `lang`
      that still names the requested locale sends a screen reader to the wrong voice. --}}
 @php($emlLocale = app('translator')->has('email-magic-link::messages.sign_in', app()->getLocale(), false) ? app()->getLocale() : (string) config('app.fallback_locale', 'en'))
@@ -14,7 +14,7 @@
     <title>@yield('title', __('email-magic-link::messages.sign_in')) &raquo; {{ $emlConfig->applicationName() }}</title>
 
     {{-- The application's per-response CSP nonce, or null when it has no policy.
-         Under a strict policy a block without it is blocked, and the block below IS the
+         Under a strict policy a block without it is blocked, and the block below is the
          entire styling of these screens: the sign-in page would arrive unstyled. The
          countdown script degrades politely when it is blocked. This does not.
 
@@ -24,11 +24,11 @@
     {{-- An expression rather than @if: a Blade conditional inside a tag leaves its
          whitespace behind, so the tag renders as `<style >`.
 
-         INLINE, not a file, and that was decided rather than inherited.
+         Inline, not a file, and that was decided rather than inherited.
          The countdown's script moved out of the page so a strict `script-src 'self'`
          accepts it without a nonce, and the same argument appears to apply here. It does
          not: this whole screen fits inside one initial congestion window, so it paints in
-         ONE round trip. A stylesheet in a file would cost a second one, render-blocking,
+         one round trip. A stylesheet in a file would cost a second one, render-blocking,
          on a page that is entirely above the fold — to save bytes the browser has already
          received. That is the standard treatment of critical CSS, and CriticalCssBudgetTest
          holds the threshold the decision rests on. --}}
@@ -103,7 +103,7 @@
 <body>
     {{-- The consumer's two slots, above and below the card. Both are null by default and
          render nothing; `ui.header_view` is where a wordmark belongs and `ui.footer_view`
-         where a language switcher does. They sit OUTSIDE <main> on purpose: a brand mark and
+         where a language switcher does. They sit outside <main> on purpose: a brand mark and
          a locale control are not the main content of a sign-in screen. The body's grid stacks
          all three as centered rows, kept together by `align-content`, without either slot
          touching the card's width. --}}

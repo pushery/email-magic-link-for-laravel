@@ -14,7 +14,7 @@ use EmailMagicLink\Support\IssuedInvitationToken;
  * Consumption is a single race-free conditional claim, so two concurrent
  * requests for the same invitation can never both succeed.
  *
- * An invitation is addressed to an EMAIL, not to a user. That is the difference
+ * An invitation is addressed to an email, not to a user. That is the difference
  * from TokenStore, and it is the reason this contract exists: a sign-in token can
  * only be issued for somebody who already has an account.
  */
@@ -23,18 +23,22 @@ interface InvitationStore
     /**
      * Issue a fresh invitation and return the plaintext secret.
      *
-     * Issuing supersedes any earlier unaccepted invitation for the same email and
-     * guard, so re-inviting someone never leaves two working links behind.
+     * Issuing supersedes any earlier unaccepted invitation for the same email, guard
+     * and scope, so re-inviting someone never leaves two working links behind. An
+     * invitation without a scope supersedes the unscoped ones only.
      *
      * @param  array<string, mixed>|null  $context  Whatever the inviting side decided in
      *                                              advance. Stored verbatim and handed back
      *                                              on acceptance; never interpreted here.
      * @param  int|null  $ttl  Lifetime in seconds; null uses the configured default.
+     * @param  string|null  $scope  Who the invitation belongs to beyond its guard, such as
+     *                              the tenant that sent it. Stored and handed back on
+     *                              acceptance; supersession stays inside it.
      */
-    public function issue(string $email, string $guard, ?array $context = null, ?string $invitedBy = null, ?int $ttl = null): IssuedInvitationToken;
+    public function issue(string $email, string $guard, ?array $context = null, ?string $invitedBy = null, ?int $ttl = null, ?string $scope = null): IssuedInvitationToken;
 
     /**
-     * Look up an invitation by its plaintext token WITHOUT consuming it.
+     * Look up an invitation by its plaintext token without consuming it.
      *
      * Read-only by contract. It is what lets the confirmation page reject a dead
      * invitation before asking the recipient for anything.
@@ -47,11 +51,12 @@ interface InvitationStore
     public function claim(string $token): InvitationClaimResult;
 
     /**
-     * Revoke every unaccepted invitation for the email and guard. Returns the number
-     * revoked. An already accepted invitation is left alone -- it is a record of
-     * something that happened, not an open door.
+     * Revoke every unaccepted invitation for the email and guard, in the given scope or,
+     * without one, in every scope. Returns the number revoked. An already accepted
+     * invitation is left alone -- it is a record of something that happened, not an
+     * open door.
      */
-    public function revoke(string $email, string $guard): int;
+    public function revoke(string $email, string $guard, ?string $scope = null): int;
 
     /**
      * Delete expired invitations, and accepted or revoked ones past the configured

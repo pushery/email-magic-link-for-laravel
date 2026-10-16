@@ -23,7 +23,7 @@ use EmailMagicLink\Support\ResendDecision;
  * keys its request endpoint with "request:{email}", and keys are shared per
  * store.
  *
- * A key you own is ALWAYS guarded. The `resend.enabled` config switch turns off
+ * A key you own is always guarded. The `resend.enabled` config switch turns off
  * throttling on the package's own request endpoint and nothing else: it is
  * checked by that endpoint, not by the guard, so it never disarms a host key.
  */

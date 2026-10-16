@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace EmailMagicLink\Support;
 
 /**
- * Lays the package's shipped defaults UNDER a host's published config.
+ * Lays the package's shipped defaults under a host's published config.
  *
  * Laravel's `mergeConfigFrom` uses `array_merge`, which is shallow: a host that
- * published `config/email-magic-link.php` once keeps receiving new TOP-LEVEL keys
+ * published `config/email-magic-link.php` once keeps receiving new top-level keys
  * from later releases, but a key added inside a block it already published never
  * arrives — the host's whole block wins. The result is silent: no error, no
  * warning, the feature simply runs on `null` instead of its default.
@@ -19,12 +19,12 @@ namespace EmailMagicLink\Support;
  *
  * ## Why not array_merge_recursive
  *
- * Because it CONCATENATES lists rather than replacing them. A host setting
+ * Because it concatenates lists rather than replacing them. A host setting
  * `guards => ['admin']` against a package default of `['web']` would end up with
  * `['web', 'admin']` — silently re-adding a guard it deliberately removed. For a
  * guard allowlist that is a security regression, not a merge.
  *
- * So the rule is: recurse into associative arrays, and treat a LIST as one
+ * So the rule is: recurse into associative arrays, and treat a list as one
  * indivisible value the host either replaced or did not. That is the only reading
  * under which "the host wins on everything it set" stays true.
  */

@@ -17,7 +17,7 @@ use Symfony\Component\HttpFoundation\Response;
  * "was this ever a real link", which is the question the uniformity exists to leave
  * unanswered.
  *
- * Shared by the sign-in flow and the invitation flow so both have ONE response path.
+ * Shared by the sign-in flow and the invitation flow so both have one response path.
  * Two paths could drift, and drift between two refusals is exactly what makes them
  * tell apart.
  */

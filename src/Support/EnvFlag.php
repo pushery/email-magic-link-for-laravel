@@ -7,7 +7,7 @@ namespace EmailMagicLink\Support;
 use Illuminate\Support\Str;
 
 /**
- * Reads an env-backed switch whose OFF position loosens a protection.
+ * Reads an env-backed switch whose off position loosens a protection.
  *
  * `env()` hands a variable that is set but empty back as "", and `filter_var` reads "" as
  * false. On a switch that gates a path that is the safe direction: the path closes, and

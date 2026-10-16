@@ -91,7 +91,7 @@ return [
     |
     | Case handling follows the alphabet. One that writes a single case accepts
     | either case on submission and folds toward the one it mints, so a reader may
-    | type an all-uppercase code in lowercase. One that writes BOTH cases is case
+    | type an all-uppercase code in lowercase. One that writes both cases is case
     | sensitive: there `a` and `A` are distinct characters that are both minted,
     | and folding would make valid codes unredeemable.
     |
@@ -149,12 +149,12 @@ return [
     | Two different budgets, and collapsing them into one number is how a lock
     | silently stops locking.
     |
-    | `lock_block_seconds` is how long a SECOND caller waits for the first one to
+    | `lock_block_seconds` is how long a second caller waits for the first one to
     | finish before giving up.
     |
-    | It does NOT apply to the sign-in request endpoint, and that is a security
+    | It does not apply to the sign-in request endpoint, and that is a security
     | property rather than a tuning choice. The lock is taken only for an address
-    | that RESOLVES to a user, so the time a request spends queueing for it is a
+    | that resolves to a user, so the time a request spends queueing for it is a
     | readable answer to whether that account exists -- measured at 827 ms against
     | 12 ms with this set to 1, and the caller produces the contention himself by
     | sending two requests at once. That endpoint therefore gives up at once, and
@@ -171,7 +171,7 @@ return [
     | database transaction inside it, or the lock expires while the work is
     | still running and a second request walks straight in. PostgreSQL does not
     | cap that transaction by default (`statement_timeout` is the host's to set),
-    | and MySQL rolls back only a lock WAIT after `innodb_lock_wait_timeout`
+    | and MySQL rolls back only a lock wait after `innodb_lock_wait_timeout`
     | (50 seconds by default), which does not bound the transaction's own
     | runtime -- which is why the default is generous rather than tight.
     |
@@ -269,7 +269,7 @@ return [
     |--------------------------------------------------------------------------
     |
     | The notification used to deliver the link or code. To control branding,
-    | channels, and copy, point this at a class that EXTENDS MagicLinkNotification.
+    | channels, and copy, point this at a class that extends MagicLinkNotification.
     |
     | It is not a contract, and a class that does not extend it is ignored rather
     | than rejected: the package falls back to the bundled notification, so mail
@@ -401,7 +401,7 @@ return [
     | spatie/laravel-csp registers, and falls back to a global csp_nonce()
     | function for hosts that define one. Set it only when your nonce lives
     | somewhere else entirely.
-    | Under a strict policy without a nonce these are blocked SILENTLY — the screen
+    | Under a strict policy without a nonce these are blocked silently — the screen
     | renders unstyled, and under 'strict-dynamic' the countdown never runs.
     |
     | The WireKit screens have one more requirement, and it is not a nonce. Their
@@ -420,7 +420,7 @@ return [
     |      force-injects Livewire's assets (that is how Alpine reaches a page with no
     |      Livewire component on it), and Livewire compiles its own directives at
     |      runtime the same way — so the page still needs "unsafe-eval" unless the app
-    |      also runs Livewire's CSP distribution. The bundle also CONTAINS Alpine and
+    |      also runs Livewire's CSP distribution. The bundle also contains Alpine and
     |      starts it, so an app on it must not load its own as well.
     |
     */
@@ -447,7 +447,7 @@ return [
          * those becomes yours to carry by hand. These give you the two places where you
          * have something to say and leave the rest here.
          *
-         * A name that resolves to no view is DROPPED and logged at `warning`, never thrown:
+         * A name that resolves to no view is dropped and logged at `warning`, never thrown:
          * this renders on the sign-in path, where a typo would lock everyone out rather
          * than spoil a screen.
          */
@@ -508,13 +508,13 @@ return [
     | your application with RateLimiter::for() using the same names. The "limits"
     | defaults below are used by the bundled limiter definitions.
     |
-    | "request" covers ONE route (POST magic-link). "consume" covers THREE, which
+    | "request" covers one route (POST magic-link). "consume" covers three, which
     | therefore share one budget: POST magic-link/verify/{token}, POST
-    | magic-link/code, and POST magic-link/invitation/{token}. All three SPEND a
+    | magic-link/code, and POST magic-link/invitation/{token}. All three spend a
     | credential.
     |
     | "invitation_view" covers the one route that is throttled without spending
-    | anything: the GET that DISPLAYS an invitation. It is guarded because every
+    | anything: the GET that displays an invitation. It is guarded because every
     | call with a valid link costs a lookup and a render of your acceptance view
     | (without a valid signature the page refuses before it looks anything up, so
     | it confirms nothing about a guessed token) -- but out of its own budget,
@@ -573,11 +573,11 @@ return [
     | atomic locks (the array, file, database, redis, and memcached stores all
     | do); leave "store" null to use the default cache store.
     |
-    | The state IS a cache entry: `cache:clear` resets every cooldown and every
+    | The state is a cache entry: `cache:clear` resets every cooldown and every
     | rolling window at once, and the array store holds it for one process only,
     | so on that store the guard throttles nothing outside a test.
     |
-    | "enabled" turns off throttling on THIS package's request endpoint and
+    | "enabled" turns off throttling on this package's request endpoint and
     | nothing else. Keys you own stay guarded — the switch is checked by the
     | endpoint, not by the guard, so disabling magic-link throttling can never
     | disarm your own flood protection.
@@ -609,7 +609,7 @@ return [
     |
     | Every request can create a token row, so the table grows unbounded without a
     | regular purge. The package ships the `email-magic-link:purge` command; this
-    | block decides whether it also SCHEDULES it for you.
+    | block decides whether it also schedules it for you.
     |
     | Off by default, deliberately. A package that deletes rows on a schedule
     | nobody asked for is doing something an operator should choose, and hosts
@@ -650,20 +650,20 @@ return [
     |--------------------------------------------------------------------------
     |
     | A magic link signs in somebody who already exists. An invitation does the
-    | opposite: it puts an account INTO SERVICE for an address that may have no
+    | opposite: it puts an account into service for an address that may have no
     | account at all -- setting a password, confirming the address, making someone a
     | member with roles decided in advance by whoever invited them.
     |
     | The package owns the token: it issues one, supersedes the previous one when you
     | re-invite, rejects an unknown, expired, accepted or revoked one identically, and
-    | spends it exactly once. It does NOT own what acceptance means. Setting a
+    | spends it exactly once. It does not own what acceptance means. Setting a
     | password, creating membership and granting roles are your domain, and they reach
     | you through "handler" -- a class implementing EmailMagicLink\Contracts\
     | InvitationHandler. Return an authenticatable from it and the package signs that
     | user in through the same path a magic link uses, including the Fortify two-factor
     | handoff; return null and the invitation is accepted without a session.
     |
-    | "view" is the name of YOUR acceptance screen. No screen ships with the package:
+    | "view" is the name of your acceptance screen. No screen ships with the package:
     | one that carried a password field would put credential handling inside a package
     | that deliberately handles none. The package renders your view only after the
     | token has already been checked, so a dead invitation is refused before the

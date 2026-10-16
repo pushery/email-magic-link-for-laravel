@@ -28,19 +28,19 @@ use Symfony\Component\HttpFoundation\Response;
  *
  * The only state-changing step of the flow, and the only one behind CSRF.
  *
- * The claim and the host's handler run in ONE transaction. That is what makes a
+ * The claim and the host's handler run in one transaction. That is what makes a
  * thrown handler safe: a validation failure on a too-short password, or a unique
  * constraint losing a race, rolls the acceptance back with it, and the invited
  * person's link still works. The alternative -- spend first, create after -- turns
  * every handler failure into a burnt invitation and a support request.
  *
- * Signing in happens AFTER the commit and goes through the same authenticator
+ * Signing in happens after the commit and goes through the same authenticator
  * singleton a magic link uses, which the Fortify bridge decorates. So an invited
  * person Fortify considers two-factor-enabled lands in Fortify's challenge instead
  * of being quietly signed in -- which the package gets for free precisely because
  * the host does not call Auth::login() itself.
  *
- * The signature is verified HERE rather than by the `signed` middleware, for the same
+ * The signature is verified here rather than by the `signed` middleware, for the same
  * reason the GET checks it itself: that middleware answers a bad signature with 403
  * and an unknown token with the generic page, and telling those apart tells a caller
  * whether the token was ever real. Checking it here folds both into one refusal.
@@ -77,7 +77,7 @@ final readonly class AcceptInvitationController
             return $this->refuse($request, ClaimFailure::Revoked);
         }
 
-        // The closure returns EITHER a failure OR the pair, rather than writing into
+        // The closure returns either a failure or the pair, rather than writing into
         // captured variables and reporting success separately. With by-reference captures
         // nothing can know the pair was set, which forced a third branch that no input can
         // reach -- and an unreachable branch is not a hole to test, it is a shape to fix.
@@ -95,6 +95,7 @@ final readonly class AcceptInvitationController
                 $result->invitation->guard,
                 $result->invitation->context,
                 $result->invitation->invited_by,
+                $result->invitation->scope,
             );
 
             $user = app(InvitationHandler::class)->accept($accepted, $request);
@@ -127,13 +128,13 @@ final readonly class AcceptInvitationController
 
     /**
      * SessionGuard::login() keeps only the identifier, and every later request resolves it
-     * through the guard's OWN provider. A handler that returns a model of another provider
+     * through the guard's own provider. A handler that returns a model of another provider
      * would make the invited person whichever account of that provider carries the same
      * id, so the user has to be one this guard's provider hands back -- the check the Mint
      * API makes before it issues.
      *
      * An Eloquent provider is answered by the model class alone: a same-class user with
-     * this id IS the account the provider will resolve, and asking the database again
+     * this id is the account the provider will resolve, and asking the database again
      * right after the handler created the row would read a replica that has not seen it.
      */
     private function assertBelongsToGuard(Authenticatable $user, string $guard): void

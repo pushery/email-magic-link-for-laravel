@@ -4,6 +4,18 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.35.0] - 2026-10-17
+
+### ✨ Added
+
+- **The resend window and the retention of settled invitations can be set from the environment.** `EMAIL_MAGIC_LINK_RESEND_WINDOW_MINUTES` sets `resend.window.minutes`, and `EMAIL_MAGIC_LINK_INVITATION_RETAIN_ACCEPTED_DAYS` sets `invitations.retain_accepted_days`, where `0` deletes accepted and revoked invitations as soon as they settle. A value that is not a number, or lies below the smallest usable one, keeps the shipped value, and `email-magic-link:doctor` names it.
+
+### 🐛 Fixed
+
+- **A published migration no longer calls a class marked internal.** `EmailMagicLink\Support\TableLookup` resolves a table the way a query on the same connection does, and two migrations this package publishes call it: `add_scope_to_email_magic_link_invitations` and `index_the_purge_predicates`. Marked internal, it turned the analysis of a host that checks calls into internal code red over a file the host had only published. It is public API now.
+
+- **`EMAIL_MAGIC_LINK_LOCK_BLOCK_SECONDS` and `EMAIL_MAGIC_LINK_LOCK_HOLD_SECONDS` are read like the other numbers of the configuration.** A value that is not a number, or is below 1, keeps the shipped one, and `email-magic-link:doctor` names it. Such a value used to stand in the configuration as written, and the issuance lock replaced it with its default without a word.
+
 ## [0.34.0] - 2026-10-16
 
 Invitations can carry a scope, such as the tenant that sent them, so one tenant re-inviting an address no longer withdraws the invitation another tenant sent it. The two invitation contracts take the scope as a new last parameter, which breaks a class outside the package that implements one of them.
@@ -1424,7 +1436,8 @@ public repository sees the difference.
   `TwoFactorChallengeRequired`).
 - Publishable configuration, migration, and views.
 
-[Unreleased]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.34.0...HEAD
+[Unreleased]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.35.0...HEAD
+[0.35.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.34.0...v0.35.0
 [0.34.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.33.2...v0.34.0
 [0.33.2]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.33.1...v0.33.2
 [0.33.1]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.33.0...v0.33.1

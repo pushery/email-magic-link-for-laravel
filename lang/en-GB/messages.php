@@ -9,7 +9,7 @@ declare(strict_types=1);
 // Deleting it instead — the obvious simplification — is NOT safe, and that was
 // measured rather than assumed. Laravel falls back to `app.fallback_locale`, not
 // to the base language: with `fallback_locale = 'de'` and no bundle here, a
-// visitor on `en-GB` is served GERMAN. Keeping the file is what makes the locale
+// visitor on `en-GB` is served German. Keeping the file is what makes the locale
 // resolve to British English whatever the host's fallback is.
 //
 // Give this file real content the moment a string diverges from `en`.

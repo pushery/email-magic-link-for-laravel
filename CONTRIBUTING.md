@@ -19,7 +19,9 @@ next release.
 - Describe the behavior change and how to reproduce it. **This repository ships no test
   suite** — see below — so a pull request here cannot carry one; the tests are written
   alongside your change in the development repository.
-- Update `README.md` and the `CHANGELOG.md` `## [Unreleased]` section.
+- Update `README.md` where your change alters what it describes. Leave `CHANGELOG.md` as it
+  is: it lists released versions, and the entry for your change is written when the change is
+  carried into the development repository.
 - Keep each commit focused.
 
 ## Local requirements
@@ -43,8 +45,8 @@ MySQL 8.4 (the engines it runs on in production).
 **That bar runs in the development repository, not here.** This repository is a
 read-only mirror of the released tree: it carries the package itself — the source, its
 configuration, migrations, routes, views and translations — and deliberately not the test
-suite, the task runner or the CI configuration. So none of the commands above exist in a
-clone of this repository, and there is nothing here for you to run them against.
+suite, the task runner or the CI configuration. So the bar cannot run in a clone of this
+repository: there is nothing here for it to run against.
 
 What that means in practice: send the change with a clear description and a minimal
 reproduction. It is rerun against the full bar on the way in, and the tests for it are

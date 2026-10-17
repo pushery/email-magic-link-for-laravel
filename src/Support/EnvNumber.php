@@ -15,6 +15,9 @@ namespace EmailMagicLink\Support;
  * So the value has to be numeric and its whole part at least 1. Anything else takes the declared
  * default, which is the value the config file ships, and an unset or empty variable does too.
  *
+ * A retention is the one kind of number where zero is a setting of its own: `0` keeps nothing.
+ * `atLeastZero()` reads those, and holds a negative value to the default the same way.
+ *
  * A value that was set and could not be used is remembered under the variable it came from, when
  * the caller names it, so that `email-magic-link:doctor` can say which setting is not in effect.
  */
@@ -29,7 +32,17 @@ final class EnvNumber
 
     public static function atLeastOne(mixed $value, int $default, ?string $variable = null): int
     {
-        $number = self::usable($value);
+        return self::atLeast(1, $value, $default, $variable);
+    }
+
+    public static function atLeastZero(mixed $value, int $default, ?string $variable = null): int
+    {
+        return self::atLeast(0, $value, $default, $variable);
+    }
+
+    private static function atLeast(int $floor, mixed $value, int $default, ?string $variable): int
+    {
+        $number = self::usable($value, $floor);
 
         if ($number !== null) {
             return $number;
@@ -58,19 +71,23 @@ final class EnvNumber
         self::$setAside = [];
     }
 
-    private static function usable(mixed $value): ?int
+    /**
+     * The value as a whole number, or null when it is no number or lies below the floor.
+     *
+     * Compared before the cast, so a negative fraction such as `-0.5` stays below a floor of 0
+     * rather than reaching it as the 0 that `(int)` makes of it.
+     */
+    private static function usable(mixed $value, int $floor): ?int
     {
         if (is_int($value)) {
-            return $value >= 1 ? $value : null;
+            return $value >= $floor ? $value : null;
         }
 
-        if (! is_string($value) || ! is_numeric($value)) {
+        if (! is_string($value) || ! is_numeric($value) || (float) $value < $floor) {
             return null;
         }
 
-        $number = (int) $value;
-
-        return $number >= 1 ? $number : null;
+        return (int) $value;
     }
 
     /**

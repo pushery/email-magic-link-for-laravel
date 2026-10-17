@@ -177,9 +177,9 @@ return [
     |
     */
 
-    'lock_block_seconds' => env('EMAIL_MAGIC_LINK_LOCK_BLOCK_SECONDS', 5),
+    'lock_block_seconds' => EnvNumber::atLeastOne(env('EMAIL_MAGIC_LINK_LOCK_BLOCK_SECONDS'), 5, 'EMAIL_MAGIC_LINK_LOCK_BLOCK_SECONDS'),
 
-    'lock_hold_seconds' => env('EMAIL_MAGIC_LINK_LOCK_HOLD_SECONDS', 60),
+    'lock_hold_seconds' => EnvNumber::atLeastOne(env('EMAIL_MAGIC_LINK_LOCK_HOLD_SECONDS'), 60, 'EMAIL_MAGIC_LINK_LOCK_HOLD_SECONDS'),
 
     /*
     |--------------------------------------------------------------------------
@@ -595,7 +595,7 @@ return [
         ],
 
         'window' => [
-            'minutes' => 60,
+            'minutes' => EnvNumber::atLeastOne(env('EMAIL_MAGIC_LINK_RESEND_WINDOW_MINUTES'), 60, 'EMAIL_MAGIC_LINK_RESEND_WINDOW_MINUTES'),
             'max_sends' => EnvNumber::atLeastOne(env('EMAIL_MAGIC_LINK_RESEND_MAX_SENDS'), 5, 'EMAIL_MAGIC_LINK_RESEND_MAX_SENDS'),
         ],
 
@@ -687,7 +687,8 @@ return [
         'handler' => null,
         'view' => null,
         'redirect_to' => '/',
-        'retain_accepted_days' => 30,
+        // A value that is not a number, or is negative, keeps the shipped 30 days; 0 keeps nothing.
+        'retain_accepted_days' => EnvNumber::atLeastZero(env('EMAIL_MAGIC_LINK_INVITATION_RETAIN_ACCEPTED_DAYS'), 30, 'EMAIL_MAGIC_LINK_INVITATION_RETAIN_ACCEPTED_DAYS'),
     ],
 
     /*

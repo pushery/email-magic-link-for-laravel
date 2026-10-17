@@ -16,7 +16,10 @@ use Illuminate\Support\Facades\DB;
  * query reads, and no columns or indexes for it either. Every other driver already answers the
  * way its queries do.
  *
- * @internal
+ * Part of the public API, because the migrations this package publishes call it. Once published, a
+ * migration runs in the host's own namespace, and a host that analyzes its migrations reads every call
+ * there into a class the package marks internal as an error it cannot fix without editing a published
+ * file.
  */
 final class TableLookup
 {

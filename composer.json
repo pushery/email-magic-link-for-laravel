@@ -24,7 +24,8 @@
     "support": {
         "issues": "https://github.com/pushery/email-magic-link-for-laravel/issues",
         "source": "https://github.com/pushery/email-magic-link-for-laravel",
-        "docs": "https://docs.pushery.com/email-magic-link-for-laravel/"
+        "docs": "https://docs.pushery.com/email-magic-link-for-laravel/",
+        "security": "https://github.com/pushery/email-magic-link-for-laravel/security/policy"
     },
     "require": {
         "php": "^8.4",
@@ -48,7 +49,7 @@
         "laravel/pao": "^1.1",
         "laravel/pint": "^1.30",
         "orchestra/testbench": "^11.2",
-        "pestphp/pest": "^5.1 <5.3.1",
+        "pestphp/pest": "^5.2.1 <5.3.1",
         "pestphp/pest-plugin-agent": "^5.0",
         "pestphp/pest-plugin-browser": "^5.0",
         "pestphp/pest-plugin-evals": "^5.1",
@@ -56,10 +57,11 @@
         "pestphp/pest-plugin-phpstan": "5.2.2",
         "pestphp/pest-plugin-rector": "5.0.4",
         "pestphp/pest-plugin-type-coverage": "5.0.2",
-        "phpstan/phpstan": "2.2.16",
+        "phpstan/phpstan": "2.3.1",
         "predis/predis": "^3.2",
+        "pushery/sqlens-for-laravel": "^0.29",
         "pushery/wirekit": "^2.54",
-        "rector/rector": "2.6.7",
+        "rector/rector": "2.7.0",
         "spaze/phpstan-disallowed-calls": "4.14.0",
         "symfony/yaml": "^7.4.17 || ^8.1.5",
         "tomasvotruba/type-coverage": "2.4.1"
@@ -72,38 +74,6 @@
         "psr-4": {
             "EmailMagicLink\\": "src/"
         }
-    },
-    "autoload-dev": {
-        "psr-4": {
-            "EmailMagicLink\\Tests\\": "tests/",
-            "Workbench\\App\\": "workbench/app/",
-            "Workbench\\Database\\Factories\\": "workbench/database/factories/",
-            "Workbench\\Database\\Seeders\\": "workbench/database/seeders/"
-        }
-    },
-    "scripts": {
-        "test": "pest",
-        "test:coverage": "@php -d pcov.directory=. -d pcov.exclude='~/(vendor|tests|workbench)/~' vendor/bin/pest --coverage --min=100",
-        "test:type-coverage": "pest --type-coverage --min=100",
-        "test:browser": "pest tests/Browser tests/BrowserFortify tests/BrowserWireKit",
-        "test:browser:wirekit": "pest tests/BrowserWireKit",
-        "test:evals": "pest tests/Evals --evals",
-        "test:mysql": "pest --testsuite=MySql,MySqlLocks",
-        "test:database": "pest --testsuite=Postgres,PostgresLocks,MySql,MySqlLocks",
-        "analyse": "phpstan analyse --memory-limit=1G",
-        "format": "pint",
-        "format:test": "pint --test",
-        "rector": "rector process",
-        "rector:test": "rector process --dry-run",
-        "mutate": "@php -d memory_limit=${MUTATION_MEMORY_LIMIT:--1} -d pcov.directory=. -d pcov.exclude='~/(vendor|tests|workbench)/~' vendor/bin/pest --mutate --everything --covered-only --clear-cache --exclude-group=browser --min=93",
-        "mutate:detect": "@php -d memory_limit=${MUTATION_MEMORY_LIMIT:--1} -d pcov.directory=. -d pcov.exclude='~/(vendor|tests|workbench)/~' vendor/bin/pest --mutate --everything --covered-only --exclude-group=browser --parallel --processes=4 --min=93",
-        "qa": [
-            "@format:test",
-            "@rector:test",
-            "@analyse",
-            "@test:type-coverage",
-            "@test:coverage"
-        ]
     },
     "config": {
         "process-timeout": 0,

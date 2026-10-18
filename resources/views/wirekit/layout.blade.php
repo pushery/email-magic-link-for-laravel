@@ -4,6 +4,23 @@
 @php($emlLocale = app('translator')->has('email-magic-link::messages.sign_in', app()->getLocale(), false) ? app()->getLocale() : (string) config('app.fallback_locale', 'en'))
 @php($emlConfig = app(\EmailMagicLink\Support\MagicLinkConfig::class))
 @php($emlCodeBoxes = new \EmailMagicLink\Support\CodeBoxLayout($emlConfig->codeLength()))
+{{-- A host that names a layout component of its own gets the card inside it, with the page's title. Its frame,
+     its <head> and its theme are then the host's, and so are the WireKit and Livewire assets, the fonts and
+     whatever stands above and below the card. The slot carries the two width rules the card needs and nothing
+     else. The referrer policy this layout repeats in a <meta> reaches the browser as a header on every route of
+     the package either way. --}}
+@if ($emlHostLayout = $emlConfig->uiLayout())
+@php($emlNonce = app(\EmailMagicLink\Contracts\ScriptNonce::class)->value())
+<x-dynamic-component :component="$emlHostLayout" :title="trim($__env->yieldContent('title', __('email-magic-link::messages.sign_in')))">
+    <style{!! $emlNonce === null ? '' : ' nonce="'.e($emlNonce).'"' !!}>
+        .eml-shell { width: 100%; max-width: 24rem; margin-inline: auto; padding: 2rem; box-sizing: border-box; }
+        .eml-shell:has(.eml-otp) { max-width: {{ $emlCodeBoxes->cardMaxWidthRem() }}rem; }
+    </style>
+    <div class="eml-shell">
+        @yield('content')
+    </div>
+</x-dynamic-component>
+@else
 <!DOCTYPE html>
 {{-- The host's class for the root element, so a dark host renders these screens dark: WireKit declares
      its dark tokens under `.dark` on <html>, which the body slots below cannot reach. Null renders no
@@ -135,3 +152,4 @@
     @livewireScripts(['nonce' => $emlNonce])
 </body>
 </html>
+@endif

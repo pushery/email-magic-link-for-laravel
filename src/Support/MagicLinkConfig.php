@@ -8,10 +8,14 @@ use Closure;
 use EmailMagicLink\Contracts\InvalidLinkResponder;
 use EmailMagicLink\Contracts\ScriptNonce;
 use EmailMagicLink\Notifications\MagicLinkNotification;
+use Illuminate\Container\Container;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Str;
+use Illuminate\View\Compilers\BladeCompiler;
+use Illuminate\View\Compilers\ComponentTagCompiler;
+use InvalidArgumentException;
 
 /**
  * Typed gateway to the package configuration.
@@ -311,6 +315,14 @@ final readonly class MagicLinkConfig
         return is_string($captcha) && $captcha !== '' ? $captcha : null;
     }
 
+    /** The class that names the application and greets the recipient in the mail, or null for the bundled one. */
+    public function mailIdentity(): ?string
+    {
+        $identity = $this->repository()->get('email-magic-link.mail_identity');
+
+        return is_string($identity) && $identity !== '' ? $identity : null;
+    }
+
     /**
      * @return class-string<MagicLinkNotification>
      */
@@ -558,6 +570,42 @@ final readonly class MagicLinkConfig
     public function uiFooterView(): ?string
     {
         return $this->existingView('email-magic-link.ui.footer_view');
+    }
+
+    /**
+     * A Blade component of the host that the WireKit screens render inside, or null for this package's own layout.
+     *
+     * The host's layout carries its frame, its `<head>` and its theme, and in a host that serves several brands the
+     * name of the one the page stands on, which this package's own layout cannot know. The component receives the
+     * page's title as `title` and the card as its slot.
+     *
+     * A name that resolves to no component is dropped and logged, never thrown, for the reason the two slots give:
+     * this renders on the sign-in path, where a typo would lock every user out. The name is resolved the way
+     * `<x-dynamic-component>` resolves it, so what passes here is what that component renders.
+     */
+    public function uiLayout(): ?string
+    {
+        $name = $this->repository()->get('email-magic-link.ui.layout');
+
+        if (! is_string($name) || trim($name) === '') {
+            return null;
+        }
+
+        $name = trim($name);
+        $blade = Container::getInstance()->make(BladeCompiler::class);
+
+        try {
+            new ComponentTagCompiler($blade->getClassComponentAliases(), $blade->getClassComponentNamespaces(), $blade)->componentClass($name);
+        } catch (InvalidArgumentException) {
+            Log::warning('email-magic-link: ui.layout names a component that does not exist — the screens keep their own layout', [
+                'setting' => 'email-magic-link.ui.layout',
+                'component' => $name,
+            ]);
+
+            return null;
+        }
+
+        return $name;
     }
 
     /**

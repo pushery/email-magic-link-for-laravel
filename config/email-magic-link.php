@@ -281,6 +281,25 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Mail identity
+    |--------------------------------------------------------------------------
+    |
+    | A class implementing the MailIdentity contract, asked with the account in
+    | the request that issues the credential, for the name the mail gives the
+    | application (subject, introduction and sign-off) and for the line it
+    | opens with. Name the brand or tenant the account belongs to, and greet
+    | the recipient by name, without replacing the notification: the mail that
+    | goes out stays MagicLinkNotification.
+    |
+    | A class name rather than a closure, so it survives `config:cache`. Leave
+    | null for `app.name` and the bundled greeting.
+    |
+    */
+
+    'mail_identity' => null,
+
+    /*
+    |--------------------------------------------------------------------------
     | Routing
     |--------------------------------------------------------------------------
     |
@@ -453,6 +472,20 @@ return [
          */
         'header_view' => null,
         'footer_view' => null,
+
+        /*
+         * A Blade component of your own that the WireKit screens render inside, or null for this
+         * package's own layout. Name it the way you write the tag without `x-`, for example
+         * 'layouts.auth' for <x-layouts.auth>. The component receives the page's title as `title`
+         * and the card as its slot. Its <head>, its frame and its theme are yours, so it loads
+         * WireKit's and Livewire's assets the way your other WireKit pages do; `header_view`,
+         * `footer_view`, `html_class`, `vite` and `styles` belong to the package's own layout and
+         * are not read while this is set. The plain Blade screens do not read this key.
+         *
+         * A name that resolves to no component is dropped and logged at `warning`, never thrown:
+         * this renders on the sign-in path, where a typo would lock everyone out.
+         */
+        'layout' => null,
 
         /*
          * The class attribute of the WireKit layout's <html> element, or null for none.

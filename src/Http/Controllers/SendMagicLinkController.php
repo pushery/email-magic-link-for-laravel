@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace EmailMagicLink\Http\Controllers;
 
 use EmailMagicLink\Contracts\CaptchaGuard;
+use EmailMagicLink\Contracts\MailIdentity;
 use EmailMagicLink\Contracts\ResendGuard;
 use EmailMagicLink\Contracts\TokenStore;
 use EmailMagicLink\Contracts\UserLookup;
@@ -57,6 +58,7 @@ final class SendMagicLinkController
         CaptchaGuard $captcha,
         ResendGuard $resendGuard,
         IssuanceLock $lock,
+        MailIdentity $identity,
     ): Response {
         // Pre-issue challenge, before any user lookup, so it gates the request
         // without ever depending on whether the account exists.
@@ -121,12 +123,13 @@ final class SendMagicLinkController
                 // IssuanceLock::withoutWaiting() for why the two paths differ.
                 $issued = $lock->withoutWaiting(fn (): IssuedToken => $store->issue($user, $guard, $channel));
 
+                $notification = $this->identify($this->buildNotification($issued, $channel, $config), $identity, $user);
+
                 // The notification is queued, and a worker renders it under its locale unless
                 // the request's travels with it. The mail route is an anonymous notifiable
                 // with no locale preference of its own, so this is the only place the
                 // request's language can be captured.
-                NotificationSender::route('mail', $route)
-                    ->notify($this->buildNotification($issued, $channel, $config)->locale(app()->getLocale()));
+                NotificationSender::route('mail', $route)->notify($notification->locale(app()->getLocale()));
 
                 $this->dispatchUniformly(new MagicLinkRequested($user, $channel, $request));
             } catch (LockTimeoutException) {
@@ -243,6 +246,26 @@ final class SendMagicLinkController
             $minutes,
             $channel === 'link' ? $issued->record->uses_remaining : 1,
         );
+    }
+
+    /**
+     * The notification, carrying the name and the greeting the configured MailIdentity gives this account.
+     *
+     * Asked here because the mail is built in a queue worker, where neither the account nor the request is
+     * at hand. The identity itself is resolved for every request, before the lookup, so a class that does
+     * not implement the contract fails every request alike. What it answers is asked only for an address
+     * that resolves, so an exception from it is reported and the mail goes out under the bundled name and
+     * greeting: a 500 here, against the ordinary redirect, would say that the account exists.
+     */
+    private function identify(MagicLinkNotification $notification, MailIdentity $identity, Authenticatable $user): MagicLinkNotification
+    {
+        try {
+            return $notification->withIdentity($identity->applicationName($user), $identity->greeting($user));
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return $notification;
+        }
     }
 
     /**

@@ -16,6 +16,7 @@ use EmailMagicLink\Contracts\InvitationIssuer;
 use EmailMagicLink\Contracts\InvitationStore;
 use EmailMagicLink\Contracts\MagicLinkAuthenticator;
 use EmailMagicLink\Contracts\MagicLinkIssuer;
+use EmailMagicLink\Contracts\MailIdentity;
 use EmailMagicLink\Contracts\ResendGuard;
 use EmailMagicLink\Contracts\ScriptNonce;
 use EmailMagicLink\Contracts\SignInEligibility;
@@ -29,6 +30,7 @@ use EmailMagicLink\Http\Responses\DefaultInvalidLinkResponder;
 use EmailMagicLink\Lookups\AddressMatchingUserLookup;
 use EmailMagicLink\Lookups\DefaultUserLookup;
 use EmailMagicLink\Lookups\EligibleUserLookup;
+use EmailMagicLink\Notifications\DefaultMailIdentity;
 use EmailMagicLink\Stores\DefaultInvitationStore;
 use EmailMagicLink\Stores\DefaultTokenStore;
 use EmailMagicLink\Support\AutoScriptNonce;
@@ -170,6 +172,12 @@ final class EmailMagicLinkServiceProvider extends ServiceProvider
             $custom = $app->make(MagicLinkConfig::class)->captcha();
 
             return $this->resolveContract($app, CaptchaGuard::class, $custom, NullCaptchaGuard::class);
+        });
+
+        $this->app->singleton(MailIdentity::class, function (Application $app): MailIdentity {
+            $custom = $app->make(MagicLinkConfig::class)->mailIdentity();
+
+            return $this->resolveContract($app, MailIdentity::class, $custom, DefaultMailIdentity::class);
         });
 
         $this->app->singleton(InvalidLinkResponder::class, function (Application $app): InvalidLinkResponder {

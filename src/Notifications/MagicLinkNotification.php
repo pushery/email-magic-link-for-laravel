@@ -17,7 +17,8 @@ use SensitiveParameter;
  *
  * Queued so the request that issues it returns without waiting on the mailer,
  * which keeps the request endpoint's timing independent of whether a user was
- * found. It carries only the already-built action URL or code, never internals.
+ * found. It carries the already-built action URL or code and the name and
+ * greeting it addresses the recipient with, never internals.
  *
  * Encrypted on the queue, because the URL or code it carries is the credential
  * itself. The token table holds only an HMAC so that a database reader cannot sign
@@ -28,6 +29,12 @@ use SensitiveParameter;
 class MagicLinkNotification extends Notification implements ShouldBeEncrypted, ShouldQueue
 {
     use Queueable;
+
+    /** The application's name the configured MailIdentity gave for this mail, if it was asked. */
+    private ?string $identityName = null;
+
+    /** The opening line the configured MailIdentity gave for this mail, if it gave one. */
+    private ?string $identityGreeting = null;
 
     /**
      * @param  'link'|'code'  $channel
@@ -52,20 +59,36 @@ class MagicLinkNotification extends Notification implements ShouldBeEncrypted, S
         return ['mail'];
     }
 
-    public function toMail(object $notifiable): MailMessage
+    /**
+     * Names the application and sets the opening line of this one mail.
+     *
+     * The issuing request asks the configured MailIdentity with the account and hands its answers over
+     * here, because the mail is built in a queue worker, where neither the account nor the request is at
+     * hand. Both travel with the queued notification, encrypted like the credential.
+     */
+    public function withIdentity(string $applicationName, ?string $greeting): static
     {
-        $application = app(MagicLinkConfig::class)->applicationName();
+        $this->identityName = $applicationName;
+        $this->identityGreeting = $greeting;
 
-        return $this->channel === 'code'
-            ? $this->codeMessage($application)
-            : $this->linkMessage($application);
+        return $this;
     }
 
-    private function linkMessage(string $application): MailMessage
+    public function toMail(object $notifiable): MailMessage
+    {
+        $application = $this->identityName ?? app(MagicLinkConfig::class)->applicationName();
+        $greeting = $this->identityGreeting ?? (string) __('email-magic-link::messages.mail_greeting');
+
+        return $this->channel === 'code'
+            ? $this->codeMessage($application, $greeting)
+            : $this->linkMessage($application, $greeting);
+    }
+
+    private function linkMessage(string $application, string $greeting): MailMessage
     {
         return (new MailMessage)
             ->subject(__('email-magic-link::messages.mail_link_subject', ['app' => $application]))
-            ->greeting(__('email-magic-link::messages.mail_greeting'))
+            ->greeting($greeting)
             ->line(__('email-magic-link::messages.mail_link_intro', ['app' => $application]))
             ->action(__('email-magic-link::messages.mail_link_action'), (string) $this->actionUrl)
             ->line($this->uses > 1
@@ -75,11 +98,11 @@ class MagicLinkNotification extends Notification implements ShouldBeEncrypted, S
             ->salutation(__('email-magic-link::messages.mail_salutation', ['app' => $application]));
     }
 
-    private function codeMessage(string $application): MailMessage
+    private function codeMessage(string $application, string $greeting): MailMessage
     {
         return (new MailMessage)
             ->subject(__('email-magic-link::messages.mail_code_subject', ['app' => $application]))
-            ->greeting(__('email-magic-link::messages.mail_greeting'))
+            ->greeting($greeting)
             ->line(__('email-magic-link::messages.mail_code_intro', ['app' => $application]))
             ->line((string) $this->code)
             ->line(trans_choice('email-magic-link::messages.mail_code_expiry', $this->expiresInMinutes, ['minutes' => $this->expiresInMinutes]))

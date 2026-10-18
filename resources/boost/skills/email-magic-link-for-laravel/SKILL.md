@@ -223,7 +223,7 @@ attribute against the submitted address and refuses the account otherwise, answe
 for an unknown address, so no mail goes out. When the address lives in another column, add an
 `email` accessor to the model that returns it.
 
-The same pattern applies to `token_store`, `captcha` and `invalid_response.via`
+The same pattern applies to `token_store`, `captcha`, `mail_identity` and `invalid_response.via`
 — each takes the class-string of a published contract under
 `EmailMagicLink\Contracts` and falls back to a bundled default.
 
@@ -231,6 +231,13 @@ The same pattern applies to `token_store`, `captcha` and `invalid_response.via`
 **extends `MagicLinkNotification`**. Anything else is ignored — the package falls
 back to the bundled notification without raising, so a wrong class-string looks
 like it worked.
+
+To name a tenant in the mail or greet the recipient by name, do not subclass the
+notification: point `mail_identity` at a `MailIdentity`, which is asked with the account
+for `applicationName()` and `greeting()` in the request that issues the credential. The mail
+that goes out stays `MagicLinkNotification`, so assertions on that class keep passing. It runs
+only for addresses that resolve, so keep it cheap; an exception from it is reported and the
+mail goes out under the bundled name and greeting.
 
 ### Invitations — for somebody who has no account yet
 

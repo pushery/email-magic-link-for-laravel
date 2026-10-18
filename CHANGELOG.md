@@ -4,6 +4,18 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.36.0] - 2026-10-18
+
+### ✨ Added
+
+- **The sign-in mail can name a tenant and greet the recipient by name.** `mail_identity` names a class implementing the new `MailIdentity` contract. The request that issues the credential asks it with the account for the application's name, which the link mail and the code mail use in their subject, introduction and sign-off, and for the line the mail opens with. An exception from it is reported, and the mail goes out under the bundled name and greeting. The mail that goes out stays `MagicLinkNotification`, so tests that assert on that class need no change. Without the setting the mail names `app.name` and opens with the bundled greeting, as before.
+
+- **The WireKit screens can stand in a layout of the host's.** `ui.layout` names a Blade component of the application, and the request, confirmation and code screens render inside it, with the page's title handed over as `title` and the card as its slot. The application's frame, `<head>`, title and theme then apply to them, as on its other pages. A name that resolves to no component is dropped and logged at `warning`, and the screens keep their own layout. Without the setting nothing changes.
+
+### 🔧 Changed
+
+- **The documented WireKit floor is 2.68.0.** It is the oldest release this version supports, so `composer suggest` names it. The sign-in screens still render on an older WireKit, and the releases that made each part of them correct are listed beside the floor as before.
+
 ## [0.35.0] - 2026-10-17
 
 ### ✨ Added
@@ -1436,7 +1448,8 @@ public repository sees the difference.
   `TwoFactorChallengeRequired`).
 - Publishable configuration, migration, and views.
 
-[Unreleased]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.35.0...HEAD
+[Unreleased]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.36.0...HEAD
+[0.36.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.35.0...v0.36.0
 [0.35.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.34.0...v0.35.0
 [0.34.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.33.2...v0.34.0
 [0.33.2]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.33.1...v0.33.2

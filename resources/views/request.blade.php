@@ -27,6 +27,10 @@
             @enderror
         @endif
 
+        @if (\EmailMagicLink\Support\MagicLinkRejection::flashed() && ($emlSignInUrl = app(\EmailMagicLink\Support\MagicLinkConfig::class)->uiSignInUrl()) !== null)
+            <p class="eml-rejected"><a href="{{ $emlSignInUrl }}">{{ __('email-magic-link::messages.back_to_sign_in') }}</a></p>
+        @endif
+
         @if ($mode === 'both')
             <fieldset>
                 <legend>{{ __('email-magic-link::messages.delivery_legend') }}</legend>

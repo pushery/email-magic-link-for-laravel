@@ -6,6 +6,7 @@ namespace EmailMagicLink\Http\Responses;
 
 use EmailMagicLink\Contracts\InvalidLinkResponder;
 use EmailMagicLink\Support\MagicLinkConfig;
+use EmailMagicLink\Support\MagicLinkRejection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -65,8 +66,12 @@ final readonly class DefaultInvalidLinkResponder implements InvalidLinkResponder
         // but the field marked invalid is the one that was wrong.
         $field = $failureRoute === 'email-magic-link.code.form' ? 'code' : 'email';
 
+        // The flashed key says that a credential was turned away, so a screen can offer its ways
+        // forward without comparing the message. Every refused link and code comes through here,
+        // so the key says that one was refused and nothing about why.
         return $redirect
             ->withErrors([$field => $message])
-            ->withInput($request->only(['email', 'guard', 'remember']));
+            ->withInput($request->only(['email', 'guard', 'remember']))
+            ->with(MagicLinkRejection::SESSION_KEY, true);
     }
 }

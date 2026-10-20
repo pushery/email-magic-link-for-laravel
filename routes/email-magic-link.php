@@ -76,7 +76,7 @@ Route::post('magic-link/code', ConsumeCodeController::class)
 // both routes are useless without an acceptance view and a handler, and the boot guard
 // has already refused to start if those are missing.
 if ($config->invitationsEnabled()) {
-    // Deliberately NOT behind `signed`. That middleware answers an expired signature with
+    // Deliberately not behind `signed`. That middleware answers an expired signature with
     // 403 and an unknown token with the generic page, and those two answers are
     // distinguishable -- at a seven-day lifetime, expiry is the ordinary case. The
     // signature is verified inside the controller and folded into the one refusal.

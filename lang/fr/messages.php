@@ -41,6 +41,8 @@ return [
     'status_link_sent' => 'Si un compte correspond à cette adresse e-mail, nous vous avons envoyé un lien de connexion.',
     'status_code_sent' => 'Si un compte correspond à cette adresse e-mail, nous vous avons envoyé un code de connexion.',
     'consume_failed' => 'Cette demande de connexion est invalide ou a expiré. Veuillez en demander une nouvelle.',
+    'request_new_code' => 'Demander un nouveau code de connexion',
+    'back_to_sign_in' => 'Retour à la connexion',
     'invitation_failed' => 'Cette invitation n’est pas valide ou a expiré. Demandez-en une nouvelle à la personne qui vous a invité.',
     'captcha_failed' => 'La vérification a échoué. Veuillez réessayer.',
     'resend_throttled' => '[0,1] Veuillez patienter :seconds seconde avant de demander un nouvel e-mail de connexion.|[2,*] Veuillez patienter :seconds secondes avant de demander un nouvel e-mail de connexion.',

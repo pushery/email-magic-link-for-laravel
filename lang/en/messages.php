@@ -41,6 +41,8 @@ return [
     'status_link_sent' => 'If an account matches that email, we have sent a sign-in link.',
     'status_code_sent' => 'If an account matches that email, we have sent a sign-in code.',
     'consume_failed' => 'This sign-in request is invalid or has expired. Please request a new one.',
+    'request_new_code' => 'Request a new sign-in code',
+    'back_to_sign_in' => 'Back to sign-in',
     'invitation_failed' => 'This invitation is invalid or has expired. Ask whoever invited you for a new one.',
     'captcha_failed' => 'The verification challenge failed. Please try again.',
     'resend_throttled' => '{1} Please wait :seconds second before requesting another sign-in email.|[0,*] Please wait :seconds seconds before requesting another sign-in email.',

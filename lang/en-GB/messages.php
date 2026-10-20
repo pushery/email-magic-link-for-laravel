@@ -6,7 +6,7 @@ declare(strict_types=1);
 // delegates rather than duplicating: a copy would have to be kept in step by hand
 // on every string change, which is the drift this package cannot detect.
 //
-// Deleting it instead — the obvious simplification — is NOT safe, and that was
+// Deleting it instead — the obvious simplification — is not safe, and that was
 // measured rather than assumed. Laravel falls back to `app.fallback_locale`, not
 // to the base language: with `fallback_locale = 'de'` and no bundle here, a
 // visitor on `en-GB` is served German. Keeping the file is what makes the locale

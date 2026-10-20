@@ -39,6 +39,15 @@
             <p class="error" id="email-error">{{ $message }}</p>
         @enderror
 
+        @if (\EmailMagicLink\Support\MagicLinkRejection::flashed())
+            <p class="eml-rejected">
+                <a href="{{ route('email-magic-link.request.form') }}">{{ __('email-magic-link::messages.request_new_code') }}</a>
+                @if (($emlSignInUrl = $emlConfig->uiSignInUrl()) !== null)
+                    · <a href="{{ $emlSignInUrl }}">{{ __('email-magic-link::messages.back_to_sign_in') }}</a>
+                @endif
+            </p>
+        @endif
+
         {{-- Kept across a refused code: the refusal flashes the choice back with the email. --}}
         @if ($offerRemember ?? false)
             <label class="eml-remember"><input type="checkbox" name="remember" value="1" @checked(old('remember') === '1')> {{ __('email-magic-link::messages.remember_label') }}</label>

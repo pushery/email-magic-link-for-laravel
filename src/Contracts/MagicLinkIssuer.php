@@ -29,7 +29,7 @@ interface MagicLinkIssuer
      *                             concurrent claims can never exceed the limit.
      * @param  string|null  $passphrase  A shared secret the recipient must enter
      *                                   on the confirmation page before the link
-     *                                   is consumed. A lightweight gate, NOT the
+     *                                   is consumed. A lightweight gate, not the
      *                                   Fortify two-factor challenge.
      * @param  string|null  $baseUrl  Build the link for this host (e.g. a tenant
      *                                domain) instead of the app's. The signature

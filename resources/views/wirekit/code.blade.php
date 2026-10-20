@@ -70,6 +70,17 @@
                         :error="$errors->first('code')"
                     />
 
+                    {{-- After a refused code: the code field keeps the refusal, and here are the two ways
+                         forward, a new code and the application's own sign-in where it names one. --}}
+                    @if (\EmailMagicLink\Support\MagicLinkRejection::flashed())
+                        <x-wirekit::text size="sm">
+                            <x-wirekit::link :href="route('email-magic-link.request.form')">{{ __('email-magic-link::messages.request_new_code') }}</x-wirekit::link>
+                            @if (($emlSignInUrl = app(\EmailMagicLink\Support\MagicLinkConfig::class)->uiSignInUrl()) !== null)
+                                · <x-wirekit::link :href="$emlSignInUrl">{{ __('email-magic-link::messages.back_to_sign_in') }}</x-wirekit::link>
+                            @endif
+                        </x-wirekit::text>
+                    @endif
+
                     {{-- Kept across a refused code: the refusal flashes the choice back with the email. --}}
                     @if ($offerRemember ?? false)
                         <x-wirekit::checkbox

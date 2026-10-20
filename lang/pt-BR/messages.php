@@ -45,6 +45,8 @@ return [
     'status_link_sent' => 'Se houver uma conta com esse e-mail, enviamos um link de acesso.',
     'status_code_sent' => 'Se houver uma conta com esse e-mail, enviamos um código de acesso.',
     'consume_failed' => 'Esta solicitação de acesso é inválida ou expirou. Solicite uma nova.',
+    'request_new_code' => 'Solicitar um novo código de acesso',
+    'back_to_sign_in' => 'Voltar para a tela de entrada',
     'invitation_failed' => 'Este convite é inválido ou expirou. Peça um novo a quem enviou o convite.',
     'captcha_failed' => 'A verificação falhou. Tente novamente.',
     'resend_throttled' => '{1} Aguarde :seconds segundo antes de solicitar outro e-mail de acesso.|[0,*] Aguarde :seconds segundos antes de solicitar outro e-mail de acesso.',

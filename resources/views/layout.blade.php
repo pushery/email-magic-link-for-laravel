@@ -93,6 +93,7 @@
         a.button { display: inline-block; width: auto; text-decoration: none; box-sizing: border-box; }
         /* A class, not a style attribute: `style-src-attr` is never satisfied by a nonce. */
         .eml-code-label { margin-top: 1rem; }
+        .eml-rejected { margin: 0.6rem 0 0; font-size: 0.9rem; }
         /* Touch floors: 44 px targets and rows where a thumb lands, as the WireKit path has. */
         @media (pointer: coarse) {
             input:not([type="radio"]):not([type="checkbox"]), button, a.button { min-height: 2.75rem; }

@@ -185,7 +185,7 @@ final class IssuanceLock
         $lock = $store->lock($name, max(1, $this->holdSeconds));
 
         // A lock that cannot say no is worse than no lock, because it reads as protection.
-        // NullStore IS a LockProvider -- the check above is exactly the condition it satisfies
+        // NullStore is a LockProvider -- the check above is exactly the condition it satisfies
         // -- and its NoLock::acquire() returns true every time: two acquires on one name are
         // both true. A host on CACHE_STORE=null would have no serialization at all and no way
         // to discover it, while this class promises never two live links for one person.

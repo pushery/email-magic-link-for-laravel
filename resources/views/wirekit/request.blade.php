@@ -27,6 +27,14 @@
                         :error="session('resend_retry_after') ? null : $errors->first('email')"
                     />
 
+                    {{-- After a refused link the form above is the way to a new one, so what is added
+                         here is the way back to the application's own sign-in, where it names one. --}}
+                    @if (\EmailMagicLink\Support\MagicLinkRejection::flashed() && ($emlSignInUrl = app(\EmailMagicLink\Support\MagicLinkConfig::class)->uiSignInUrl()) !== null)
+                        <x-wirekit::text size="sm">
+                            <x-wirekit::link :href="$emlSignInUrl">{{ __('email-magic-link::messages.back_to_sign_in') }}</x-wirekit::link>
+                        </x-wirekit::text>
+                    @endif
+
                     @if ($mode === 'both')
                         {{-- A fieldset with a legend, not a bare stack: the two radios are a
                              choice, and without a group label a screen reader announces

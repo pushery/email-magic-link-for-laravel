@@ -506,6 +506,14 @@ return [
          * this key.
          */
         'heading_size' => null,
+
+        /*
+         * Your application's own sign-in page, as a URL or a path, or null for none. When a link or
+         * a code was turned away, the screens of both view trees link to it beside the way to a new
+         * one, so a person who would rather sign in another way finds the way back. Null links
+         * nothing.
+         */
+        'sign_in_url' => null,
     ],
 
     /*

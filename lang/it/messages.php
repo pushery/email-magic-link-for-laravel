@@ -41,6 +41,8 @@ return [
     'status_link_sent' => 'Se un account corrisponde a quell’email, ti abbiamo inviato un link di accesso.',
     'status_code_sent' => 'Se un account corrisponde a quell’email, ti abbiamo inviato un codice di accesso.',
     'consume_failed' => 'Questa richiesta di accesso non è valida o è scaduta. Richiedine una nuova.',
+    'request_new_code' => 'Richiedi un nuovo codice di accesso',
+    'back_to_sign_in' => 'Torna all’accesso',
     'invitation_failed' => 'Questo invito non è valido o è scaduto. Chiedi un nuovo invito a chi ti ha invitato.',
     'captcha_failed' => 'La verifica non è riuscita. Riprova.',
     'resend_throttled' => '{1} Attendi :seconds secondo prima di richiedere un’altra email di accesso.|[0,*] Attendi :seconds secondi prima di richiedere un’altra email di accesso.',

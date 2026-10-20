@@ -76,7 +76,7 @@ final readonly class DefaultResendGuard implements ResendGuard
 
         $lock = $store->lock(self::LOCK_PREFIX.$this->digest($key), self::LOCK_HOLD_SECONDS);
 
-        // NullStore IS a LockProvider, so the check above is exactly the condition it
+        // NullStore is a LockProvider, so the check above is exactly the condition it
         // satisfies, and its NoLock::acquire() returns true every time. This guard would
         // then evaluate the window under a lock that excludes nothing -- and because the
         // whole point of it is to hold sends back, a lock that never says no makes it

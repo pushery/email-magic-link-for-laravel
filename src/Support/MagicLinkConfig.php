@@ -467,6 +467,14 @@ final readonly class MagicLinkConfig
         return is_string($to) && $to !== '' ? $to : null;
     }
 
+    /** The application's own sign-in page the screens link to after a refusal, or null for none. */
+    public function uiSignInUrl(): ?string
+    {
+        $url = $this->repository()->get('email-magic-link.ui.sign_in_url');
+
+        return is_string($url) && $url !== '' ? $url : null;
+    }
+
     /**
      * Rows deleted per statement by the purge. One unbounded DELETE holds a row lock
      * on everything it removes until commit; on a table that grew for months that is
@@ -897,7 +905,7 @@ final readonly class MagicLinkConfig
     /**
      * The lock's TTL -- how long it survives a process that died holding it.
      *
-     * Deliberately NOT the same number as the wait budget. A TTL shorter than the work it
+     * Deliberately not the same number as the wait budget. A TTL shorter than the work it
      * protects expires mid-issuance and lets a second request in, which is the failure the
      * lock exists to prevent and the one that leaves no trace.
      */

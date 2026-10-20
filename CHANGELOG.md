@@ -4,6 +4,12 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.37.0] - 2026-10-20
+
+### ✨ Added
+
+- **The screens offer the ways forward after a link or a code was turned away.** The code form links to the sign-in form for a new code, and both forms of both view trees link to the application's own sign-in page when the new `ui.sign_in_url` names one. The redirect strategy flashes `MagicLinkRejection::SESSION_KEY` beside the refusal, the same for an unknown, an expired and a used credential, so a screen of its own can recognize a refusal without comparing the text of the message.
+
 ## [0.36.0] - 2026-10-18
 
 ### ✨ Added
@@ -1448,7 +1454,8 @@ public repository sees the difference.
   `TwoFactorChallengeRequired`).
 - Publishable configuration, migration, and views.
 
-[Unreleased]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.36.0...HEAD
+[Unreleased]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.37.0...HEAD
+[0.37.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.36.0...v0.37.0
 [0.36.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.35.0...v0.36.0
 [0.35.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.34.0...v0.35.0
 [0.34.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.33.2...v0.34.0

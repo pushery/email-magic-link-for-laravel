@@ -190,10 +190,11 @@ final class DoctorCommand extends Command
     /**
      * Report a fallback locale this package has no strings for.
      *
-     * Laravel tries the requested locale and then `app.fallback_locale`, and nothing in
-     * between. When neither has a bundle, every string of the screens and the mail renders as
-     * its key, "email-magic-link::messages.heading" and the like, for every visitor whose
-     * locale the package does not ship. A published copy under lang/vendor counts as a bundle.
+     * Laravel tries the requested locale and then `app.fallback_locale`, and for this package's
+     * namespace the loader puts the language of a regional locale in between. When none of them
+     * has a bundle, every string of the screens and the mail renders as its key,
+     * "email-magic-link::messages.heading" and the like, for every visitor whose language the
+     * package does not ship. A published copy under lang/vendor counts as a bundle.
      *
      * An empty or missing fallback is no fallback at all: the translator then tries the
      * requested locale alone, and Translator::has() would read an empty locale as the current

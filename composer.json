@@ -59,7 +59,7 @@
         "pestphp/pest-plugin-type-coverage": "5.0.2",
         "phpstan/phpstan": "2.3.1",
         "predis/predis": "^3.2",
-        "pushery/sqlens-for-laravel": "^0.30",
+        "pushery/sqlens-for-laravel": "^0.31",
         "pushery/wirekit": "^2.69.0",
         "rector/rector": "2.7.0",
         "spaze/phpstan-disallowed-calls": "4.14.0",

@@ -22,8 +22,8 @@ namespace EmailMagicLink\Support;
  * policy is meant to make reliable.
  *
  * The script is static: every value it needs arrives through `data-` attributes on
- * the element it drives, so nothing here is rendered per request and the file can
- * be cached forever.
+ * the element the partial renders, so nothing here is rendered per request and the file
+ * can be cached forever.
  */
 final class ResendCountdownScript
 {
@@ -39,37 +39,48 @@ final class ResendCountdownScript
      *   passes through one on its way down, and a baked-in plural would read "1 seconds"
      *   for a whole second in every language. The server renders both forms, and the
      *   script picks between them.
-     * - The box keeps its first-render height (`minHeight`). When the countdown finishes
-     *   it clears its own text, and an empty paragraph collapses, which pulls the submit
-     *   button 24px up at the moment the person reaches for it. The height is measured
-     *   rather than reserved in CSS, because it is a rendered line count: the same string
-     *   wraps to two lines on a narrow viewport and one on a wide one, and the first
-     *   render is the tallest, since the text only gets shorter.
+     * - The line that counts is the email field's error line (`data-target`), which the
+     *   server renders with the wait already in it: one message, red and under the field,
+     *   in the plain view and in the WireKit view alike. Where a view renders no such line,
+     *   as a published copy from before may, the element of the partial shows the wait.
+     * - While it counts the line is `role="timer"` with `aria-live="off"` and the name in
+     *   `data-label`, so it is read when a reader reaches it and not on every tick.
+     * - When the wait is over the line goes, and what stood below it moves up. The field
+     *   loses `aria-invalid` and the reference to the line, so nothing points at an id
+     *   that is gone.
      * - `aria-disabled`, not `disabled`: the button stays in the tab order and announces
-     *   as dimmed, and `aria-describedby` on it names the countdown as the reason.
+     *   as dimmed, and `aria-describedby` on it names the line as the reason.
      */
     private const string SOURCE = <<<'JS'
         (function () {
-            var el = document.querySelector('[data-eml-resend]');
+            var holder = document.querySelector('[data-eml-resend]');
 
-            if (! el) {
+            if (! holder) {
                 return;
             }
 
-            var form = (el.closest('main') || document).querySelector('form');
+            var line = document.getElementById(holder.getAttribute('data-target') || '') || holder;
+            var form = (holder.closest('main') || document).querySelector('form');
             var button = form ? form.querySelector('button[type="submit"], button:not([type])') : null;
-            var one = el.getAttribute('data-template-one') || '';
-            var other = el.getAttribute('data-template-other') || '';
-            var remaining = parseInt(el.getAttribute('data-seconds'), 10) || 0;
+            var field = line.id ? document.querySelector('[aria-describedby~="' + line.id + '"]:not(button)') : null;
+            var one = holder.getAttribute('data-template-one') || '';
+            var other = holder.getAttribute('data-template-other') || '';
+            var remaining = parseInt(holder.getAttribute('data-seconds'), 10) || 0;
 
-            if (el.getBoundingClientRect) {
-                el.style.minHeight = el.getBoundingClientRect().height + 'px';
-            }
+            line.hidden = false;
+            line.setAttribute('role', 'timer');
+            line.setAttribute('aria-live', 'off');
+            line.setAttribute('aria-label', holder.getAttribute('data-label') || '');
 
             var block = function (e) { e.preventDefault(); };
 
             if (button) {
                 button.setAttribute('aria-disabled', 'true');
+
+                if (line.id) {
+                    button.setAttribute('aria-describedby', line.id);
+                }
+
                 form.addEventListener('submit', block);
             }
 
@@ -81,12 +92,26 @@ final class ResendCountdownScript
                         form.removeEventListener('submit', block);
                     }
 
-                    el.textContent = '';
+                    if (field) {
+                        var rest = (field.getAttribute('aria-describedby') || '').split(/\s+/).filter(function (id) {
+                            return id !== '' && id !== line.id;
+                        });
+
+                        if (rest.length > 0) {
+                            field.setAttribute('aria-describedby', rest.join(' '));
+                        } else {
+                            field.removeAttribute('aria-describedby');
+                        }
+
+                        field.removeAttribute('aria-invalid');
+                    }
+
+                    line.remove();
 
                     return;
                 }
 
-                el.textContent = (remaining === 1 ? one : other).replace('__seconds__', remaining);
+                line.textContent = (remaining === 1 ? one : other).replace('__seconds__', remaining);
                 remaining -= 1;
                 window.setTimeout(tick, 1000);
             })();

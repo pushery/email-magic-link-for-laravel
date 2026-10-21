@@ -4,6 +4,18 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.38.0] - 2026-10-21
+
+### ✨ Added
+
+- **`Support\MigrationLocks::bound()` bounds how long a migration waits for a lock.** A migration of this package that alters a table calls it first in `up()` and `down()`: on PostgreSQL the transaction then waits three seconds for its lock and holds it thirty at most, on MySQL the session waits three seconds. An ALTER that cannot take its lock fails instead of stalling every query behind it, and running the migration again is the remedy. A published copy of such a migration calls it from the application's namespace, so it is part of the public API.
+
+- **A regional locale the package does not ship reads the bundle of its language.** The package ships `en-GB`, `en-US`, `pt-PT` and `pt-BR`, and every other region, `de-AT` or `fr-CA`, went from the locale straight to `app.fallback_locale`, so its screens and mails rendered in the fallback language unless the host wired `Lang::determineLocalesUsing()`. The package now wraps the translation loader for the `email-magic-link` namespace, so a regional locale reads its language, a region nobody listed included, and the README no longer asks for that wiring. A bundle published for the region under `lang/vendor/email-magic-link/` wins over the language key by key, and the shipped regional bundles stay as they are. Every other namespace keeps Laravel's lookup.
+
+### 🐛 Fixed
+
+- **A held-back resend shows its wait once, and the line goes when the wait is over.** The WireKit request screen showed the wait twice, the field's error line standing still and a second line below it counting down, and when the wait ran out an empty line kept its place above the button. In both views the field's error line now carries the wait and counts it down, and when the wait is over it is taken away and the button moves up. A host that published the views publishes `request.blade.php`, `wirekit/request.blade.php` and `partials/resend-countdown.blade.php` again, together.
+
 ## [0.37.0] - 2026-10-20
 
 ### ✨ Added
@@ -1454,7 +1466,8 @@ public repository sees the difference.
   `TwoFactorChallengeRequired`).
 - Publishable configuration, migration, and views.
 
-[Unreleased]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.37.0...HEAD
+[Unreleased]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.38.0...HEAD
+[0.38.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.37.0...v0.38.0
 [0.37.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.36.0...v0.37.0
 [0.36.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.35.0...v0.36.0
 [0.35.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.34.0...v0.35.0

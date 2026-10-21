@@ -16,7 +16,11 @@
                 <x-wirekit::stack as="form" method="POST" action="{{ route('email-magic-link.request') }}">
                     @csrf
 
+                    {{-- The field's own error line carries the wait of a held-back resend, and the
+                         countdown script keeps it current. Without a live region: the line changes
+                         every second, and a polite region would read each change out. --}}
                     <x-wirekit::input
+                        id="email"
                         name="email"
                         type="email"
                         :label="__('email-magic-link::messages.email_label')"
@@ -24,7 +28,7 @@
                         required
                         autofocus
                         :value="old('email')"
-                        :error="session('resend_retry_after') ? null : $errors->first('email')"
+                        :announce-error="session('resend_retry_after') ? false : null"
                     />
 
                     {{-- After a refused link the form above is the way to a new one, so what is added
@@ -54,7 +58,7 @@
                          reason for the hold-back before the button that is held back. --}}
                     @include('email-magic-link::partials.resend-countdown')
 
-                    <x-wirekit::button type="submit" :aria-describedby="session('resend_retry_after') ? 'eml-resend-countdown' : null">
+                    <x-wirekit::button type="submit" :aria-describedby="session('resend_retry_after') ? 'email-error' : null">
                         {{ $mode === 'code' ? __('email-magic-link::messages.request_send_code') : __('email-magic-link::messages.request_send_link') }}
                     </x-wirekit::button>
                 </x-wirekit::stack>

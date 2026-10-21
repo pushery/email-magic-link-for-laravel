@@ -1,7 +1,9 @@
-{{-- Renders a polite countdown that disables the submit button after a resend
-     was held back, re-enabling it when the wait elapses. Progressive
-     enhancement only: with JavaScript off the button stays usable and the
-     server simply holds the next request back again.
+{{-- Hands the countdown script what it needs after a resend was held back: the id of the
+     email field's error line, which already says how long to wait, the seconds, both plural
+     forms of the text and the name the line takes while it counts. The script keeps that
+     line current, holds the submit button back, and takes the line away when the wait is
+     over. Progressive enhancement only: with JavaScript off the line stays as the server
+     rendered it, the button stays usable, and the server holds the next request back again.
 
      The script is an external same-origin file, not an inline block, and that is
      a CSP decision rather than a tidiness one. Inline, it needed a nonce under any
@@ -20,27 +22,24 @@
          of the request screen and the countdown shows on almost none of them. --}}
     @php($emlCountdownScript = route('email-magic-link.resend-countdown-script', ['v' => \EmailMagicLink\Support\ResendCountdownScript::version()]))
 
-    {{-- role="timer", not role="status". A status region is aria-live="polite", so a
-         value that changes every second is announced every second — a screen
-         reader would hear the remaining time read out eight times instead of being
-         told once that they have to wait. role="timer" is implicitly aria-live="off",
-         so the text is read when the reader navigates to it and not on every tick.
-         The aria-label keeps the region named now that the live text is not the
-         announcement. (WireKit's own countdown component reaches the same conclusion
-         for the same reason.) --}}
-    <p
-        id="eml-resend-countdown"
-        class="eml-resend-countdown"
-        role="timer"
-        aria-label="{{ __('email-magic-link::messages.resend_countdown_label') }}"
+    {{-- No line of its own: a second line beside the field's error said the same thing twice.
+         The script gives the error line role="timer" while it counts, not role="status": a
+         status region is aria-live="polite", so a value that changes every second would be
+         read out every second. role="timer" is implicitly aria-live="off", and data-label is
+         the name the line carries meanwhile. (WireKit's own countdown component reaches the
+         same conclusion for the same reason.) --}}
+    <span
+        hidden
         data-eml-resend
+        data-target="email-error"
+        data-label="{{ __('email-magic-link::messages.resend_countdown_label') }}"
         data-seconds="{{ $resendSeconds }}"
         {{-- Both forms, because the tick counts down through one: a single template
              would have to bake a plural in and say "1 seconds" for a whole second, in
              every language. The script picks by the number it is about to render. --}}
         data-template-one="{{ trans_choice('email-magic-link::messages.resend_throttled', 1, ['seconds' => '__seconds__']) }}"
         data-template-other="{{ trans_choice('email-magic-link::messages.resend_throttled', 2, ['seconds' => '__seconds__']) }}"
-    >{{ trans_choice('email-magic-link::messages.resend_throttled', $resendSeconds, ['seconds' => $resendSeconds]) }}</p>
+    ></span>
 
     {{-- An expression rather than @if: a Blade conditional inside a tag leaves its
          whitespace behind, so the tag renders as `<script >`. The nonce is escaped

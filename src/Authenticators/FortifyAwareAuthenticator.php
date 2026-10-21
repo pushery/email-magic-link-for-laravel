@@ -20,7 +20,7 @@ use Symfony\Component\HttpFoundation\Response;
  *
  * When the verified user has two-factor authentication enabled by Fortify's own
  * verdict, the user is handed off to
- * Fortify's own challenge in a NOT-yet-authenticated state: the login.id /
+ * Fortify's own challenge in a not-yet-authenticated state: the login.id /
  * login.remember session keys are set and the request is redirected to the
  * challenge route. The actual login happens inside Fortify, only after the code
  * passes. Calling the guard's login() before the redirect would defeat the

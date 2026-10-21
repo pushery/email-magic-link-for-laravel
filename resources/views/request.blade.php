@@ -14,18 +14,14 @@
         @csrf
 
         <label for="email">{{ __('email-magic-link::messages.email_label') }}</label>
-        {{-- The field names the paragraph only while it is rendered: during a held-back resend
-             the paragraph is left out, and a reference to a missing id describes nothing. --}}
         <input id="email" name="email" type="email" autocomplete="email" required autofocus value="{{ old('email') }}"
-            @error('email') aria-invalid="true" @if (! session('resend_retry_after')) aria-describedby="email-error" @endif @enderror>
+            @error('email') aria-invalid="true" aria-describedby="email-error" @enderror>
 
-        {{-- Skipped while a resend is held back: the countdown below carries that message and
-             keeps it current; a second, static copy would say "30 seconds" for the whole wait. --}}
-        @if (! session('resend_retry_after'))
-            @error('email')
-                <p class="error" id="email-error">{{ $message }}</p>
-            @enderror
-        @endif
+        {{-- During a held-back resend this line carries the wait, and the countdown script keeps
+             it current and takes it away when the wait is over. --}}
+        @error('email')
+            <p class="error" id="email-error">{{ $message }}</p>
+        @enderror
 
         @if (\EmailMagicLink\Support\MagicLinkRejection::flashed() && ($emlSignInUrl = app(\EmailMagicLink\Support\MagicLinkConfig::class)->uiSignInUrl()) !== null)
             <p class="eml-rejected"><a href="{{ $emlSignInUrl }}">{{ __('email-magic-link::messages.back_to_sign_in') }}</a></p>
@@ -41,6 +37,6 @@
 
         @include('email-magic-link::partials.resend-countdown')
 
-        <button type="submit"{!! session('resend_retry_after') ? ' aria-describedby="eml-resend-countdown"' : '' !!}>{{ $mode === 'code' ? __('email-magic-link::messages.request_send_code') : __('email-magic-link::messages.request_send_link') }}</button>
+        <button type="submit"{!! session('resend_retry_after') ? ' aria-describedby="email-error"' : '' !!}>{{ $mode === 'code' ? __('email-magic-link::messages.request_send_code') : __('email-magic-link::messages.request_send_link') }}</button>
     </form>
 @endsection

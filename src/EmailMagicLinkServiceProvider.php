@@ -41,6 +41,7 @@ use EmailMagicLink\Support\DefaultResendGuard;
 use EmailMagicLink\Support\EntropyGuard;
 use EmailMagicLink\Support\InvitationGuard;
 use EmailMagicLink\Support\IssuanceLock;
+use EmailMagicLink\Support\LanguageFallbackLoader;
 use EmailMagicLink\Support\MagicLinkConfig;
 use EmailMagicLink\Support\RateLimits;
 use EmailMagicLink\Support\TokenHasher;
@@ -52,6 +53,7 @@ use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\Foundation\CachesConfiguration;
 use Illuminate\Contracts\Http\Kernel as KernelContract;
+use Illuminate\Contracts\Translation\Loader;
 use Illuminate\Foundation\Console\AboutCommand;
 use Illuminate\Foundation\Http\Kernel as HttpKernel;
 use Illuminate\Support\Facades\Log;
@@ -92,6 +94,10 @@ final class EmailMagicLinkServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->mergeConfigDeeplyFrom(__DIR__.'/../config/email-magic-link.php', 'email-magic-link');
+
+        // A regional locale reads this package's catalog of its language, `pt-BR` from `pt`, in this package's
+        // namespace only. Registered here so it wraps the loader before the translator is built from it.
+        $this->app->extend('translation.loader', static fn (Loader $loader): Loader => new LanguageFallbackLoader($loader, 'email-magic-link'));
 
         // A resolver rather than the repository: Octane swaps a copy of the repository into a fresh
         // container for every request, and a singleton holding the instance from boot would never

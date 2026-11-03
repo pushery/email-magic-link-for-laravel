@@ -50,6 +50,10 @@ final class ResendCountdownScript
      *   that is gone.
      * - `aria-disabled`, not `disabled`: the button stays in the tab order and announces
      *   as dimmed, and `aria-describedby` on it names the line as the reason.
+     * - The form whose button is held back is the one the countdown stands in, and failing
+     *   that the request form by its `data-email-magic-link-form` attribute. Never the first
+     *   form of the page: a host layout, a header view or a language switcher can put a form
+     *   of its own above the card, and the countdown would hold that one back instead.
      */
     private const string SOURCE = <<<'JS'
         (function () {
@@ -60,7 +64,7 @@ final class ResendCountdownScript
             }
 
             var line = document.getElementById(holder.getAttribute('data-target') || '') || holder;
-            var form = (holder.closest('main') || document).querySelector('form');
+            var form = holder.closest('form') || document.querySelector('form[data-email-magic-link-form="request"]');
             var button = form ? form.querySelector('button[type="submit"], button:not([type])') : null;
             var field = line.id ? document.querySelector('[aria-describedby~="' + line.id + '"]:not(button)') : null;
             var one = holder.getAttribute('data-template-one') || '';

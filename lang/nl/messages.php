@@ -14,6 +14,8 @@ return [
     'request_intro_code' => 'Voer je e-mailadres in en we sturen je een veilige inlogcode.',
     'request_send_link' => 'Inloglink versturen',
     'request_send_code' => 'Inlogcode versturen',
+    'request_resend_link' => 'Inloglink opnieuw versturen',
+    'request_resend_code' => 'Inlogcode opnieuw versturen',
     'delivery_legend' => 'Bezorging',
     'delivery_link' => 'Magische link',
     'delivery_code' => 'Eenmalige code',
@@ -40,6 +42,8 @@ return [
     // Status and error messages.
     'status_link_sent' => 'Als een account overeenkomt met dat e-mailadres, hebben we een inloglink gestuurd.',
     'status_code_sent' => 'Als een account overeenkomt met dat e-mailadres, hebben we een inlogcode gestuurd.',
+    'status_sent_title' => 'Controleer je e-mail',
+    'status_sent_hint' => 'Komt er binnen een paar minuten niets aan, kijk dan in je spammap.',
     'consume_failed' => 'Deze inlogaanvraag is ongeldig of verlopen. Vraag een nieuwe aan.',
     'request_new_code' => 'Nieuwe inlogcode aanvragen',
     'back_to_sign_in' => 'Terug naar inloggen',

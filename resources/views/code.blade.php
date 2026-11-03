@@ -6,18 +6,26 @@
     <h1>{{ __('email-magic-link::messages.code_heading') }}</h1>
     <p>{{ __('email-magic-link::messages.code_intro') }}</p>
 
+    {{-- A title, the status, and the optional hint below it, as on the WireKit screens. --}}
     @if (session('status'))
-        <div class="status" role="status">{{ session('status') }}</div>
+        @php($emlSentHint = __('email-magic-link::messages.status_sent_hint'))
+        <div class="status" role="status">
+            <strong class="eml-status-title">{{ __('email-magic-link::messages.status_sent_title') }}</strong>
+            {{ session('status') }}
+            @if ($emlSentHint !== '')
+                <span class="eml-status-hint">{{ $emlSentHint }}</span>
+            @endif
+        </div>
     @endif
 
-    <form method="POST" action="{{ route('email-magic-link.code.consume') }}">
+    <form method="POST" action="{{ route('email-magic-link.code.consume') }}" data-email-magic-link-form="code">
         @csrf
-        @if ($guard ?: old('guard'))
-            <input type="hidden" name="guard" value="{{ $guard ?: old('guard') }}">
+        @if ($guard ?: \EmailMagicLink\Support\SentText::old('guard'))
+            <input type="hidden" name="guard" value="{{ $guard ?: \EmailMagicLink\Support\SentText::old('guard') }}">
         @endif
 
         <label for="email">{{ __('email-magic-link::messages.email_label') }}</label>
-        <input id="email" name="email" type="email" autocomplete="email" required value="{{ $email ?: old('email') }}"
+        <input id="email" name="email" type="email" autocomplete="email" required value="{{ $email ?: \EmailMagicLink\Support\SentText::old('email') }}"
             @error('email') aria-invalid="true" aria-describedby="email-error" @enderror>
 
         <label for="code" class="eml-code-label">{{ __('email-magic-link::messages.code_label') }}</label>
@@ -40,12 +48,7 @@
         @enderror
 
         @if (\EmailMagicLink\Support\MagicLinkRejection::flashed())
-            <p class="eml-rejected">
-                <a href="{{ route('email-magic-link.request.form') }}">{{ __('email-magic-link::messages.request_new_code') }}</a>
-                @if (($emlSignInUrl = $emlConfig->uiSignInUrl()) !== null)
-                    · <a href="{{ $emlSignInUrl }}">{{ __('email-magic-link::messages.back_to_sign_in') }}</a>
-                @endif
-            </p>
+            <p class="eml-rejected"><a href="{{ route('email-magic-link.request.form') }}">{{ __('email-magic-link::messages.request_new_code') }}</a></p>
         @endif
 
         {{-- Kept across a refused code: the refusal flashes the choice back with the email. --}}
@@ -54,5 +57,9 @@
         @endif
 
         <button type="submit">{{ __('email-magic-link::messages.sign_in') }}</button>
+
+        @if (($emlSignInUrl = app(\EmailMagicLink\Support\MagicLinkConfig::class)->uiSignInUrl()) !== null)
+            <p class="eml-sign-in"><a href="{{ $emlSignInUrl }}">{{ __('email-magic-link::messages.back_to_sign_in') }}</a></p>
+        @endif
     </form>
 @endsection

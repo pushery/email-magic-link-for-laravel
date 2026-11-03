@@ -16,7 +16,6 @@
 ![Type Coverage](https://img.shields.io/badge/types-100%25-brightgreen.svg)
 [![PHPStan](https://img.shields.io/badge/PHPStan-max-blue.svg)](https://phpstan.org)
 [![Code Style](https://img.shields.io/badge/code%20style-pint-orange.svg)](https://laravel.com/docs/pint)
-
 ![Databases](https://img.shields.io/badge/tested%20on-PostgreSQL%2018%20%2B%20MySQL%208.4-336791.svg)
 ![Mutation](https://img.shields.io/badge/mutation-%E2%89%A593%25-blueviolet.svg)
 

@@ -14,6 +14,7 @@ use EmailMagicLink\Http\Controllers\Concerns\RejectsGenerically;
 use EmailMagicLink\Models\Invitation;
 use EmailMagicLink\Support\AcceptedInvitation;
 use EmailMagicLink\Support\ClaimFailure;
+use EmailMagicLink\Support\CompletedSignIns;
 use EmailMagicLink\Support\MagicLinkConfig;
 use Illuminate\Auth\AuthManager;
 use Illuminate\Auth\EloquentUserProvider;
@@ -110,12 +111,16 @@ final readonly class AcceptInvitationController
         });
 
         if ($outcome instanceof ClaimFailure) {
-            return $this->refuse($request, $outcome);
+            // The second request of a double click finds the invitation the first one spent.
+            return $this->repeatedAcceptance($request, 'invitation|'.$token) ?? $this->refuse($request, $outcome);
         }
 
         [$accepted, $user] = $outcome;
 
         event(new InvitationAccepted($accepted, $user, $request));
+
+        // Noted under the session the request arrived with, which signing in is about to replace.
+        app(CompletedSignIns::class)->remember($request, 'invitation|'.$token, $user, $accepted->guard, false);
 
         if (! $user instanceof Authenticatable) {
             // The handler accepted without producing a session -- which is what you want
@@ -151,6 +156,29 @@ final readonly class AcceptInvitationController
         if (! $belongs) {
             throw InvitationsMisconfiguredException::handlerUserNotInGuard($guard);
         }
+    }
+
+    /**
+     * Answer a refused acceptance as the one it repeats, where this session accepted the invitation a moment ago.
+     *
+     * An acceptance that signed nobody in is answered with the same redirect, and one that signed a person in signs them
+     * in again through the same authenticator. Nothing is accepted twice: the host's handler is not asked again.
+     */
+    private function repeatedAcceptance(Request $request, string $credential): ?Response
+    {
+        $note = app(CompletedSignIns::class)->repeated($request, $credential);
+
+        if ($note === null) {
+            return null;
+        }
+
+        if ($note['user'] === null) {
+            return redirect()->to($this->config->invitationRedirectTo());
+        }
+
+        $user = $this->auth->createUserProvider($this->config->providerForGuard($note['guard']))?->retrieveById($note['user']);
+
+        return $user instanceof Authenticatable ? app(MagicLinkAuthenticator::class)->authenticate($request, $user, $note['guard'], false) : null;
     }
 
     private function refuse(Request $request, ClaimFailure $reason): Response

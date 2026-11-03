@@ -50,7 +50,7 @@ final readonly class MagicLinkConfig
 
     public function enabled(): bool
     {
-        return $this->bool($this->repository()->get('email-magic-link.enabled'), true);
+        return EnvFlag::protection($this->repository()->get('email-magic-link.enabled'), true);
     }
 
     /**
@@ -315,6 +315,18 @@ final readonly class MagicLinkConfig
         return is_string($captcha) && $captcha !== '' ? $captcha : null;
     }
 
+    /**
+     * The host's view holding the captcha widget, rendered inside the request form. A raw view
+     * name, not a resolved view: the request form checks that it resolves when it renders,
+     * because a host may register the namespace that holds it after this package boots.
+     */
+    public function captchaView(): ?string
+    {
+        $view = $this->repository()->get('email-magic-link.captcha_view');
+
+        return is_string($view) && $view !== '' ? $view : null;
+    }
+
     /** The class that names the application and greets the recipient in the mail, or null for the bundled one. */
     public function mailIdentity(): ?string
     {
@@ -467,7 +479,7 @@ final readonly class MagicLinkConfig
         return is_string($to) && $to !== '' ? $to : null;
     }
 
-    /** The application's own sign-in page the screens link to after a refusal, or null for none. */
+    /** The application's own sign-in page the screens link to below their button, or null for none. */
     public function uiSignInUrl(): ?string
     {
         $url = $this->repository()->get('email-magic-link.ui.sign_in_url');
@@ -654,6 +666,18 @@ final readonly class MagicLinkConfig
         $size = Str::trim($size);
 
         return $size === '' ? null : $size;
+    }
+
+    /**
+     * A view rendered at the top of the card of every WireKit screen, the host's error summary, or
+     * null for none.
+     *
+     * Dropped and logged rather than thrown when it names no view, like the two slots: it renders on
+     * the sign-in path, where a typo would lock everyone out.
+     */
+    public function uiErrorsView(): ?string
+    {
+        return $this->existingView('email-magic-link.ui.errors_view');
     }
 
     /**

@@ -14,6 +14,8 @@ return [
     'request_intro_code' => 'Enter your email address and we will send you a secure sign-in code.',
     'request_send_link' => 'Send sign-in link',
     'request_send_code' => 'Send sign-in code',
+    'request_resend_link' => 'Resend sign-in link',
+    'request_resend_code' => 'Resend sign-in code',
     'delivery_legend' => 'Delivery',
     'delivery_link' => 'Magic link',
     'delivery_code' => 'One-time code',
@@ -40,6 +42,8 @@ return [
     // Status and error messages.
     'status_link_sent' => 'If an account matches that email, we have sent a sign-in link.',
     'status_code_sent' => 'If an account matches that email, we have sent a sign-in code.',
+    'status_sent_title' => 'Check your email',
+    'status_sent_hint' => 'If nothing arrives within a few minutes, look in your spam folder.',
     'consume_failed' => 'This sign-in request is invalid or has expired. Please request a new one.',
     'request_new_code' => 'Request a new sign-in code',
     'back_to_sign_in' => 'Back to sign-in',

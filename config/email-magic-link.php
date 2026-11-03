@@ -15,11 +15,13 @@ return [
     |
     | Turns the magic-link channel on or off independently of whether Fortify
     | is installed. When false, no routes, notifications, or rate limiters are
-    | registered: the package becomes inert.
+    | registered: the package becomes inert. A variable that is set but empty
+    | counts as not set and keeps the channel on; `false`, `off`, `no` and `0`
+    | switch it off.
     |
     */
 
-    'enabled' => filter_var(env('EMAIL_MAGIC_LINK_ENABLED', true), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? true,
+    'enabled' => EnvFlag::protection(env('EMAIL_MAGIC_LINK_ENABLED', true), true),
 
     /*
     |--------------------------------------------------------------------------
@@ -262,6 +264,22 @@ return [
     */
 
     'captcha' => null,
+
+    /*
+    |--------------------------------------------------------------------------
+    | Captcha widget
+    |--------------------------------------------------------------------------
+    |
+    | A Blade view of yours that renders the widget whose token the captcha
+    | guard above verifies, such as the container and script of hCaptcha,
+    | Turnstile or reCAPTCHA. Both bundled request forms include it inside the
+    | <form>, before the submit button, so the token it writes is posted with
+    | the address. Leave null to render nothing. A name that resolves to no
+    | view stops the form with an exception that names this key.
+    |
+    */
+
+    'captcha_view' => null,
 
     /*
     |--------------------------------------------------------------------------
@@ -508,9 +526,19 @@ return [
         'heading_size' => null,
 
         /*
-         * Your application's own sign-in page, as a URL or a path, or null for none. When a link or
-         * a code was turned away, the screens of both view trees link to it beside the way to a new
-         * one, so a person who would rather sign in another way finds the way back. Null links
+         * A view of yours that the WireKit screens render at the top of the card with `$errors`, for
+         * an application whose forms show their errors in one summary (a role="alert" list that names
+         * every message, WCAG 3.3.1). While it is set, the form tells WireKit's fields not to announce
+         * their own errors as well, and the confirmation screen leaves its error alert to the summary.
+         * Null keeps each error at its field. A name that resolves to no view is dropped and logged at
+         * `warning`. The plain Blade screens do not read this key.
+         */
+        'errors_view' => null,
+
+        /*
+         * Your application's own sign-in page, as a URL or a path, or null for none. The sign-in,
+         * code and confirmation screens of both view trees link to it below their button in every
+         * state, so a person who would rather sign in another way finds the way back. Null links
          * nothing.
          */
         'sign_in_url' => null,

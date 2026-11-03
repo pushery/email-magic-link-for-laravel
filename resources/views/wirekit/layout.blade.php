@@ -6,15 +6,17 @@
 @php($emlCodeBoxes = new \EmailMagicLink\Support\CodeBoxLayout($emlConfig->codeLength()))
 {{-- A host that names a layout component of its own gets the card inside it, with the page's title. Its frame,
      its <head> and its theme are then the host's, and so are the WireKit and Livewire assets, the fonts and
-     whatever stands above and below the card. The slot carries the two width rules the card needs and nothing
-     else. The referrer policy this layout repeats in a <meta> reaches the browser as a header on every route of
-     the package either way. --}}
+     whatever stands above and below the card. The slot carries the width rules the card needs, each through a
+     custom property with this package's value as the fallback, so a frame that decides width and spacing itself
+     sets them and the shell follows. The referrer policy this layout repeats in a <meta> reaches the browser as
+     a header on every route of the package either way. --}}
 @if ($emlHostLayout = $emlConfig->uiLayout())
 @php($emlNonce = app(\EmailMagicLink\Contracts\ScriptNonce::class)->value())
 <x-dynamic-component :component="$emlHostLayout" :title="trim($__env->yieldContent('title', __('email-magic-link::messages.sign_in')))">
     <style{!! $emlNonce === null ? '' : ' nonce="'.e($emlNonce).'"' !!}>
-        .eml-shell { width: 100%; max-width: 24rem; margin-inline: auto; padding: 2rem; box-sizing: border-box; }
-        .eml-shell:has(.eml-otp) { max-width: {{ $emlCodeBoxes->cardMaxWidthRem() }}rem; }
+        .eml-shell { width: 100%; max-width: var(--eml-card-max-width, 24rem); margin-inline: auto; padding: var(--eml-card-padding, 2rem); box-sizing: border-box; }
+        .eml-shell:has(.eml-otp) { max-width: var(--eml-code-card-max-width, {{ $emlCodeBoxes->cardMaxWidthRem() }}rem); }
+        .eml-status-hint { display: block; margin-top: 0.25rem; }
     </style>
     <div class="eml-shell">
         @yield('content')
@@ -99,11 +101,13 @@
             background: var(--color-wk-bg, Canvas);
             color: var(--color-wk-text, CanvasText);
         }
-        .eml-shell { width: 100%; max-width: 24rem; padding: 2rem; box-sizing: border-box; }
+        .eml-shell { width: 100%; max-width: var(--eml-card-max-width, 24rem); padding: var(--eml-card-padding, 2rem); box-sizing: border-box; }
         {{-- The card widens for a long code so a desktop keeps the whole thing in one row: how
              wide this package's card may grow is a decision about the screen around the component.
              Where the code breaks is WireKit's `group` prop. --}}
-        .eml-shell:has(.eml-otp) { max-width: {{ $emlCodeBoxes->cardMaxWidthRem() }}rem; }
+        .eml-shell:has(.eml-otp) { max-width: var(--eml-code-card-max-width, {{ $emlCodeBoxes->cardMaxWidthRem() }}rem); }
+        {{-- The optional hint below the status in the sent state, on a line of its own. --}}
+        .eml-status-hint { display: block; margin-top: 0.25rem; }
     </style>
 </head>
 <body>

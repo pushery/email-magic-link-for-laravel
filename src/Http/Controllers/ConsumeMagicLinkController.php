@@ -40,9 +40,11 @@ final class ConsumeMagicLinkController
 
         $result = $store->claimLink($token, $passphrase);
         if (! $result->succeeded()) {
-            return $this->failedConsumption($request, 'email-magic-link.request.form', $result->failure);
+            // The second request of a double click finds the link the first one spent.
+            return $this->repeatedLogin($request, 'link|'.$token)
+                ?? $this->failedConsumption($request, 'email-magic-link.request.form', $result->failure);
         }
 
-        return $this->completeLogin($request, $result->token, 'email-magic-link.request.form');
+        return $this->completeLogin($request, $result->token, 'email-magic-link.request.form', 'link|'.$token);
     }
 }

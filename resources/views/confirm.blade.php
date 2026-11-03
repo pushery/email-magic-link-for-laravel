@@ -10,7 +10,7 @@
         <p class="error" id="email-error" role="alert">{{ $message }}</p>
     @enderror
 
-    <form method="POST" action="{{ $action }}">
+    <form method="POST" action="{{ $action }}" data-email-magic-link-form="confirm">
         @csrf
         @if ($requiresPassphrase ?? false)
             <label for="passphrase">{{ __('email-magic-link::messages.passphrase_label') }}</label>
@@ -20,5 +20,9 @@
             <label class="eml-remember"><input type="checkbox" name="remember" value="1"> {{ __('email-magic-link::messages.remember_label') }}</label>
         @endif
         <button type="submit">{{ __('email-magic-link::messages.sign_in') }}</button>
+
+        @if (($emlSignInUrl = app(\EmailMagicLink\Support\MagicLinkConfig::class)->uiSignInUrl()) !== null)
+            <p class="eml-sign-in"><a href="{{ $emlSignInUrl }}">{{ __('email-magic-link::messages.back_to_sign_in') }}</a></p>
+        @endif
     </form>
 @endsection

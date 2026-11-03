@@ -10,6 +10,7 @@ use EmailMagicLink\Models\Invitation;
 use EmailMagicLink\Models\MagicLinkToken;
 use EmailMagicLink\Stores\DefaultTokenStore;
 use EmailMagicLink\Support\AutoScriptNonce;
+use EmailMagicLink\Support\DatabaseLockTransaction;
 use EmailMagicLink\Support\EnvNumber;
 use EmailMagicLink\Support\MagicLinkConfig;
 use EmailMagicLink\Support\TableLookup;
@@ -371,6 +372,11 @@ final class DoctorCommand extends Command
      * waits and times out as usual, and the transaction stays usable. The store's
      * `lock_connection` setting exists for exactly that.
      *
+     * From laravel/framework 13.39.0 the store inserts its lock with insertOrIgnore(), which a
+     * taken key does not fail, so the lock waits on a shared connection as well and there is
+     * nothing to report ({@see DatabaseLockTransaction}). The package installs on any 13.x, so
+     * the check stays for the releases before.
+     *
      * The transaction that aborts is the caller's, so the lock is reported on the connections
      * the package's tables use and on the application's default, where DB::transaction()
      * opens it. The two differ once the models are mapped to a connection of their own.
@@ -402,13 +408,18 @@ final class DoctorCommand extends Command
             return;
         }
 
+        if (! $app->make(DatabaseLockTransaction::class)->abortsOnATakenKey()) {
+            return;
+        }
+
         $where = in_array($connection->getName(), $tables, true) ? 'the tables use' : "that is your application's default";
 
         $this->line("Issue lock  the database cache store, on the PostgreSQL connection \"{$connection->getName()}\" {$where}.");
         $this->line('            An invite() or issueLink() inside a transaction of yours on that connection');
         $this->line('            fails at once with SQLSTATE 25P02 while another issue for the same address');
         $this->line('            holds the lock, and your transaction is aborted. Give the store a');
-        $this->line('            lock_connection of its own, or point email-magic-link.lock_store elsewhere.');
+        $this->line('            lock_connection of its own, point email-magic-link.lock_store elsewhere,');
+        $this->line('            or update laravel/framework to '.DatabaseLockTransaction::USABLE_SINCE.', whose lock leaves it usable.');
     }
 
     /**

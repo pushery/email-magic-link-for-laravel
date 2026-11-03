@@ -14,6 +14,8 @@ return [
     'request_intro_code' => 'Saisissez votre adresse e-mail et nous vous enverrons un code de connexion sécurisé.',
     'request_send_link' => 'Envoyer le lien de connexion',
     'request_send_code' => 'Envoyer le code de connexion',
+    'request_resend_link' => 'Renvoyer le lien de connexion',
+    'request_resend_code' => 'Renvoyer le code de connexion',
     'delivery_legend' => 'Livraison',
     'delivery_link' => 'Lien magique',
     'delivery_code' => 'Code à usage unique',
@@ -40,6 +42,8 @@ return [
     // Status and error messages.
     'status_link_sent' => 'Si un compte correspond à cette adresse e-mail, nous vous avons envoyé un lien de connexion.',
     'status_code_sent' => 'Si un compte correspond à cette adresse e-mail, nous vous avons envoyé un code de connexion.',
+    'status_sent_title' => 'Consultez votre boîte de réception',
+    'status_sent_hint' => 'Si rien n’arrive d’ici quelques minutes, regardez dans votre dossier de courrier indésirable.',
     'consume_failed' => 'Cette demande de connexion est invalide ou a expiré. Veuillez en demander une nouvelle.',
     'request_new_code' => 'Demander un nouveau code de connexion',
     'back_to_sign_in' => 'Retour à la connexion',

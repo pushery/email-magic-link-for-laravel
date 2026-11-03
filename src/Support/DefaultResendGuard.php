@@ -220,8 +220,9 @@ final readonly class DefaultResendGuard implements ResendGuard
         return $this->cache->store($this->config->resendStore());
     }
 
+    /** Keyed with the application key, because the key holds the normalized address (KeyedDigest). */
     private function digest(string $key): string
     {
-        return hash('sha256', $key);
+        return KeyedDigest::of($key);
     }
 }

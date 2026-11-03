@@ -227,6 +227,10 @@ The same pattern applies to `token_store`, `captcha`, `mail_identity` and `inval
 — each takes the class-string of a published contract under
 `EmailMagicLink\Contracts` and falls back to a bundled default.
 
+`captcha_view` is the other half of `captcha`: the name of a Blade view of the application's
+that renders the widget writing the token the guard verifies. Both bundled request forms include
+it inside the `<form>`, before the submit button, so no form template has to be published for it.
+
 `notification` is the odd one out and is **not** a contract: it takes a class that
 **extends `MagicLinkNotification`**. Anything else is ignored — the package falls
 back to the bundled notification without raising, so a wrong class-string looks

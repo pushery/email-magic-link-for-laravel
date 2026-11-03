@@ -39,10 +39,13 @@ final class ConsumeCodeController
         }
 
         $result = $store->claimCode($user, $request->code(), $guard);
+        $credential = 'code|'.$guard.'|'.mb_strtolower($request->email()).'|'.$request->code();
         if (! $result->succeeded()) {
-            return $this->failedConsumption($request, 'email-magic-link.code.form', $result->failure);
+            // A spent code reads as no code at all, so the second request of a double click is found by its note.
+            return $this->repeatedLogin($request, $credential)
+                ?? $this->failedConsumption($request, 'email-magic-link.code.form', $result->failure);
         }
 
-        return $this->completeLogin($request, $result->token, 'email-magic-link.code.form');
+        return $this->completeLogin($request, $result->token, 'email-magic-link.code.form', $credential);
     }
 }

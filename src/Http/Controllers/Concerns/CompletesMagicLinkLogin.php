@@ -11,6 +11,7 @@ use EmailMagicLink\Events\MagicLinkConsumptionFailed;
 use EmailMagicLink\Events\MagicLinkVerified;
 use EmailMagicLink\Models\MagicLinkToken;
 use EmailMagicLink\Support\ClaimFailure;
+use EmailMagicLink\Support\CompletedSignIns;
 use EmailMagicLink\Support\MagicLinkConfig;
 use EmailMagicLink\Support\ResendKey;
 use Illuminate\Auth\AuthManager;
@@ -29,7 +30,7 @@ trait CompletesMagicLinkLogin
 {
     use RejectsGenerically;
 
-    protected function completeLogin(Request $request, MagicLinkToken $token, string $failureRoute): Response
+    protected function completeLogin(Request $request, MagicLinkToken $token, string $failureRoute, string $credential): Response
     {
         // The guard was validated when the token was issued; re-checked here so an
         // operator who removes a guard from the allowlist closes the door for links
@@ -73,7 +74,37 @@ trait CompletesMagicLinkLogin
         // carries the same value on to Fortify as `login.remember`.
         $remember = app(MagicLinkConfig::class)->rememberEnabled() && $request->boolean('remember');
 
+        // Noted under the session the request arrived with, which signing in is about to replace, so the second request
+        // of a double click is answered as this one rather than with the refusal of a spent credential.
+        app(CompletedSignIns::class)->remember($request, $credential, $user, $token->guard, $remember);
+
         return app(MagicLinkAuthenticator::class)->authenticate($request, $user, $token->guard, $remember);
+    }
+
+    /**
+     * Sign the person in again where a refused request repeats a sign-in this session made a moment ago.
+     *
+     * The second request of a double click carries the session the first one replaced, and the credential the first one
+     * spent. It is answered as the first was, through the same authenticator, so a second factor is still asked for.
+     * The account is read and its eligibility asked again, and a request that repeats no sign-in gets null.
+     */
+    protected function repeatedLogin(Request $request, string $credential): ?Response
+    {
+        $note = app(CompletedSignIns::class)->repeated($request, $credential);
+
+        if ($note === null) {
+            return null;
+        }
+
+        $user = app(AuthManager::class)
+            ->createUserProvider(app(MagicLinkConfig::class)->providerForGuard($note['guard']))
+            ?->retrieveById($note['user']);
+
+        if (! $user instanceof Authenticatable || ! app(SignInEligibility::class)->allows($user, $note['guard'])) {
+            return null;
+        }
+
+        return app(MagicLinkAuthenticator::class)->authenticate($request, $user, $note['guard'], $note['remember']);
     }
 
     protected function resolveUser(MagicLinkToken $token): ?Authenticatable

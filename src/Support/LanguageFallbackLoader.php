@@ -67,10 +67,19 @@ final readonly class LanguageFallbackLoader implements Loader
         $this->inner->addJsonPath($path);
     }
 
-    /** @return array<string, string> */
+    /**
+     * The registered namespaces and their paths. The contract spells this out as array<string, string> in its later
+     * Laravel 13 releases and as a bare array in Laravel 12 and the first 13 releases, while the wrapped loader answers
+     * the same map in both, so the answer is narrowed here rather than taken on the contract's word.
+     *
+     * @return array<string, string>
+     */
     public function namespaces(): array
     {
-        return $this->inner->namespaces();
+        /** @var array<string, string> $namespaces */
+        $namespaces = $this->inner->namespaces();
+
+        return $namespaces;
     }
 
     /**

@@ -116,7 +116,8 @@ final class IssuanceLock
      */
     public static function keyFor(string $scope, string $subject, string $guard): string
     {
-        return self::PREFIX.$scope.':'.hash('sha256', $subject.'|'.$guard);
+        // Keyed with the application key, because the subject is a mail address (KeyedDigest).
+        return self::PREFIX.$scope.':'.KeyedDigest::of($subject.'|'.$guard);
     }
 
     /**

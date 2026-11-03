@@ -4,6 +4,46 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.39.0] - 2026-11-03
+
+### ✨ Added
+
+- **`ui.errors_view` renders an error summary of the application at the top of the WireKit screens.** It names a view that the sign-in, code and confirmation screens render at the top of the card with `$errors`, for an application whose forms show their errors in one `role="alert"` list. While it is set, the form tells WireKit's fields not to announce their errors as well, and the confirmation screen leaves its error alert to the summary. Without it nothing changes. The plain Blade screens do not read the key.
+
+- **A host frame decides the card's width and spacing.** The shell around the card takes its width and padding from `--eml-card-max-width`, `--eml-card-padding` and, on the code screen, `--eml-code-card-max-width`, each with the earlier value as its fallback, so a frame named by `ui.layout` that decides width and spacing itself sets them and the card follows.
+
+- **`captcha_view` renders a captcha widget inside the bundled request forms.** The `captcha` guard verifies a token the browser posts, and the widget that writes the token had no place in the bundled forms, so an application that used the guard copied the request template and left the update path. Both bundled forms, the WireKit one and the plain one, now include the view `captcha_view` names inside the `<form>`, before the submit button. A name that resolves to no view fails with a `CaptchaMisconfiguredException` that names the key.
+
+- **The bundled forms carry `data-email-magic-link-form`, so a host script can hold a second click back.** A double click sent a form twice, and the second request found the link, the code or the invitation the first one had spent, so the browser showed the refusal although the person was signed in. Every form of both bundled screen sets carries the attribute, set to `request`, `code` or `confirm`, and the screens guide shows a script that holds the second submission back.
+
+### 🔧 Changed
+
+- **The bundled screens link the application's sign-in page in every state, call a second send a resend, and title the sent state.** Where `ui.sign_in_url` names a page, the sign-in, code and confirmation screens of both view trees link to it below their button, not only after a refusal. After a send, and while a resend is held back, the send button reads `request_resend_link` or `request_resend_code`, because pressing it sends another mail. The sent state carries the title `status_sent_title` and, below the status, the optional hint `status_sent_hint` about the spam folder, which an empty translation switches off. All four strings ship in every bundled language.
+
+  **Upgrade:** a copy of the views published before keeps the earlier screens. `php artisan vendor:publish --tag=email-magic-link-views --force` brings the change, and a browser test of the application that presses "Send sign-in link" a second time on the same page now presses "Resend sign-in link".
+
+### 🐛 Fixed
+
+- **An address or a guard sent as a list is refused at its field.** Laravel flashes the whole input back when validation refuses it, and the sign-in forms wrote `old()` into their fields as it came: a list reached `htmlspecialchars()` in the plain views and a string cast in the WireKit views, and the refusal ended on an error page. The forms read the refused input as text now, a list as an empty field.
+
+  **Upgrade:** an application that published the views republishes them with `php artisan vendor:publish --tag=email-magic-link-views --force`.
+
+- **The resend countdown holds back the form it stands in.** It took the first form of the `<main>` around it, so a form that a host layout, a header view or a language switcher put above the card was held back, while the request form stayed free. It now takes the form it stands in, and failing that the request form by its `data-email-magic-link-form` attribute.
+
+- **The second request of a double click is answered as the sign-in it repeats.** It carried the session the first request had replaced and the link, the code or the invitation that request had spent, and got the refusal of a spent credential although the person was signed in. Where both match a sign-in made within the last minute, the second request now signs the person in again through the same authenticator, so a second factor is still asked for, and an invitation that signed nobody in gets the same redirect. The invitation handler is not asked twice, and `MagicLinkVerified` and `InvitationAccepted` are announced once.
+
+- **`email-magic-link:doctor` warns about a shared PostgreSQL lock connection only where the framework's lock still ends the transaction.** From laravel/framework 13.39.0 the database cache store takes its lock with `insertOrIgnore()`, so a key another issue holds no longer aborts the transaction an `invite()` or `issueLink()` runs in: the lock waits and times out as it does on a connection of its own, and the issue-lock line stays quiet. Before 13.39.0 the line reports as before and names the update as a third way out.
+
+- **A set but empty `EMAIL_MAGIC_LINK_ENABLED` keeps the channel on.** `env()` hands an empty variable back as `""`, which the master switch read as off, so a line copied empty from an `.env` template made the package inert without a message. An application that reads the same variable with an empty value as not set, to list its ways to sign in, then counted a channel that was off, and its check for at least one way passed while nobody could sign in. The shipped config and `MagicLinkConfig::enabled()` now read an empty or blank value as not set, the way `EMAIL_MAGIC_LINK_RESEND` already reads. `false`, `off`, `no` and `0` still switch the channel off.
+
+  **Upgrade:** a config published before keeps the earlier line. Replace it with `'enabled' => EnvFlag::protection(env('EMAIL_MAGIC_LINK_ENABLED', true), true),` and import `EmailMagicLink\Support\EnvFlag`, or leave the variable unset rather than empty.
+
+### 🔒 Security
+
+- **No cache key names a client's address, a mail address or a token any more.** The rate limiters keyed the address raw and the mail address and the token as a plain SHA-256, the framework turned a named limiter's key into `md5()` of its name and that key, and the issuance lock and the resend record took a plain SHA-256 of the address. Sentry and Flare record every cache key they see, and each of those hashes can be tried back. Every subject is now hashed with the application key, and the same subject still counts against the same bucket.
+
+  **Upgrade:** the counts, the resend records and the lock names start afresh once with this version. While two releases run side by side during a deploy, they do not share the issuance lock for one address, so deploy in one step where you can.
+
 ## [0.38.0] - 2026-10-21
 
 ### ✨ Added
@@ -1466,7 +1506,8 @@ public repository sees the difference.
   `TwoFactorChallengeRequired`).
 - Publishable configuration, migration, and views.
 
-[Unreleased]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.38.0...HEAD
+[Unreleased]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.39.0...HEAD
+[0.39.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.38.0...v0.39.0
 [0.38.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.37.0...v0.38.0
 [0.37.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.36.0...v0.37.0
 [0.36.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.35.0...v0.36.0

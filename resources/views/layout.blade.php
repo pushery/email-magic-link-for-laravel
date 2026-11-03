@@ -94,6 +94,9 @@
         /* A class, not a style attribute: `style-src-attr` is never satisfied by a nonce. */
         .eml-code-label { margin-top: 1rem; }
         .eml-rejected { margin: 0.6rem 0 0; font-size: 0.9rem; }
+        .eml-sign-in { margin: 0.75rem 0 0; font-size: 0.9rem; }
+        .eml-status-title { display: block; font-weight: 600; margin-bottom: 0.25rem; }
+        .eml-status-hint { display: block; margin-top: 0.25rem; font-size: 0.9rem; }
         /* Touch floors: 44 px targets and rows where a thumb lands, as the WireKit path has. */
         @media (pointer: coarse) {
             input:not([type="radio"]):not([type="checkbox"]), button, a.button { min-height: 2.75rem; }

@@ -68,19 +68,17 @@ final readonly class RateLimits
         $email = is_string($email) ? NormalizedEmail::from($email) : '';
 
         return [
-            // Hashed here rather than left to the framework, and the difference only shows on
-            // a host that has turned the framework's hashing off.
-            // `ThrottleRequests::shouldHashKeys(false)` is a supported call, and after it the raw
-            // key is what reaches the cache -- so the address would sit in Redis in the clear,
-            // under a key that survives as long as the window. The address is the more
-            // identifying of the two subjects, and it is hashed like the token.
+            // Both subjects are hashed here with the application key (KeyedDigest), and neither
+            // is left to the framework. The framework's own hash is md5() of the limiter's name
+            // and this key: a plain hash of a known prefix and the subject, which a version 4
+            // address and a list of known mail addresses undo in minutes, and which Sentry and
+            // Flare record with every cache access. A host that turned the framework's hashing
+            // off with `ThrottleRequests::shouldHashKeys(false)` stores this key as it stands.
             //
-            // The IP is deliberately not hashed: it is not the subject, it is already in every
-            // access log the request touches, and an operator reading a limiter key needs to be
-            // able to recognize a hostile source. It is counted as a source, an IPv6 address by
-            // its /64, which a host can send from as a whole (ClientSource).
-            Limit::perMinutes($limit['per_minutes'], $limit['max'])->by('eml:req:email:'.hash('sha256', $email)),
-            Limit::perMinutes($limit['per_minutes'], $limit['max'])->by('eml:req:ip:'.ClientSource::of($request->ip())),
+            // The source is still counted as a source, an IPv6 address by its /64, which a host
+            // can send from as a whole (ClientSource). The same source keeps the same bucket.
+            Limit::perMinutes($limit['per_minutes'], $limit['max'])->by('eml:req:email:'.KeyedDigest::of($email)),
+            Limit::perMinutes($limit['per_minutes'], $limit['max'])->by('eml:req:ip:'.KeyedDigest::of(ClientSource::of($request->ip()))),
         ];
     }
 
@@ -92,7 +90,7 @@ final readonly class RateLimits
         $limit = $this->config->consumeLimit();
 
         return [
-            Limit::perMinutes($limit['per_minutes'], $limit['max'])->by('eml:con:ip:'.ClientSource::of($request->ip())),
+            Limit::perMinutes($limit['per_minutes'], $limit['max'])->by('eml:con:ip:'.KeyedDigest::of(ClientSource::of($request->ip()))),
             Limit::perMinutes($limit['per_minutes'], $limit['max'])->by('eml:con:id:'.$this->discriminator($request)),
         ];
     }
@@ -107,7 +105,7 @@ final readonly class RateLimits
         $limit = $this->config->invitationViewLimit();
 
         return [
-            Limit::perMinutes($limit['per_minutes'], $limit['max'])->by('eml:inv:ip:'.ClientSource::of($request->ip())),
+            Limit::perMinutes($limit['per_minutes'], $limit['max'])->by('eml:inv:ip:'.KeyedDigest::of(ClientSource::of($request->ip()))),
             Limit::perMinutes($limit['per_minutes'], $limit['max'])->by('eml:inv:id:'.$this->discriminator($request)),
         ];
     }
@@ -115,7 +113,7 @@ final readonly class RateLimits
     /**
      * The token in the path decides the bucket; the submitted email is the fallback
      * only when there is no token, so a caller cannot pick a bucket by shortening the
-     * token in the URL. Never the raw subject -- always its hash, in both branches. The
+     * token in the URL. Never the raw subject -- always its keyed hash, in both branches. The
      * normalization still decides the bucket; it happens before the hash rather than
      * instead of it.
      */
@@ -124,11 +122,11 @@ final readonly class RateLimits
         $token = $request->route('token');
 
         if (is_string($token) && $token !== '') {
-            return hash('sha256', $token);
+            return KeyedDigest::of($token);
         }
 
         $email = $request->input('email');
 
-        return hash('sha256', is_string($email) ? NormalizedEmail::from($email) : '');
+        return KeyedDigest::of(is_string($email) ? NormalizedEmail::from($email) : '');
     }
 }

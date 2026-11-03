@@ -22,6 +22,8 @@ return [
     'request_intro_code' => 'Introduz o teu endereço de e-mail e enviamos-te um código de acesso seguro.',
     'request_send_link' => 'Enviar link de acesso',
     'request_send_code' => 'Enviar código de acesso',
+    'request_resend_link' => 'Reenviar link de acesso',
+    'request_resend_code' => 'Reenviar código de acesso',
     'delivery_legend' => 'Entrega',
     'delivery_link' => 'Link mágico',
     'delivery_code' => 'Código de uso único',
@@ -48,6 +50,8 @@ return [
     // Status and error messages.
     'status_link_sent' => 'Se existir uma conta com esse e-mail, enviámos um link de acesso.',
     'status_code_sent' => 'Se existir uma conta com esse e-mail, enviámos um código de acesso.',
+    'status_sent_title' => 'Verifica o teu e-mail',
+    'status_sent_hint' => 'Se nada chegar dentro de alguns minutos, verifica a tua pasta de spam.',
     'consume_failed' => 'Este pedido de acesso é inválido ou expirou. Solicita um novo.',
     'request_new_code' => 'Pedir um novo código de acesso',
     'back_to_sign_in' => 'Voltar a iniciar sessão',

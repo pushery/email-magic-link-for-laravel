@@ -14,6 +14,8 @@ return [
     'request_intro_code' => 'Gib deine E-Mail-Adresse ein und wir senden dir einen sicheren Anmeldecode.',
     'request_send_link' => 'Anmeldelink senden',
     'request_send_code' => 'Anmeldecode senden',
+    'request_resend_link' => 'Anmeldelink erneut senden',
+    'request_resend_code' => 'Anmeldecode erneut senden',
     'delivery_legend' => 'Zustellung',
     'delivery_link' => 'Magic Link',
     'delivery_code' => 'Einmalcode',
@@ -40,6 +42,8 @@ return [
     // Status and error messages.
     'status_link_sent' => 'Wenn ein Konto zu dieser E-Mail-Adresse passt, haben wir einen Anmeldelink gesendet.',
     'status_code_sent' => 'Wenn ein Konto zu dieser E-Mail-Adresse passt, haben wir einen Anmeldecode gesendet.',
+    'status_sent_title' => 'Schau in dein Postfach',
+    'status_sent_hint' => 'Kommt in ein paar Minuten nichts an, sieh im Spam-Ordner nach.',
     'consume_failed' => 'Diese Anmeldeanfrage ist ungültig oder abgelaufen. Bitte fordere eine neue an.',
     'request_new_code' => 'Neuen Anmeldecode anfordern',
     'back_to_sign_in' => 'Zurück zur Anmeldung',

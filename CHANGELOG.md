@@ -4,6 +4,14 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.39.1] - 2026-11-07
+
+### 🐛 Fixed
+
+- **The scheduled purge starts on one server where several run the scheduler.** The entry `prune.schedule` registers carried `withoutOverlapping()` only, which keeps a run from starting while another is still going, so two servers could each start a purge in the same minute once the first had finished. It now adds `onOneServer()`, which takes its lock from the same cache store and holds across servers that share it.
+
+  **Upgrade:** an application that added `onOneServer()` to the package's entry itself can drop that line.
+
 ## [0.39.0] - 2026-11-03
 
 ### ✨ Added
@@ -1506,7 +1514,8 @@ public repository sees the difference.
   `TwoFactorChallengeRequired`).
 - Publishable configuration, migration, and views.
 
-[Unreleased]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.39.0...HEAD
+[Unreleased]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.39.1...HEAD
+[0.39.1]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.39.0...v0.39.1
 [0.39.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.38.0...v0.39.0
 [0.38.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.37.0...v0.38.0
 [0.37.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.36.0...v0.37.0

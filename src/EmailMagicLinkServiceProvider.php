@@ -341,6 +341,11 @@ final class EmailMagicLinkServiceProvider extends ServiceProvider
             // stopped (a memory or time limit) never releases it, and with the default of a day an
             // hourly purge would skip the next twenty-three runs without an error or a log line.
             //
+            // onOneServer so two servers that both run the scheduler do not each start a purge in the
+            // same minute, which withoutOverlapping alone allows once the first run has finished. It
+            // takes its lock from the same cache store as the overlap lock and asks for nothing more;
+            // on a store each server keeps for itself, every server still runs it, as before.
+            //
             // A description only: for a command event `name()` is an alias of `description()`, so
             // setting both kept whichever came last. The mutex follows the command either way.
             $event->withoutOverlapping(match ($frequency) {
@@ -348,6 +353,7 @@ final class EmailMagicLinkServiceProvider extends ServiceProvider
                 'weekly', 'monthly' => 6 * 24 * 60,
                 default => 23 * 60,
             })
+                ->onOneServer()
                 ->description('Delete expired and consumed magic-link tokens, and settled invitations past their retention window.');
         });
     }

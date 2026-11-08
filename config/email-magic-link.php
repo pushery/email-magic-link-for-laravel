@@ -213,6 +213,13 @@ return [
     // provider can sign in to that guard.
     'guards' => [],
 
+    // A class implementing the GuardResolver contract, which picks the guard of a
+    // request instead of the "guard" field: the readers of a site on the site's
+    // host, the team on the application's host. It is asked when a link or a code
+    // is issued and again when one is redeemed, and its answer has to be "guard"
+    // or one listed in "guards". Leave null to let the field choose from "guards".
+    'guard_resolver' => null,
+
     'user_lookup' => null,
 
     /*

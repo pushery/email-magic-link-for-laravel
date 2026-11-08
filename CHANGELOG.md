@@ -4,6 +4,18 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.40.0] - 2026-11-08
+
+### ✨ Added
+
+- **The application can choose the guard of a request, by host or by anything else the request cannot pick.** A request named its guard in a `guard` field, and listing a guard in `guards` let every request pick it on every host. A class implementing `GuardResolver`, named in `guard_resolver`, now decides the guard when a link or a code is issued and again when one is redeemed, so the readers of a site sign in on the site's host and the team on the application's host, and a link issued on one host opens no session on another. Its answer has to be `guard` or one listed in `guards`. Without it the `guard` field chooses from `guards` as before.
+
+### 🔒 Security
+
+- **A greeting and an application name somebody typed reach the sign-in mail as text.** The mail is Markdown, and a name typed as `[Sign in](https://…)` arrived in it as a real link. The greeting a `MailIdentity` returns as a string and the application's name in every line of the mail are now set as text: their Markdown stays characters, and a web address in them is written so that a mail program does not link it. `MailIdentity::greeting()` may also return an `Htmlable`, which is set as it is.
+
+  **Upgrade:** a greeting that used Markdown on purpose now shows its characters. A greeting returned as an `Htmlable` is set as it is, so one built as Markdown keeps its formatting, and what it takes from the user is then the application's to escape.
+
 ## [0.39.1] - 2026-11-07
 
 ### 🐛 Fixed
@@ -1514,7 +1526,8 @@ public repository sees the difference.
   `TwoFactorChallengeRequired`).
 - Publishable configuration, migration, and views.
 
-[Unreleased]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.39.1...HEAD
+[Unreleased]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.40.0...HEAD
+[0.40.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.39.1...v0.40.0
 [0.39.1]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.39.0...v0.39.1
 [0.39.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.38.0...v0.39.0
 [0.38.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.37.0...v0.38.0

@@ -10,6 +10,7 @@ use EmailMagicLink\Console\Commands\DoctorCommand;
 use EmailMagicLink\Console\Commands\InstallCommand;
 use EmailMagicLink\Console\Commands\PurgeExpiredTokensCommand;
 use EmailMagicLink\Contracts\CaptchaGuard;
+use EmailMagicLink\Contracts\GuardResolver;
 use EmailMagicLink\Contracts\InvalidLinkResponder;
 use EmailMagicLink\Contracts\InvitationHandler;
 use EmailMagicLink\Contracts\InvitationIssuer;
@@ -24,6 +25,7 @@ use EmailMagicLink\Contracts\TokenStore;
 use EmailMagicLink\Contracts\UserLookup;
 use EmailMagicLink\Eligibility\AlwaysEligible;
 use EmailMagicLink\Exceptions\InvitationsMisconfiguredException;
+use EmailMagicLink\Guards\AllowlistGuardResolver;
 use EmailMagicLink\Http\Middleware\NoIndex;
 use EmailMagicLink\Http\Middleware\SameOriginReferrer;
 use EmailMagicLink\Http\Responses\DefaultInvalidLinkResponder;
@@ -150,6 +152,12 @@ final class EmailMagicLinkServiceProvider extends ServiceProvider
             $custom = $app->make(MagicLinkConfig::class)->eligibility();
 
             return $this->resolveContract($app, SignInEligibility::class, $custom, AlwaysEligible::class);
+        });
+
+        $this->app->singleton(GuardResolver::class, function (Application $app): GuardResolver {
+            $custom = $app->make(MagicLinkConfig::class)->guardResolver();
+
+            return $this->resolveContract($app, GuardResolver::class, $custom, AllowlistGuardResolver::class);
         });
 
         $this->app->singleton(UserLookup::class, function (Application $app): UserLookup {

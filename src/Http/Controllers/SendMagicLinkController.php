@@ -16,6 +16,7 @@ use EmailMagicLink\Http\Requests\SendMagicLinkRequest;
 use EmailMagicLink\Notifications\MagicLinkNotification;
 use EmailMagicLink\Support\AccountAddress;
 use EmailMagicLink\Support\ConfirmationUrl;
+use EmailMagicLink\Support\GuardSelection;
 use EmailMagicLink\Support\IssuanceLock;
 use EmailMagicLink\Support\IssuedToken;
 use EmailMagicLink\Support\MagicLinkConfig;
@@ -59,6 +60,7 @@ final class SendMagicLinkController
         ResendGuard $resendGuard,
         IssuanceLock $lock,
         MailIdentity $identity,
+        GuardSelection $guards,
     ): Response {
         // Pre-issue challenge, before any user lookup, so it gates the request
         // without ever depending on whether the account exists.
@@ -86,7 +88,7 @@ final class SendMagicLinkController
         }
 
         $channel = $this->resolveChannel($request->requestedChannel(), $config->mode());
-        $guard = $config->resolveGuard($request->requestedGuard());
+        $guard = $guards->guardFor($request, $request->requestedGuard());
 
         // A code is issued under a lock, and the lock is taken only for an address that
         // resolves, so a store that cannot lock would fail only for known addresses -- a
@@ -151,7 +153,7 @@ final class SendMagicLinkController
 
         // Echo back the raw requested guard (not the resolved one) so the redirect
         // shape is identical for allowed and unknown guards — guards stay
-        // un-enumerable. resolveGuard() re-validates it on consume.
+        // un-enumerable. The guard resolver decides it again on consume.
         return $this->sentResponse($request, $channel, $email, $request->requestedGuard());
     }
 

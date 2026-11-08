@@ -301,6 +301,13 @@ final readonly class MagicLinkConfig
         return is_string($eligibility) && $eligibility !== '' ? $eligibility : null;
     }
 
+    public function guardResolver(): ?string
+    {
+        $resolver = $this->repository()->get('email-magic-link.guard_resolver');
+
+        return is_string($resolver) && $resolver !== '' ? $resolver : null;
+    }
+
     public function tokenStore(): ?string
     {
         $store = $this->repository()->get('email-magic-link.token_store');

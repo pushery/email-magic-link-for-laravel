@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace EmailMagicLink\Contracts;
 
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Contracts\Support\Htmlable;
 
 /**
  * Names the application and greets the recipient in the sign-in mail.
@@ -35,7 +36,9 @@ interface MailIdentity
      * The line the mail opens with, or null for the bundled greeting.
      *
      * Sent as it is returned, so it is already in the recipient's language. The request's locale is the
-     * one the mail is rendered in.
+     * one the mail is rendered in. A string is set as text, so a name typed into it as a Markdown link or
+     * as a web address stays text. An Htmlable is set as it is, for a greeting the application builds as
+     * Markdown itself, with what it took from the user escaped, as `Support\MarkdownText` does.
      */
-    public function greeting(Authenticatable $user): ?string;
+    public function greeting(Authenticatable $user): Htmlable|string|null;
 }

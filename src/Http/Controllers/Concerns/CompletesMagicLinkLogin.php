@@ -12,6 +12,7 @@ use EmailMagicLink\Events\MagicLinkVerified;
 use EmailMagicLink\Models\MagicLinkToken;
 use EmailMagicLink\Support\ClaimFailure;
 use EmailMagicLink\Support\CompletedSignIns;
+use EmailMagicLink\Support\GuardSelection;
 use EmailMagicLink\Support\MagicLinkConfig;
 use EmailMagicLink\Support\ResendKey;
 use Illuminate\Auth\AuthManager;
@@ -34,9 +35,10 @@ trait CompletesMagicLinkLogin
     {
         // The guard was validated when the token was issued; re-checked here so an
         // operator who removes a guard from the allowlist closes the door for links
-        // already in flight too. The row is spent either way, which is the fail-closed
-        // direction.
-        if (! in_array($token->guard, app(MagicLinkConfig::class)->allowedGuards(), true)) {
+        // already in flight too, and so a credential issued for one guard opens no
+        // session on a request the guard resolver gives another. The row is spent
+        // either way, which is the fail-closed direction.
+        if (! app(GuardSelection::class)->admits($request, $token->guard)) {
             return $this->failedConsumption($request, $failureRoute, ClaimFailure::NotFound);
         }
 

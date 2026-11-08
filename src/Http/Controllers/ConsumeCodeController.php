@@ -9,7 +9,7 @@ use EmailMagicLink\Contracts\UserLookup;
 use EmailMagicLink\Http\Controllers\Concerns\CompletesMagicLinkLogin;
 use EmailMagicLink\Http\Requests\ConsumeCodeRequest;
 use EmailMagicLink\Support\ClaimFailure;
-use EmailMagicLink\Support\MagicLinkConfig;
+use EmailMagicLink\Support\GuardSelection;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -29,9 +29,9 @@ final class ConsumeCodeController
         ConsumeCodeRequest $request,
         UserLookup $lookup,
         TokenStore $store,
-        MagicLinkConfig $config,
+        GuardSelection $guards,
     ): Response {
-        $guard = $config->resolveGuard($request->requestedGuard());
+        $guard = $guards->guardFor($request, $request->requestedGuard());
         $user = $lookup->findByEmail($request->email(), $guard);
 
         if (! $user instanceof Authenticatable) {

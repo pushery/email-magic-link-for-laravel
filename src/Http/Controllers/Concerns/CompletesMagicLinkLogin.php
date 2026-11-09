@@ -18,6 +18,7 @@ use EmailMagicLink\Support\ResendKey;
 use Illuminate\Auth\AuthManager;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Http\Request;
+use SensitiveParameter;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -31,7 +32,7 @@ trait CompletesMagicLinkLogin
 {
     use RejectsGenerically;
 
-    protected function completeLogin(Request $request, MagicLinkToken $token, string $failureRoute, string $credential): Response
+    protected function completeLogin(Request $request, MagicLinkToken $token, string $failureRoute, #[SensitiveParameter] string $credential): Response
     {
         // The guard was validated when the token was issued; re-checked here so an
         // operator who removes a guard from the allowlist closes the door for links
@@ -90,7 +91,7 @@ trait CompletesMagicLinkLogin
      * spent. It is answered as the first was, through the same authenticator, so a second factor is still asked for.
      * The account is read and its eligibility asked again, and a request that repeats no sign-in gets null.
      */
-    protected function repeatedLogin(Request $request, string $credential): ?Response
+    protected function repeatedLogin(Request $request, #[SensitiveParameter] string $credential): ?Response
     {
         $note = app(CompletedSignIns::class)->repeated($request, $credential);
 

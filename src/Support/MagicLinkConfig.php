@@ -612,27 +612,7 @@ final readonly class MagicLinkConfig
      */
     public function uiLayout(): ?string
     {
-        $name = $this->repository()->get('email-magic-link.ui.layout');
-
-        if (! is_string($name) || trim($name) === '') {
-            return null;
-        }
-
-        $name = trim($name);
-        $blade = Container::getInstance()->make(BladeCompiler::class);
-
-        try {
-            new ComponentTagCompiler($blade->getClassComponentAliases(), $blade->getClassComponentNamespaces(), $blade)->componentClass($name);
-        } catch (InvalidArgumentException) {
-            Log::warning('email-magic-link: ui.layout names a component that does not exist — the screens keep their own layout', [
-                'setting' => 'email-magic-link.ui.layout',
-                'component' => $name,
-            ]);
-
-            return null;
-        }
-
-        return $name;
+        return $this->hostLayout(true);
     }
 
     /**
@@ -659,8 +639,8 @@ final readonly class MagicLinkConfig
 
     /**
      * The size of the main heading on the WireKit screens, or null for WireKit's own size of a
-     * level-one heading. The level stays 1; only the size moves. WireKit checks the value against
-     * its sizes when the heading renders, so it is passed on as given, trimmed.
+     * level-one heading. Only the size moves; {@see self::uiHeadingLevel()} decides the level. WireKit
+     * checks the value against its sizes when the heading renders, so it is passed on as given, trimmed.
      */
     public function uiHeadingSize(): ?string
     {
@@ -673,6 +653,68 @@ final readonly class MagicLinkConfig
         $size = Str::trim($size);
 
         return $size === '' ? null : $size;
+    }
+
+    /**
+     * The level of the main heading on the WireKit screens. It is 1 unless `ui.heading_level` names another and
+     * `ui.layout` frames the screens in a component of the host's: such a layout can carry a level-one heading of
+     * its own, a logo for instance, and the card's heading then sits below it. In the package's own layout the card
+     * is the page's only heading, so it stays at 1 there.
+     *
+     * A level written as text, as an environment variable gives it, is read as its number. One outside 1 to 6 is
+     * logged and the heading stays at 1, never thrown: this renders on the sign-in path.
+     */
+    public function uiHeadingLevel(): int
+    {
+        $configured = $this->repository()->get('email-magic-link.ui.heading_level');
+
+        if ($configured === null || $this->hostLayout(false) === null) {
+            return 1;
+        }
+
+        $level = is_int($configured) || (is_string($configured) && ctype_digit(trim($configured))) ? (int) trim((string) $configured) : 0;
+
+        if ($level >= 1 && $level <= 6) {
+            return $level;
+        }
+
+        Log::warning('email-magic-link: ui.heading_level is not a heading level from 1 to 6 — the card keeps level 1', [
+            'setting' => 'email-magic-link.ui.heading_level',
+            'level' => $configured,
+        ]);
+
+        return 1;
+    }
+
+    /**
+     * The component `ui.layout` names, or null when it names none this installation resolves. Only the caller that
+     * picks the layout logs a miss, so a page that asks again for the heading's level does not log it twice.
+     */
+    private function hostLayout(bool $logMiss): ?string
+    {
+        $name = $this->repository()->get('email-magic-link.ui.layout');
+
+        if (! is_string($name) || trim($name) === '') {
+            return null;
+        }
+
+        $name = trim($name);
+        $blade = Container::getInstance()->make(BladeCompiler::class);
+
+        try {
+            new ComponentTagCompiler($blade->getClassComponentAliases(), $blade->getClassComponentNamespaces(), $blade)->componentClass($name);
+        } catch (InvalidArgumentException) {
+            if ($logMiss) {
+                Log::warning('email-magic-link: ui.layout names a component that does not exist — the screens keep their own layout', [
+                    'setting' => 'email-magic-link.ui.layout',
+                    'component' => $name,
+                ]);
+            }
+
+            return null;
+        }
+
+        return $name;
     }
 
     /**

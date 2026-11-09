@@ -7,6 +7,7 @@ namespace EmailMagicLink\Support;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Cache\Repository as Cache;
 use Illuminate\Http\Request;
+use SensitiveParameter;
 
 /**
  * The sign-ins a session made a moment ago, so a sign-in form sent twice reads as the sign-in it repeats.
@@ -29,7 +30,7 @@ final readonly class CompletedSignIns
     public function __construct(private Cache $cache) {}
 
     /** Note that this session signed a person in with the credential, or accepted an invitation that signed nobody in. */
-    public function remember(Request $request, string $credential, ?Authenticatable $user, string $guard, bool $remember): void
+    public function remember(Request $request, #[SensitiveParameter] string $credential, ?Authenticatable $user, string $guard, bool $remember): void
     {
         if ($request->hasSession()) {
             $this->cache->put($this->key($request, $credential), [
@@ -45,7 +46,7 @@ final readonly class CompletedSignIns
      *
      * @return array{user: mixed, guard: string, remember: bool}|null
      */
-    public function repeated(Request $request, string $credential): ?array
+    public function repeated(Request $request, #[SensitiveParameter] string $credential): ?array
     {
         $note = $request->hasSession() ? $this->cache->get($this->key($request, $credential)) : null;
 
@@ -57,7 +58,7 @@ final readonly class CompletedSignIns
     }
 
     /** The cache key of the session and the credential, hashed so the cache holds neither. */
-    private function key(Request $request, string $credential): string
+    private function key(Request $request, #[SensitiveParameter] string $credential): string
     {
         return 'email-magic-link:sign-in:'.hash('sha256', $request->session()->getId().'|'.$credential);
     }

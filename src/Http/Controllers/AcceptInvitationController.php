@@ -164,7 +164,7 @@ final readonly class AcceptInvitationController
      * An acceptance that signed nobody in is answered with the same redirect, and one that signed a person in signs them
      * in again through the same authenticator. Nothing is accepted twice: the host's handler is not asked again.
      */
-    private function repeatedAcceptance(Request $request, string $credential): ?Response
+    private function repeatedAcceptance(Request $request, #[SensitiveParameter] string $credential): ?Response
     {
         $note = app(CompletedSignIns::class)->repeated($request, $credential);
 

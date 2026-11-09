@@ -4,6 +4,26 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.41.0] - 2026-11-09
+
+### ✨ Added
+
+- **`ui.heading_level` sets the level of the card's heading inside a host's layout.** A host layout that already carries a level-one heading, such as its logo, sets `2`, and the main heading of each WireKit screen sits below it. It applies only while `ui.layout` frames the screens: in the package's own layout the card is the page's only heading and stays at level 1. A level outside 1 to 6 is logged at `warning`, and the heading stays at 1.
+
+### 🐛 Fixed
+
+- **An e-mail address in a typed greeting keeps its characters in the sign-in mail.** The mail sets a typed greeting and the name of the application as text, and it wrote the dot of a domain with a look-alike character so that no mail program would link it. An e-mail address came out with that look-alike too, such as one a greeting names the user by, so a mail program did not offer it as an address and a copy of it was not the address that was typed. An address now stays as typed; a web address is still broken as before.
+
+### 🔒 Security
+
+- **The credential of a sign-in stays out of the trace of a failure.** The stores marked the plain token of a link, the address and code of a sign-in by code and the token of an invitation, and the sign-in handed the same values on unmarked, joined into one credential. A failure while signing a person in, such as a lost session store, put that credential into the trace where `zend.exception_ignore_args` is off, as `php.ini-development` sets it, and an error tracker reads the arguments of every frame. Every parameter that takes a token, a code, a passphrase or such a credential is marked with `#[\SensitiveParameter]` now, the contracts included.
+
+### 📚 Documentation
+
+- **The documentation shows the screens and mails it describes.** The quick start shows the flow from the address to the page a link opens, the overview shows that page with its signed address, the page on one-time codes shows the mail and the screen a code is typed into, and the page on the WireKit screens shows one screen with WireKit and with the plain views. Each image is rendered from the package itself, nothing in it drawn by hand.
+
+- **The README names the spelling a stored address needs.** The sign-in looks up the lowercased address exactly, so on PostgreSQL and SQLite an address stored with capitals is never found, and the request answers as it does for an unknown address. Only the contract reference said so. The installation section says it now and links the reasons.
+
 ## [0.40.0] - 2026-11-08
 
 ### ✨ Added
@@ -1526,7 +1546,8 @@ public repository sees the difference.
   `TwoFactorChallengeRequired`).
 - Publishable configuration, migration, and views.
 
-[Unreleased]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.40.0...HEAD
+[Unreleased]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.41.0...HEAD
+[0.41.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.40.0...v0.41.0
 [0.40.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.39.1...v0.40.0
 [0.39.1]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.39.0...v0.39.1
 [0.39.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.38.0...v0.39.0

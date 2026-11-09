@@ -524,13 +524,22 @@ return [
 
         /*
          * The size of the main heading on each WireKit screen, one of WireKit's heading sizes
-         * (`sm` to `5xl`), or null for the size WireKit gives a level-one heading. The level
-         * stays 1, because each screen has one main heading; this only lets the card match the
-         * headings of a host's own forms. WireKit checks the value as it renders: an unknown
-         * size is logged and drawn at its fallback size. The plain Blade screens do not read
-         * this key.
+         * (`sm` to `5xl`), or null for the size WireKit gives a level-one heading. Only the size
+         * moves, so the card can match the headings of a host's own forms; `heading_level` below
+         * decides the level. WireKit checks the value as it renders: an unknown size is logged and
+         * drawn at its fallback size. The plain Blade screens do not read this key.
          */
         'heading_size' => null,
+
+        /*
+         * The level of the main heading on each WireKit screen while `layout` frames it in a
+         * component of yours, 1 to 6, or null for 1. A layout that already carries a level-one
+         * heading, a logo for instance, sets 2, and the card's heading sits below it. In this
+         * package's own layout the card is the page's only heading and stays at 1, whatever this
+         * says. A level outside 1 to 6 is logged at `warning` and the heading stays at 1. The plain
+         * Blade screens do not read this key.
+         */
+        'heading_level' => null,
 
         /*
          * A view of yours that the WireKit screens render at the top of the card with `$errors`, for

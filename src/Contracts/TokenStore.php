@@ -7,6 +7,7 @@ namespace EmailMagicLink\Contracts;
 use EmailMagicLink\Support\ClaimResult;
 use EmailMagicLink\Support\IssuedToken;
 use Illuminate\Contracts\Auth\Authenticatable;
+use SensitiveParameter;
 
 /**
  * Issues, stores, and atomically consumes magic-link tokens and one-time codes.
@@ -27,7 +28,7 @@ interface TokenStore
      *                                   entered on the confirmation page before a
      *                                   link is consumed. Link-only; not 2FA.
      */
-    public function issue(Authenticatable $user, string $guard, string $channel, ?int $maxUses = null, ?string $passphrase = null): IssuedToken;
+    public function issue(Authenticatable $user, string $guard, string $channel, ?int $maxUses = null, #[SensitiveParameter] ?string $passphrase = null): IssuedToken;
 
     /**
      * Atomically claim a magic-link token by its plaintext value.
@@ -35,19 +36,19 @@ interface TokenStore
      * When the link carries a passphrase, it is verified before the token is
      * spent, so a wrong passphrase never consumes a use of a multi-use link.
      */
-    public function claimLink(string $token, ?string $passphrase = null): ClaimResult;
+    public function claimLink(#[SensitiveParameter] string $token, #[SensitiveParameter] ?string $passphrase = null): ClaimResult;
 
     /**
      * Whether the given magic-link token is gated by a passphrase, so the
      * confirmation page can prompt for it. Read-only; consumes nothing.
      */
-    public function requiresPassphrase(string $token): bool;
+    public function requiresPassphrase(#[SensitiveParameter] string $token): bool;
 
     /**
      * Atomically claim a one-time code for a known user on a specific guard,
      * accounting for failed attempts and enforcing the per-token lockout.
      */
-    public function claimCode(Authenticatable $user, string $code, string $guard): ClaimResult;
+    public function claimCode(Authenticatable $user, #[SensitiveParameter] string $code, string $guard): ClaimResult;
 
     /**
      * Spend every open link and code of the user on the guard, so none of them signs

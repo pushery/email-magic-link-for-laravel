@@ -7,6 +7,7 @@ namespace EmailMagicLink\Contracts;
 use EmailMagicLink\Support\IssuedCode;
 use EmailMagicLink\Support\IssuedLink;
 use Illuminate\Contracts\Auth\Authenticatable;
+use SensitiveParameter;
 
 /**
  * Issues magic links and one-time codes for a known user without sending mail.
@@ -36,7 +37,7 @@ interface MagicLinkIssuer
      *                                binds to that host, so there is no open
      *                                redirect — the link verifies only there.
      */
-    public function issueLink(Authenticatable $user, ?string $guard = null, ?int $maxUses = null, ?string $passphrase = null, ?string $baseUrl = null): IssuedLink;
+    public function issueLink(Authenticatable $user, ?string $guard = null, ?int $maxUses = null, #[SensitiveParameter] ?string $passphrase = null, ?string $baseUrl = null): IssuedLink;
 
     /**
      * Issue a one-time code for the user on the given guard.

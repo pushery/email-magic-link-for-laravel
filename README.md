@@ -34,6 +34,8 @@ composer require pushery/email-magic-link-for-laravel
 
 Requires PHP `^8.4` and Laravel `^13.0`. Laravel Fortify (`^1.39`) is optional and only needed for the two-factor handoff. Beyond the framework, the package requires only `nesbot/carbon` and `symfony/http-foundation`, both of which every Laravel application already installs.
 
+The sign-in looks up the address it was given in lowercase, and the database's collation decides what matches. On PostgreSQL and SQLite an address stored with capitals is never found, and the request answers as it does for an unknown address. Store addresses lowercase, or bind a `UserLookup` of your own; [Contracts](https://docs.pushery.com/email-magic-link-for-laravel/reference/contracts) says why the package does not compare without regard to case itself.
+
 ## Documentation
 
 **Full docs at [docs.pushery.com/email-magic-link-for-laravel](https://docs.pushery.com/email-magic-link-for-laravel/)**

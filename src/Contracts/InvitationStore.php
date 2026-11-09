@@ -6,6 +6,7 @@ namespace EmailMagicLink\Contracts;
 
 use EmailMagicLink\Support\InvitationClaimResult;
 use EmailMagicLink\Support\IssuedInvitationToken;
+use SensitiveParameter;
 
 /**
  * Issues, stores, and atomically consumes invitation tokens.
@@ -43,12 +44,12 @@ interface InvitationStore
      * Read-only by contract. It is what lets the confirmation page reject a dead
      * invitation before asking the recipient for anything.
      */
-    public function peek(string $token): InvitationClaimResult;
+    public function peek(#[SensitiveParameter] string $token): InvitationClaimResult;
 
     /**
      * Atomically claim an invitation by its plaintext token.
      */
-    public function claim(string $token): InvitationClaimResult;
+    public function claim(#[SensitiveParameter] string $token): InvitationClaimResult;
 
     /**
      * Revoke every unaccepted invitation for the email and guard, in the given scope or,

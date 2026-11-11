@@ -45,20 +45,28 @@ final class MarkdownText
      * The line keeps its Markdown and is escaped the way `{{ }}` escapes a string. The placeholders are the
      * translator's: `:key` takes the value, `:Key` the value with its first letter in capitals, and `:KEY` the value
      * in capitals. The line is read once, so a value that holds a placeholder of its own is text like the rest of it.
+     * A value that ends on a period, such as `Acme Inc.`, ends the sentence where the line puts its own period right
+     * after the placeholder, so the line's period is left out there and the sentence ends on one.
      *
      * @param  array<string, string>  $values
      */
     public static function interpolate(string $line, array $values): HtmlString
     {
         $replacements = [];
+        $line = htmlspecialchars($line, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
         foreach ($values as $key => $value) {
+            if (str_ends_with(trim($value), '.')) {
+                $placeholders = [':'.Str::ucfirst($key), ':'.Str::upper($key), ':'.$key];
+                $line = str_replace(array_map(static fn (string $placeholder): string => $placeholder.'.', $placeholders), $placeholders, $line);
+            }
+
             $replacements[':'.Str::ucfirst($key)] = self::neutral(Str::ucfirst($value));
             $replacements[':'.Str::upper($key)] = self::neutral(Str::upper($value));
             $replacements[':'.$key] = self::neutral($value);
         }
 
-        return new HtmlString(strtr(htmlspecialchars($line, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'), $replacements));
+        return new HtmlString(strtr($line, $replacements));
     }
 
     /**

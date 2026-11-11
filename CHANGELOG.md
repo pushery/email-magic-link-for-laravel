@@ -4,6 +4,12 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.41.1] - 2026-11-11
+
+### 🐛 Fixed
+
+- **An application name that ends on a period no longer doubles the period in the link mail.** The line above the button ends on the application's name in English, Spanish, French, Italian, Dutch and Portuguese and sets its own period after it, so a name such as `Acme Inc.` came out as `Acme Inc..`. The line now ends on the name's own period. The German line, the code mail and the salutation set no period right after the name and read as before.
+
 ## [0.41.0] - 2026-11-09
 
 ### ✨ Added
@@ -1546,7 +1552,8 @@ public repository sees the difference.
   `TwoFactorChallengeRequired`).
 - Publishable configuration, migration, and views.
 
-[Unreleased]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.41.0...HEAD
+[Unreleased]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.41.1...HEAD
+[0.41.1]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.41.0...v0.41.1
 [0.41.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.40.0...v0.41.0
 [0.40.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.39.1...v0.40.0
 [0.39.1]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.39.0...v0.39.1

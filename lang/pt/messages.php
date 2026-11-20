@@ -27,7 +27,7 @@ return [
     // Code entry form.
     'code_title' => 'Introduza o seu código',
     'code_heading' => 'Introduza o seu código de acesso',
-    'code_intro' => 'Enviámos-lhe um código de uso único por e-mail. Introduza-o abaixo para concluir o início de sessão.',
+    'code_intro' => 'Introduza abaixo o código de uso único do e-mail para concluir o início de sessão.',
     'code_label' => 'Código de acesso',
 
     // Confirmation passphrase gate.

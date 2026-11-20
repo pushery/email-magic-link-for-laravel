@@ -27,7 +27,7 @@ return [
     // Code entry form.
     'code_title' => 'Saisissez votre code',
     'code_heading' => 'Saisissez votre code de connexion',
-    'code_intro' => 'Nous vous avons envoyé un code à usage unique par e-mail. Saisissez-le ci-dessous pour terminer la connexion.',
+    'code_intro' => 'Saisissez ci-dessous le code à usage unique reçu par e-mail pour terminer la connexion.',
     'code_label' => 'Code de connexion',
 
     // Confirmation passphrase gate.

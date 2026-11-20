@@ -27,7 +27,7 @@ return [
     // Code entry form.
     'code_title' => 'Inserisci il tuo codice',
     'code_heading' => 'Inserisci il tuo codice di accesso',
-    'code_intro' => 'Ti abbiamo inviato un codice monouso via email. Inseriscilo qui sotto per completare l’accesso.',
+    'code_intro' => 'Inserisci qui sotto il codice monouso ricevuto via email per completare l’accesso.',
     'code_label' => 'Codice di accesso',
 
     // Confirmation passphrase gate.

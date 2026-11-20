@@ -32,6 +32,9 @@ class MagicLinkNotification extends Notification implements ShouldBeEncrypted, S
 {
     use Queueable;
 
+    /** The longest application name a sentence of the mail keeps on one line, in characters. */
+    private const int KEPT_TOGETHER_UP_TO = 24;
+
     /** The application's name the configured MailIdentity gave for this mail, if it was asked. */
     private ?string $identityName = null;
 
@@ -101,7 +104,7 @@ class MagicLinkNotification extends Notification implements ShouldBeEncrypted, S
     {
         $message = new MailMessage()->subject(__('email-magic-link::messages.mail_link_subject', ['app' => $application]));
         $message->greeting($greeting)
-            ->line(MarkdownText::interpolate((string) __('email-magic-link::messages.mail_link_intro'), ['app' => $application]))
+            ->line(MarkdownText::interpolate((string) __('email-magic-link::messages.mail_link_intro'), ['app' => $this->keptTogether($application)]))
             ->action(__('email-magic-link::messages.mail_link_action'), (string) $this->actionUrl)
             ->line($this->uses > 1
                 ? trans_choice('email-magic-link::messages.mail_link_expiry_reusable', $this->expiresInMinutes, ['minutes' => $this->expiresInMinutes, 'uses' => $this->uses])
@@ -115,12 +118,29 @@ class MagicLinkNotification extends Notification implements ShouldBeEncrypted, S
     {
         $message = new MailMessage()->subject(__('email-magic-link::messages.mail_code_subject', ['app' => $application]));
         $message->greeting($greeting)
-            ->line(MarkdownText::interpolate((string) __('email-magic-link::messages.mail_code_intro'), ['app' => $application]))
+            ->line(MarkdownText::interpolate((string) __('email-magic-link::messages.mail_code_intro'), ['app' => $this->keptTogether($application)]))
             ->line((string) $this->code)
             ->line(trans_choice('email-magic-link::messages.mail_code_expiry', $this->expiresInMinutes, ['minutes' => $this->expiresInMinutes]))
             ->line(__('email-magic-link::messages.mail_ignore'));
 
+        // The code in a panel, which sets it apart in the HTML part and leaves it bare in the text
+        // part, where a reader copies it from a mail without HTML.
+        $message->markdown('email-magic-link::mail.code', ['code' => (string) $this->code]);
+
+        // The application's theme with one rule more, for the code in its panel. See the view.
+        $message->theme('email-magic-link::mail.theme');
+
         return $this->signedOff($message, $application);
+    }
+
+    /**
+     * A short name kept on one line in a sentence: its spaces become no-break spaces, so "Linen & Co"
+     * never ends one line with "Linen &". A long name keeps its spaces, because a name that may not
+     * break is wider than a phone's mail column long before it is unusual.
+     */
+    private function keptTogether(string $name): string
+    {
+        return mb_strlen($name) <= self::KEPT_TOGETHER_UP_TO ? str_replace(' ', mb_chr(0xA0), $name) : $name;
     }
 
     /** The message, signed off in the name of the application, set as text. */

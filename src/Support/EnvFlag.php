@@ -22,6 +22,9 @@ use Illuminate\Support\Str;
  */
 final class EnvFlag
 {
+    /**
+     * @param  mixed  $value  what env() or the configuration gives, which a host may write as any type
+     */
     public static function protection(mixed $value, bool $default): bool
     {
         if (is_bool($value)) {

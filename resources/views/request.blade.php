@@ -26,9 +26,11 @@
             @error('email') aria-invalid="true" aria-describedby="email-error" @enderror>
 
         {{-- During a held-back resend this line carries the wait, and the countdown script keeps
-             it current and takes it away when the wait is over. --}}
+             it current and takes it away when the wait is over. Otherwise it is a polite live
+             region, as WireKit makes the error line of a field; not during the wait, when the
+             line changes every second and a polite region would read out each change. --}}
         @error('email')
-            <p class="error" id="email-error">{{ $message }}</p>
+            <p class="error" id="email-error"@unless (session('resend_retry_after')) aria-live="polite" aria-atomic="true"@endunless>{{ $message }}</p>
         @enderror
 
         @if ($mode === 'both')

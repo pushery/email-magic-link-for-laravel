@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 use EmailMagicLink\Notifications\MagicLinkNotification;
-use EmailMagicLink\Support\EnvFlag;
 use EmailMagicLink\Support\EnvNumber;
+use EmailMagicLink\Support\EnvSwitch;
 
 return [
 
@@ -21,7 +21,7 @@ return [
     |
     */
 
-    'enabled' => EnvFlag::protection(env('EMAIL_MAGIC_LINK_ENABLED', true), true),
+    'enabled' => EnvSwitch::read(env('EMAIL_MAGIC_LINK_ENABLED', true), true),
 
     /*
     |--------------------------------------------------------------------------
@@ -365,7 +365,7 @@ return [
     */
 
     'remember' => [
-        'enabled' => filter_var(env('EMAIL_MAGIC_LINK_REMEMBER', false), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? false,
+        'enabled' => EnvSwitch::read(env('EMAIL_MAGIC_LINK_REMEMBER', false), false),
     ],
 
     /*
@@ -671,7 +671,7 @@ return [
 
     'resend' => [
         // A protection, so a set but empty value keeps it on instead of switching it off.
-        'enabled' => EnvFlag::protection(env('EMAIL_MAGIC_LINK_RESEND', true), true),
+        'enabled' => EnvSwitch::read(env('EMAIL_MAGIC_LINK_RESEND', true), true),
 
         'cooldown' => [
             'base' => 30,
@@ -764,7 +764,7 @@ return [
     */
 
     'invitations' => [
-        'enabled' => filter_var(env('EMAIL_MAGIC_LINK_INVITATIONS_ENABLED', false), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? false,
+        'enabled' => EnvSwitch::read(env('EMAIL_MAGIC_LINK_INVITATIONS_ENABLED', false), false),
         // Read like "ttl": a value that is not a number, or is below 1, keeps the shipped week, and
         // a fraction above 1 counts by its whole part.
         'ttl' => EnvNumber::atLeastOne(env('EMAIL_MAGIC_LINK_INVITATION_TTL'), 604800, 'EMAIL_MAGIC_LINK_INVITATION_TTL'),

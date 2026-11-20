@@ -599,6 +599,8 @@ final class DoctorCommand extends Command
      *
      * `mixed`, because it renders whatever a config file holds, nested arrays included; each
      * arm of the match narrows the value before it is used.
+     *
+     * @param  mixed  $value  whatever a config file holds, nested arrays included
      */
     private static function render(mixed $value): string
     {

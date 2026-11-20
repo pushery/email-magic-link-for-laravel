@@ -27,7 +27,7 @@ return [
     // Code entry form.
     'code_title' => 'Enter your code',
     'code_heading' => 'Enter your sign-in code',
-    'code_intro' => 'We emailed you a one-time code. Enter it below to finish signing in.',
+    'code_intro' => 'Enter the one-time code from the email to finish signing in.',
     'code_label' => 'Sign-in code',
 
     // Confirmation passphrase gate.

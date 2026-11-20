@@ -39,12 +39,13 @@
             autocomplete="one-time-code" required autofocus
             @error('code') aria-invalid="true" aria-describedby="code-error" @enderror>
 
+        {{-- Polite live regions, as WireKit makes the error line of a field. --}}
         @error('code')
-            <p class="error" id="code-error">{{ $message }}</p>
+            <p class="error" id="code-error" aria-live="polite" aria-atomic="true">{{ $message }}</p>
         @enderror
 
         @error('email')
-            <p class="error" id="email-error">{{ $message }}</p>
+            <p class="error" id="email-error" aria-live="polite" aria-atomic="true">{{ $message }}</p>
         @enderror
 
         @if (\EmailMagicLink\Support\MagicLinkRejection::flashed())

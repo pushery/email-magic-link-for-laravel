@@ -38,12 +38,15 @@
                             <input type="hidden" name="guard" value="{{ $guard ?: \EmailMagicLink\Support\SentText::old('guard') }}">
                         @endif
 
+                        {{-- Required, and said so with aria-required rather than `required`: WireKit marks a required
+                             label with an asterisk, and on a screen whose every field is required the mark explains
+                             nothing. The server refuses an empty address, and the plain screen draws no mark either. --}}
                         <x-wirekit::input
                             name="email"
                             type="email"
                             :label="__('email-magic-link::messages.email_label')"
                             autocomplete="email"
-                            required
+                            aria-required="true"
                             :value="$email ?: \EmailMagicLink\Support\SentText::old('email')"
                             :error="$errors->first('email')"
                         />
@@ -73,8 +76,9 @@
                              break inside, so a row that fits stays one row and one that does not breaks
                              where the code itself has a boundary. Half the code, rounded up, from the
                              same class that decides how wide the card may grow — see CodeBoxLayout.
-                             `justify` (2.54) centers the row like everything else on the card; before
-                             it, that took a rule over the component's internal markup. --}}
+                             The row starts where its label and the button start, the kit's own packing:
+                             the card sets everything on its leading edge, and a code centered on a phone,
+                             split over two rows, stood away from its own label. --}}
                         @php($emlCodeGroup = new \EmailMagicLink\Support\CodeBoxLayout($emlCodeLength)->group())
 
                         <x-wirekit::otp-input
@@ -83,7 +87,6 @@
                             autofocus
                             :length="$emlCodeLength"
                             :group="$emlCodeGroup"
-                            justify="center"
                             :alphabet="$emlAlphabet !== '' ? $emlAlphabet : '0123456789'"
                             :label="__('email-magic-link::messages.code_label')"
                             :error="$errors->first('code')"

@@ -40,13 +40,16 @@
                         {{-- The field's own error line carries the wait of a held-back resend, and the
                              countdown script keeps it current. Without a live region: the line changes
                              every second, and a polite region would read each change out. --}}
+                        {{-- Required, and said so with aria-required rather than `required`: WireKit marks a required
+                             label with an asterisk, and on a screen whose every field is required the mark explains
+                             nothing. The server refuses an empty address, and the plain screen draws no mark either. --}}
                         <x-wirekit::input
                             id="email"
                             name="email"
                             type="email"
                             :label="__('email-magic-link::messages.email_label')"
                             autocomplete="email"
-                            required
+                            aria-required="true"
                             autofocus
                             :value="\EmailMagicLink\Support\SentText::old('email')"
                             :announce-error="session('resend_retry_after') ? false : null"

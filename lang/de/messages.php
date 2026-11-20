@@ -27,7 +27,7 @@ return [
     // Code entry form.
     'code_title' => 'Code eingeben',
     'code_heading' => 'Anmeldecode eingeben',
-    'code_intro' => 'Wir haben dir einen Einmalcode per E-Mail geschickt. Gib ihn unten ein, um die Anmeldung abzuschließen.',
+    'code_intro' => 'Gib den Einmalcode aus der E-Mail ein, um die Anmeldung abzuschließen.',
     'code_label' => 'Anmeldecode',
 
     // Confirmation passphrase gate.

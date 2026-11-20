@@ -91,7 +91,9 @@ final class IssuanceLock
      * @template TReturn
      *
      * @param  Closure(): TReturn  $callback
-     * @return TReturn
+     * @return mixed what the callback returns, of whatever type the caller's callback gives
+     *
+     * @phpstan-return TReturn
      */
     public function withoutWaiting(Closure $callback): mixed
     {
@@ -124,7 +126,9 @@ final class IssuanceLock
      * @template TReturn
      *
      * @param  Closure(): TReturn  $callback
-     * @return TReturn
+     * @return mixed what the callback returns, of whatever type the caller's callback gives
+     *
+     * @phpstan-return TReturn
      */
     public function run(string $scope, string $subject, string $guard, Closure $callback): mixed
     {

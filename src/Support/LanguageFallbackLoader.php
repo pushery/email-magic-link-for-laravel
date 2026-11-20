@@ -42,14 +42,14 @@ final readonly class LanguageFallbackLoader implements Loader
      */
     public function load($locale, $group, $namespace = null): array
     {
-        $lines = $this->lines((string) $locale, (string) $group, $namespace);
-        $language = self::languageOf((string) $locale);
+        $lines = $this->lines($locale, $group, $namespace);
+        $language = self::languageOf($locale);
 
         if ($namespace !== $this->namespace || $language === null) {
             return $lines;
         }
 
-        return array_replace_recursive($this->lines($language, (string) $group, $namespace), $lines);
+        return array_replace_recursive($this->lines($language, $group, $namespace), $lines);
     }
 
     /**

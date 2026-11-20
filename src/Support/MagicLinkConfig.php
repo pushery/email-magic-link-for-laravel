@@ -1088,6 +1088,9 @@ final readonly class MagicLinkConfig
         return $this->config instanceof Closure ? ($this->config)() : $this->config;
     }
 
+    /**
+     * @param  mixed  $value  the value config() hands back, which a host may write as any type
+     */
     private function string(mixed $value, string $default): string
     {
         return is_string($value) ? $value : $default;
@@ -1097,6 +1100,8 @@ final readonly class MagicLinkConfig
      * `config()` hands back whatever the host wrote, so the value arrives as `mixed`. This
      * narrows it to an integer: an int as it is, a numeric string converted, and anything
      * else, an empty `.env` line included, the declared default.
+     *
+     * @param  mixed  $value  the value config() hands back, which a host may write as any type
      */
     private function int(mixed $value, int $default): int
     {
@@ -1107,6 +1112,9 @@ final readonly class MagicLinkConfig
         return is_string($value) && is_numeric($value) ? (int) $value : $default;
     }
 
+    /**
+     * @param  mixed  $value  the value config() hands back, which a host may write as any type
+     */
     private function bool(mixed $value, bool $default): bool
     {
         if (is_bool($value)) {

@@ -16,6 +16,11 @@ namespace EmailMagicLink\Support;
  * something off and on are named here, trimmed and in any case. Anything else keeps the value the
  * package ships: a missing line, an empty line as copying a template of a .env leaves one, and a
  * spelling that names neither.
+ *
+ * Part of the public API, because the configuration file this package publishes calls it. Once
+ * published, the file runs in the host's own namespace, and a host that analyzes its configuration
+ * reads a call there into a class the package marks internal as an error it cannot fix without
+ * editing a published file.
  */
 final class EnvSwitch
 {

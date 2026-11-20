@@ -9,6 +9,7 @@ use EmailMagicLink\Contracts\TokenStore;
 use EmailMagicLink\Models\Invitation;
 use EmailMagicLink\Models\MagicLinkToken;
 use EmailMagicLink\Support\MagicLinkConfig;
+use EmailMagicLink\Support\PruneExpiredCacheKeys;
 use EmailMagicLink\Support\TableLookup;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Console\Isolatable;
@@ -16,13 +17,14 @@ use Illuminate\Database\Connection;
 
 /**
  * Deletes expired and consumed magic-link tokens — and expired and settled
- * invitations in the same run, whenever their table exists.
+ * invitations in the same run, whenever their table exists, and the package's
+ * expired keys in a database cache store.
  *
  * Schedule it (for example daily) so neither table grows unbounded:
  * Schedule::command('email-magic-link:purge')->daily();
  *
- * Isolatable, so `--isolated` refuses a second copy while one runs -- the framework's
- * own overlap guard, for a host that schedules the command itself. Deletes in chunks
+ * Isolatable and isolated by default, so a second copy ends at once while one runs, also
+ * from a schedule line like the one above that passes no `--isolated`. Deletes in chunks
  * (config `prune.chunk`), so no single statement holds its row locks for long.
  */
 final class PurgeExpiredTokensCommand extends Command implements Isolatable
@@ -31,7 +33,15 @@ final class PurgeExpiredTokensCommand extends Command implements Isolatable
 
     protected $description = 'Delete expired and consumed magic-link tokens, and expired or settled invitations.';
 
-    public function handle(TokenStore $store, MagicLinkConfig $config): int
+    /**
+     * A second run while one is under way ends at once, also where nobody passed --isolated: Laravel takes the
+     * isolation lock only where the option is set, and a plain schedule line or a run by hand sets nothing.
+     *
+     * @var bool
+     */
+    protected $isolated = true;
+
+    public function handle(TokenStore $store, MagicLinkConfig $config, PruneExpiredCacheKeys $cacheKeys): int
     {
         // The query log is an array that only ever grows, and this command is the one
         // place in the package that issues an unbounded number of statements: two per
@@ -89,6 +99,15 @@ final class PurgeExpiredTokensCommand extends Command implements Isolatable
 
             if ($config->invitationsEnabled() || $invitations > 0) {
                 $this->info("Purged {$invitations} invitation(s).");
+            }
+
+            // The package's expired keys in a database cache store, which deletes such a row only when its key is read
+            // again, and nobody reads the note of a past sign-in again. The line appears only when a row went, so an
+            // installation whose stores are no database stores sees the output it always saw.
+            $keys = $cacheKeys();
+
+            if ($keys > 0) {
+                $this->info("Purged {$keys} expired cache key(s).");
             }
         } finally {
             foreach ($connections as $name => $connection) {

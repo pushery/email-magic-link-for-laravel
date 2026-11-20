@@ -4,6 +4,34 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.42.0] - 2026-11-20
+
+### 🔧 Changed
+
+- **`Support\MigrationLocks` is internal.** 0.38.0 added it as public API, for a migration of this package that alters a table and is published into an application. No migration of this package calls it, so the class leaves the public API: an application that calls it from a migration of its own keeps working until a later release changes or removes it.
+
+### 🐛 Fixed
+
+- **The sign-in code in its mail is large, dark and spaced.** In its panel it stood at the size and in the gray of the theme's body text, where it is the one thing the mail is for. The mail renders with the package's own theme now, which starts from the application's theme and adds that one rule; the text part still prints the code alone.
+- **A short application name stays on one line in the first sentence of a mail.** "Use the button below to sign in to Linen & Co." broke after "Linen &" at the width of a phone. A name of up to 24 characters keeps its words together now, and a longer one may still break where it has to.
+- **The sign-in code stands apart in its mail.** It stood as one more paragraph between the sentence that announces it and the one that says when it expires. The mail with a code renders through `email-magic-link::mail.code` now, Laravel's notification template with the code in a panel, and the text part carries the code alone, without a mark a reader could copy along. A host that published Laravel's notification template to restyle every mail publishes the package's views to restyle this one.
+- **The WireKit request and code screens draw no asterisk.** Every field on them is required, and an asterisk beside the email address explained nothing while the code field carried none. The email fields say they are required with `aria-required` now, as the plain screens draw no mark either, and an empty address is refused as before.
+- **A field's error on the plain request and code screens is a polite live region, as on the WireKit screens.** WireKit makes the error line of each field a polite live region, so a screen reader reads a message that appears or changes there, and the plain screens wrote the same line without one. The line on the request screen stays out of it while it counts down a held-back resend, where it changes every second, as it does on the WireKit screen. A host that published the views publishes `request.blade.php` and `code.blade.php` again.
+- **The code screen no longer says a code was sent.** Its introduction read "We emailed you a one-time code" while the box below it said a code goes out only if an account matches the address, which is the answer the package gives on purpose, so that the screen does not tell who has an account. The introduction asks for the code from the email now, in every language of the package.
+- **The code boxes of the WireKit code screen start where their label starts.** The row was centered in its field, so on a phone, where an eight-character code splits into two rows of four, both rows stood away from the label above them and the button below them. The boxes now start at the same edge.
+- **`email-magic-link:purge` runs once at a time also where nobody passed `--isolated`.** Laravel takes a command's isolation lock only where the option is set, so a schedule line without it, such as the one the command's own docblock shows, or a run started by hand, could start beside a run under way. The command sets the option itself now, and a second run ends at once with the line Laravel prints for it.
+- **The sign-in screens take WireKit only from 2.73.0 on.** The choice asked only whether WireKit was installed, while the WireKit screens pass props an older release does not have, so a host on such a release got a screen that failed to render. Below 2.73.0, the oldest release they are proven against, the plain screens render, and the `suggest` entry names that release.
+- **`email-magic-link:purge` also deletes the package's expired keys from a database cache store.** A database store deletes the row of an expired key only when that key is read again, and nothing in Laravel prunes its table, so the note of every sign-in made from a session and the resend counters of every address that asked for a link and never signed in stayed in the table for good. The purge now deletes the expired rows of those keys from the default store and from the store in `resend.store`, a thousand to a statement, and reports them on a line of their own that appears only when one went. On any other store nothing changes.
+
+### 📚 Documentation
+
+- **A call the pages write with arguments runs as written.** A few pages named an instance method in the form `Class::method($argument)`, which PHP refuses as a static call. They write it through the container now: `app(Class::class)->method($argument)`.
+- **The descriptions of the documentation pages fit a search result.** Each page that described itself in more than about 160 characters says first what it answers, within that length, so a search result shows the description whole.
+- **The configuration page names every way a store loses the package's state, and the stores that keep it.** Its section on what the cache instance has to survive named eviction and a restart without AOF, and recommended a connection of their own for `lock_store` and `resend.store` only on an instance that evicts. It now names the note of a sign-in made a moment ago beside the lock, the counters and the rate-limiter buckets, Memcached's LRU without `-M`, a flush by `cache:clear` or `optimize:clear` that empties the whole Redis database of the store or every row of a database store, and `appendonly yes`. It recommends a store of their own for `lock_store` and `resend.store`, a Redis with `noeviction` and persistence or a database store with a table of its own, leaves Memcached out, and says that a Redis under `noeviction` that has filled up refuses every write. The resend guard page, the token cleanup guide, the command reference and the Boost skill say the same.
+- **The README and the documentation pages say what the package does by default.** The features list, the quick start, the start page and the page on the two-factor handoff promised a result without setup and named nothing a reader could check. They now name the routes, the screens and the mails the package registers, and the guard the package and Fortify both sign in on unless the application configures another. The footer of the README says when the sign-in screens render with WireKit.
+- **The examples that open with `use` lines import every class they name.** The resend guard page typed its endpoint with `Request` and `Response`, and the extension points page bound `MyAuthenticator`, without importing either, so the example copied into a controller or a service provider resolved those names in the namespace of that file. Both now import them.
+- **The Boost skill publishes the migrations once, and only after it asks for `ignoreMigrations()`.** Its configure step was a single block that ran the umbrella tag `email-magic-link` and then `email-magic-link-migrations`, and Boost hands the skill over as a workflow whose blocks run in order, so following it published every migration twice under two dates, and nothing in the skill named `ignoreMigrations()`. The step now publishes the configuration alone, names the other tags in a table, and publishes the migrations in a block below the paragraph that asks for `EmailMagicLinkServiceProvider::ignoreMigrations(tablesExist: true)`. It names `magic_link_tokens` and `email_magic_link_invitations`, the two tables a copy under another name would create a second time, and how to take over a migration a later release adds.
+
 ## [0.41.1] - 2026-11-11
 
 ### 🐛 Fixed
@@ -1552,7 +1580,8 @@ public repository sees the difference.
   `TwoFactorChallengeRequired`).
 - Publishable configuration, migration, and views.
 
-[Unreleased]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.41.1...HEAD
+[Unreleased]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.42.0...HEAD
+[0.42.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.41.1...v0.42.0
 [0.41.1]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.41.0...v0.41.1
 [0.41.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.40.0...v0.41.0
 [0.40.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.39.1...v0.40.0

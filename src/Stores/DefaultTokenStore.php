@@ -36,7 +36,7 @@ final readonly class DefaultTokenStore implements TokenStore
      * statement that never waits cannot be one end of a deadlock cycle.
      *
      * Duplicated in the sibling store rather than shared, and pinned against it by
-     * `PurgeNeverWaitsTest` -- which also pins the `skip locked` itself, because a shared
+     * a test -- which also pins the `skip locked` itself, because a shared
      * field would prevent the two from drifting apart without ever proving the value is
      * the right one. SQLite compiles this to nothing (`compileLock` returns an empty
      * string there), so the suites that run on it are unaffected.
@@ -216,9 +216,10 @@ final readonly class DefaultTokenStore implements TokenStore
             }
 
             if (! $this->atomicClaim('id', (string) $token->id, 'code', $now)) {
-                // Unreachable once the row lock above serializes claims; kept as a
-                // defensive backstop that maps a losing race to a clean outcome.
-                return ClaimResult::failed(ClaimFailure::AlreadyConsumed); // @codeCoverageIgnore
+                // On PostgreSQL and MySQL the row lock above serializes claims, so a second claimer
+                // never gets here. A store on an engine that takes no row lock can lose the row
+                // between the read and the claim, and the claim then answers like a spent code.
+                return ClaimResult::failed(ClaimFailure::AlreadyConsumed);
             }
 
             $token->consumed_at = $now;

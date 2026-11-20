@@ -50,15 +50,48 @@ Requires PHP `^8.4` and Laravel `^13.0`. The emails are queued
 
 ### 2. Configure
 
-Publish everything at once, or one group:
+Publish the configuration file:
 
 ```bash
-php artisan vendor:publish --tag="email-magic-link"           # umbrella
 php artisan vendor:publish --tag="email-magic-link-config"
-php artisan vendor:publish --tag="email-magic-link-migrations"
-php artisan vendor:publish --tag="email-magic-link-views"
-php artisan vendor:publish --tag="email-magic-link-lang"
 ```
+
+The other publish tags:
+
+| Tag | Publishes |
+|---|---|
+| `email-magic-link-views` | the views, to override them in the application |
+| `email-magic-link-lang` | the translations, to override them in the application |
+| `email-magic-link-migrations` | the migrations, in the steps below |
+| `email-magic-link` | every group at once, the migrations included |
+
+The migrations run from the package with `php artisan migrate`, and nothing has to be
+published for that. To keep them in the application instead, call
+`\EmailMagicLink\EmailMagicLinkServiceProvider::ignoreMigrations()` in the `register` method
+of one of the application's service providers before the application's first
+`php artisan migrate`, then publish and run them. Pass it `tablesExist: true`, as in
+`ignoreMigrations(tablesExist: true)`: it tells the package that the tables exist, so a
+scheduled purge keeps running, where a bare call means the application declined them and the
+purge is not scheduled.
+
+```bash
+php artisan vendor:publish --tag="email-magic-link-migrations"
+php artisan migrate
+```
+
+The package also stops loading its own migrations once `database/migrations` holds a
+`*_create_magic_link_tokens_table.php`. A copy under another name, without the call, has
+`php artisan migrate` create `magic_link_tokens` and `email_magic_link_invitations` a second
+time, and it fails on the first that already exists. The `email-magic-link` tag publishes the
+migrations with every other group, so the same holds for it.
+
+Publish the migrations once. A migration a later release adds, which its release notes name,
+is copied from `vendor/pushery/email-magic-link-for-laravel/database/migrations` into
+`database/migrations`, renamed to start with today's date, and never by publishing the tag
+again, which writes every migration a second time under a new date. Where
+`php artisan migrate` has already run them from the package, copy the files from that
+directory under their own names instead of publishing them, so the `migrations` table
+recognizes them as run.
 
 Every option in `config/email-magic-link.php` is documented inline. The keys that
 decide the shape of the integration:
@@ -79,6 +112,15 @@ decide the shape of the integration:
 | `ui.script_nonce` | A `ScriptNonce` class supplying the CSP nonce for every tag the bundled screens emit (countdown script, inline stylesheet, WireKit's tags); `null` reads the `csp-nonce` container binding spatie/laravel-csp registers, then a global `csp_nonce()` |
 | `invitations.enabled` | Turn on the invitation channel; needs `invitations.handler` and `invitations.view` — see Invitations |
 | `prune.chunk` | Rows one purge `DELETE` removes (default 1000) |
+
+The issuance lock and the resend guard's counters are state, not a cache: losing them before
+their time issues two live credentials for one address and lets more mail through than the
+cooldown and the window allow. Point `lock_store` and `resend.store` at a cache store of their own
+that keeps its keys: a Redis connection and database no other store uses, with
+`maxmemory-policy noeviction` and `appendonly yes`, or a database store with a table of its own.
+Leave the default store to the application's cache, because `cache:clear` and `optimize:clear`,
+which a deploy often runs, flush it. Memcached does not qualify: without `-M` it evicts, and every
+restart empties it. A Redis under `noeviction` that has filled up refuses every write instead.
 
 ### 3. Apply the package
 
@@ -159,6 +201,11 @@ Schedule::command('email-magic-link:purge')->daily();
 ```
 
 Do not do both — that is two scheduler entries for one job.
+
+On a database cache store the purge also deletes the package's expired cache keys, the notes of
+past sign-ins and the resend counters of addresses that never signed in, which such a store
+deletes only when a key is read again. A database store without a scheduled purge keeps every one
+of those rows.
 
 ## Examples
 
@@ -297,5 +344,10 @@ and run `email-magic-link:purge` through the tenancy runner instead.
 - Do not treat the passphrase gate as two-factor. It is a shared secret on the
   link; a passphrase-gated link for a 2FA user still goes through the Fortify
   challenge.
+- Do not keep the issuance lock and the resend counters in a store that loses keys
+  before their time: a Redis whose `maxmemory-policy` is anything but `noeviction` or
+  that runs without `appendonly yes`, Memcached, or the default store, which
+  `cache:clear` and `optimize:clear` flush. A lost counter forgets the cooldown, and a
+  lost lock lets two credentials go out for one address.
 - Do not guess at behavior this skill does not cover. The full reference is at
   <https://docs.pushery.com/email-magic-link-for-laravel/>.

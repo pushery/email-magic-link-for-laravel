@@ -86,7 +86,7 @@ final readonly class FortifyAwareAuthenticator implements MagicLinkAuthenticator
                 'authenticated' => false,
                 'two_factor' => true,
                 'redirect' => $challenge,
-            ], static fn (mixed $value): bool => $value !== null));
+            ], static fn (bool|string|null $value): bool => $value !== null));
         }
 
         return redirect()->route($this->config->challengeRoute());

@@ -93,6 +93,8 @@ final class AutoScriptNonce implements ScriptNonce
     /**
      * `nonce=""` is not the same thing as no nonce: it fails a strict policy just
      * as hard while looking like the feature works.
+     *
+     * @param  mixed  $nonce  what the nonce binding or the CSP package's helper returned, which neither types
      */
     private function usable(mixed $nonce): ?string
     {

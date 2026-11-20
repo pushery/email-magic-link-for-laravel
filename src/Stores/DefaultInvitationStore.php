@@ -31,7 +31,7 @@ final readonly class DefaultInvitationStore implements InvitationStore
      * statement that never waits cannot be one end of a deadlock cycle.
      *
      * Duplicated in the sibling store rather than shared, and pinned against it by
-     * `PurgeNeverWaitsTest` -- which also pins the `skip locked` itself, because a shared
+     * a test -- which also pins the `skip locked` itself, because a shared
      * field would prevent the two from drifting apart without ever proving the value is
      * the right one. SQLite compiles this to nothing (`compileLock` returns an empty
      * string there), so the suites that run on it are unaffected.

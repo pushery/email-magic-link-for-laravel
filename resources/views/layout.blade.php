@@ -30,8 +30,8 @@
          not: this whole screen fits inside one initial congestion window, so it paints in
          one round trip. A stylesheet in a file would cost a second one, render-blocking,
          on a page that is entirely above the fold — to save bytes the browser has already
-         received. That is the standard treatment of critical CSS, and CriticalCssBudgetTest
-         holds the threshold the decision rests on. --}}
+         received. That is the standard treatment of critical CSS, and a test holds every
+         bundled screen inside one round trip, the threshold the decision rests on. --}}
     <style{!! $emlNonce === null ? '' : ' nonce="'.e($emlNonce).'"' !!}>
         :root { color-scheme: light dark; }
         body {

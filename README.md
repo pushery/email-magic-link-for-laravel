@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://github.com/pushery/email-magic-link-for-laravel">
-    <img src="art/header.png" alt="Email Magic Link for Laravel" width="100%">
+    <img src="https://raw.githubusercontent.com/pushery/email-magic-link-for-laravel/main/art/header.png" alt="Email Magic Link for Laravel" width="100%">
   </a>
 </p>
 
@@ -11,13 +11,13 @@
 [![Laravel Versions](https://badge.laravel.cloud/badge/pushery/email-magic-link-for-laravel?style=flat)](https://packagist.org/packages/pushery/email-magic-link-for-laravel)
 [![License](https://img.shields.io/packagist/l/pushery/email-magic-link-for-laravel.svg)](LICENSE)
 
-[![Tests](https://img.shields.io/badge/tests-Pest%205-8BC34A.svg)](https://pestphp.com)
-![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)
-![Type Coverage](https://img.shields.io/badge/types-100%25-brightgreen.svg)
-[![PHPStan](https://img.shields.io/badge/PHPStan-max-blue.svg)](https://phpstan.org)
-[![Code Style](https://img.shields.io/badge/code%20style-pint-orange.svg)](https://laravel.com/docs/pint)
-![Databases](https://img.shields.io/badge/tested%20on-PostgreSQL%2018%20%2B%20MySQL%208.4-336791.svg)
-![Mutation](https://img.shields.io/badge/mutation-%E2%89%A593%25-blueviolet.svg)
+[![Tests: Pest 5](https://img.shields.io/badge/tests-Pest%205-8BC34A.svg)](https://pestphp.com)
+![Coverage: 100%](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)
+![Type coverage: 100%](https://img.shields.io/badge/types-100%25-brightgreen.svg)
+[![PHPStan: level 10](https://img.shields.io/badge/PHPStan-10-blue.svg)](https://phpstan.org)
+[![Code style: Pint](https://img.shields.io/badge/code%20style-pint-orange.svg)](https://laravel.com/docs/pint)
+![Tested on: PostgreSQL 18 + MySQL 8.4](https://img.shields.io/badge/tested%20on-PostgreSQL%2018%20%2B%20MySQL%208.4-336791.svg)
+![Mutation: ≥93%](https://img.shields.io/badge/mutation-%E2%89%A593%25-blueviolet.svg)
 
 Passwordless email authentication for Laravel — magic links and one-time codes — that works **standalone** or alongside **Laravel Fortify**.
 
@@ -41,7 +41,7 @@ The sign-in looks up the address it was given in lowercase, and the database's c
 **Full docs at [docs.pushery.com/email-magic-link-for-laravel](https://docs.pushery.com/email-magic-link-for-laravel/)**
 
 - [Installation](https://docs.pushery.com/email-magic-link-for-laravel/installation) — the installer, the migration, the publish tags, and the queue worker the emails need
-- [Quick start](https://docs.pushery.com/email-magic-link-for-laravel/quick-start) — the routes you get out of the box and the flow a user walks through
+- [Quick start](https://docs.pushery.com/email-magic-link-for-laravel/quick-start) — the routes the package registers and the flow a user walks through
 - [Configuration](https://docs.pushery.com/email-magic-link-for-laravel/configuration) — the three Fortify setups, token lifetimes, and the invalid-link response
 - [Minting links and codes yourself](https://docs.pushery.com/email-magic-link-for-laravel/features/issuing-links-and-codes) — deliver a credential over SMS, chat, or your own transactional email
 - [Security model](https://docs.pushery.com/email-magic-link-for-laravel/security-model) — every threat the package is designed against and the decision that addresses it
@@ -49,7 +49,7 @@ The sign-in looks up the address it was given in lowercase, and the database's c
 ## What it does
 
 - **Magic links and one-time codes** — pick either, or offer both.
-- **A complete browser flow out of the box** — the routes, the screens, and the emails; point your "log in" link at one route name.
+- **A complete browser flow, registered by the package** — the routes, the screens, and the emails; point your "log in" link at one route name.
 - **A Mint API** — issue a signed link or a code and get it back without sending anything, to deliver over any channel you like.
 - **Bounded multi-use links** — hand out a link redeemable N times, with the counter decremented in the same conditional `UPDATE` that consumes it, so concurrent redemptions can never exceed the limit.
 - **Passphrase-gated links** — require a shared secret, delivered out of band, before a high-value link is consumed.
@@ -67,7 +67,7 @@ The sign-in looks up the address it was given in lowercase, and the database's c
 
 This package is built and maintained by [PUSHERY](https://www.pushery.com) — a Berlin-based studio building Laravel applications, SaaS products, and open-source tools.
 
-Want these sign-in screens to match a polished component library out of the box? They render automatically with [WireKit](https://wirekit.app), PUSHERY's open-source Livewire UI kit. Browse the rest of our work at [pushery.com](https://www.pushery.com).
+The sign-in screens render with [WireKit](https://wirekit.app), PUSHERY's open-source Livewire UI kit, when the application installs it. Browse the rest of our work at [pushery.com](https://www.pushery.com).
 
 ## Security
 

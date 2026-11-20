@@ -29,6 +29,9 @@ use Illuminate\Support\Str;
  * Both methods return an HtmlString, which `{{ }}` prints as it is. The result is safe as HTML by itself, because the
  * references cover `<`, `>`, `&` and both quotes.
  *
+ * Internal: no file this package publishes calls it. A published file runs in the host's own namespace, and the
+ * first one to call this class would make it public API.
+ *
  * @internal
  */
 final class MarkdownText
@@ -85,15 +88,14 @@ final class MarkdownText
 
         // Every run of whitespace that holds a line break becomes one space, and the ends are trimmed, so the value
         // stays on the line it was put on and cannot indent itself into a code block.
-        $value = trim(preg_replace('/(?:\h*\R)+\h*/u', ' ', $value) ?? '');
+        $value = trim(Str::of($value)->replaceMatches('/(?:\h*\R)+\h*/u', ' ')->toString());
 
         // An e-mail address keeps its characters: the references it gets show the same ones. An address holds no slash
         // and no backslash, so a doubled one is broken wherever it stands, and a scheme in front of an address still
         // loses its slashes.
-        $parts = preg_split(self::MAIL_ADDRESS, $value, -1, PREG_SPLIT_DELIM_CAPTURE);
         $text = '';
 
-        foreach ($parts === false ? [$value] : $parts as $index => $part) {
+        foreach (Str::of($value)->split(self::MAIL_ADDRESS, flags: PREG_SPLIT_DELIM_CAPTURE) as $index => $part) {
             // The captured parts, at the odd places, are the addresses.
             $text .= $index % 2 === 1 ? self::references($part) : self::broken(self::references($part));
         }
@@ -119,6 +121,6 @@ final class MarkdownText
         // The look-alikes are U+2044 (fraction slash), U+2216 (set minus) and U+2024 (one dot leader).
         $text = str_replace(['&#47;&#47;', '&#92;&#92;'], ['&#8260;&#8260;', '&#8726;&#8726;'], $text);
 
-        return preg_replace('/&#46;(?=\p{L}[\p{L}\p{N}])/u', '&#8228;', $text) ?? '';
+        return Str::of($text)->replaceMatches('/&#46;(?=\p{L}[\p{L}\p{N}])/u', '&#8228;')->toString();
     }
 }

@@ -27,7 +27,7 @@ return [
     // Code entry form.
     'code_title' => 'Voer je code in',
     'code_heading' => 'Voer je inlogcode in',
-    'code_intro' => 'We hebben je een eenmalige code gemaild. Voer deze hieronder in om het inloggen te voltooien.',
+    'code_intro' => 'Voer hieronder de eenmalige code uit de e-mail in om het inloggen te voltooien.',
     'code_label' => 'Inlogcode',
 
     // Confirmation passphrase gate.

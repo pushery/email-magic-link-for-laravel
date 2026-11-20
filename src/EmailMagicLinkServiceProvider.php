@@ -95,7 +95,7 @@ final class EmailMagicLinkServiceProvider extends ServiceProvider
     #[Override]
     public function register(): void
     {
-        $this->mergeConfigDeeplyFrom(__DIR__.'/../config/email-magic-link.php', 'email-magic-link');
+        $this->mergeConfigRecursivelyFrom(__DIR__.'/../config/email-magic-link.php', 'email-magic-link');
 
         // A regional locale reads this package's catalog of its language, `pt-BR` from `pt`, in this package's
         // namespace only. Registered here so it wraps the loader before the translator is built from it.
@@ -375,11 +375,14 @@ final class EmailMagicLinkServiceProvider extends ServiceProvider
      * already has. It gets `null` instead of the shipped default, silently. See
      * ConfigMerger for why the recursion stops at lists.
      *
-     * The cached-configuration check is Laravel's and is kept verbatim: with a
-     * cached config there is nothing to merge into, and writing here would produce
-     * a config that differs between cached and uncached boots.
+     * The cached-configuration check is Laravel's and is kept verbatim. A host with
+     * a cached config is not merged at runtime: the cache already holds the merge
+     * `config:cache` did when it ran, in a fresh copy of the application where this
+     * provider registered, and writing here would produce a config that differs
+     * between cached and uncached boots. A key a later release adds is missing from
+     * the cache until the host caches again.
      */
-    private function mergeConfigDeeplyFrom(string $path, string $key): void
+    private function mergeConfigRecursivelyFrom(string $path, string $key): void
     {
         if ($this->app instanceof CachesConfiguration && $this->app->configurationIsCached()) {
             return;

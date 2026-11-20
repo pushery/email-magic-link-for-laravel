@@ -30,16 +30,25 @@ final class EnvNumber
      */
     private static array $setAside = [];
 
+    /**
+     * @param  mixed  $value  what env() or the configuration gives, which a host may write as any type
+     */
     public static function atLeastOne(mixed $value, int $default, ?string $variable = null): int
     {
         return self::atLeast(1, $value, $default, $variable);
     }
 
+    /**
+     * @param  mixed  $value  what env() or the configuration gives, which a host may write as any type
+     */
     public static function atLeastZero(mixed $value, int $default, ?string $variable = null): int
     {
         return self::atLeast(0, $value, $default, $variable);
     }
 
+    /**
+     * @param  mixed  $value  what env() or the configuration gives, which a host may write as any type
+     */
     private static function atLeast(int $floor, mixed $value, int $default, ?string $variable): int
     {
         $number = self::usable($value, $floor);
@@ -76,6 +85,8 @@ final class EnvNumber
      *
      * Compared before the cast, so a negative fraction such as `-0.5` stays below a floor of 0
      * rather than reaching it as the 0 that `(int)` makes of it.
+     *
+     * @param  mixed  $value  what env() or the configuration gives, which a host may write as any type
      */
     private static function usable(mixed $value, int $floor): ?int
     {
@@ -92,6 +103,8 @@ final class EnvNumber
 
     /**
      * A value as it was written: `env()` turns `true` and `false` into booleans on the way in.
+     *
+     * @param  mixed  $value  what env() or the configuration gives, which a host may write as any type
      */
     private static function spelled(mixed $value): string
     {

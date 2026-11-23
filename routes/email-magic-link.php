@@ -46,7 +46,7 @@ Route::get('magic-link/verify/{token}', ConfirmMagicLinkController::class)
 // step that accepted a bare token would let a token minted for one host be spent at
 // another: a link built for one tenant's host could sign its reader in at a different
 // tenant. Both routes share this URI, so the signature the GET arrived with verifies the
-// POST unchanged -- the confirmation form simply posts back to the URL it was reached at.
+// POST unchanged -- the confirmation form posts back to the URL it was reached at.
 //
 // What the signature cannot do is tell a forged host from a real one. It names a host,
 // not a server, and an application that answers any `Host` header accepts a replay that

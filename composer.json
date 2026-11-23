@@ -1,7 +1,7 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
     "name": "pushery/email-magic-link-for-laravel",
-    "description": "Passwordless email magic-link & OTP authentication for Laravel — standalone, or with Fortify so that a user with 2FA reaches the challenge before any session exists, and with scanner-safe link consumption.",
+    "description": "Passwordless email magic-link and OTP sign-in for Laravel, standalone or with Fortify: 2FA comes before any session, and mail scanners cannot use up a link.",
     "keywords": [
         "laravel",
         "authentication",
@@ -60,7 +60,7 @@
         "phpstan/phpstan": "2.3.1",
         "phpstan/phpstan-deprecation-rules": "2.0.5",
         "predis/predis": "^3.2",
-        "pushery/sqlens-for-laravel": "^0.34.0",
+        "pushery/sqlens-for-laravel": "^0.35.1",
         "pushery/wirekit": "^2.73.0",
         "rector/rector": "2.7.0",
         "spaze/phpstan-disallowed-calls": "4.14.0",

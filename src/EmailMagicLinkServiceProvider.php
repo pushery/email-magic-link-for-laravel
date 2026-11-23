@@ -396,10 +396,23 @@ final class EmailMagicLinkServiceProvider extends ServiceProvider
         // rather than a host mistake — so it falls back to nothing to merge.
         $defaults = require $path;
 
-        $config->set($key, ConfigMerger::deep(
+        $config->set($key, $this->mergeConfigSections(
             is_array($defaults) ? $defaults : [],
             is_array($published) ? $published : [],
         ));
+    }
+
+    /**
+     * The shipped config with the published one laid over it, recursively through sections and
+     * whole at a list, as ConfigMerger::deep() merges.
+     *
+     * @param  array<array-key, mixed>  $shipped
+     * @param  array<array-key, mixed>  $published
+     * @return array<array-key, mixed>
+     */
+    private function mergeConfigSections(array $shipped, array $published): array
+    {
+        return ConfigMerger::deep($shipped, $published);
     }
 
     private function registerFortifyBridge(MagicLinkConfig $config): void

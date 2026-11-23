@@ -29,7 +29,7 @@ final class ResendCountdownScript
 {
     /**
      * Progressive enhancement, and it degrades in the right direction: with the
-     * script blocked or absent the button stays usable and the server simply holds
+     * script blocked or absent the button stays usable and the server holds
      * the next request back again.
      *
      * The reasons live here rather than in the script, because the script is sent to

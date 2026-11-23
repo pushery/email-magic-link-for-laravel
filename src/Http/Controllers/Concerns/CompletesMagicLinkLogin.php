@@ -123,7 +123,7 @@ trait CompletesMagicLinkLogin
      * The token stores only a user id (never the address it was issued to, by
      * design), so this resets by the user's present email. In the ordinary case
      * that is the address the cooldown was armed on; if the user changed it
-     * between requesting and verifying, the old key simply ages out on its own —
+     * between requesting and verifying, the old key ages out on its own —
      * a harmless miss, never an error, and it clears no one else's state.
      */
     protected function resetResendCooldown(Authenticatable $user): void

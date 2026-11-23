@@ -25,11 +25,13 @@ use Illuminate\Contracts\Http\Kernel as KernelContract;
 use Illuminate\Database\Connection;
 use Illuminate\Database\ConnectionResolverInterface;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Http\Kernel as HttpKernel;
 use Illuminate\Http\Middleware\TrustHosts;
 use Illuminate\Routing\UrlGenerator;
+use Illuminate\Support\Carbon;
 use Illuminate\Translation\Translator;
 use InvalidArgumentException;
 use ReflectionProperty;
@@ -72,6 +74,7 @@ final class DoctorCommand extends Command
             $this->reportScriptNonce($config);
             $this->reportLinkOrigin($app);
             $this->reportPruneSchedule($app);
+            $this->reportStaleTokens($app);
             $this->reportIssueLock($app);
             $this->reportFallbackLocale($app);
             $this->reportSetAsideEnvironment($app);
@@ -123,6 +126,7 @@ final class DoctorCommand extends Command
         $this->reportScriptNonce($config);
         $this->reportLinkOrigin($app);
         $this->reportPruneSchedule($app);
+        $this->reportStaleTokens($app);
         $this->reportIssueLock($app);
         $this->reportFallbackLocale($app);
         $this->reportSetAsideEnvironment($app);
@@ -186,6 +190,50 @@ final class DoctorCommand extends Command
         $this->line('            and expired tokens are never deleted. Set prune.schedule to true,');
         $this->line('            or schedule the command yourself. A purge you run outside the');
         $this->line('            scheduler, from a cron line or a job, is fine; then ignore this.');
+    }
+
+    /**
+     * Report tokens a purge should have deleted more than a day ago.
+     *
+     * reportPruneSchedule() sees a purge that nothing schedules. A purge that is scheduled and fails
+     * every night, or one a cron line was meant to run and does not, leaves the same rows behind and
+     * passes that check. The purge deletes every token that has expired or been used, so a token that
+     * expired or was used more than a day ago means no purge has run in that day. Left alone, as above,
+     * for a token store of the host's own and where the package's tables were declined, and where the
+     * table cannot be read at all.
+     */
+    private function reportStaleTokens(Application $app): void
+    {
+        $store = $app->make(MagicLinkConfig::class)->tokenStore();
+
+        if ($store !== null && ! is_a($store, DefaultTokenStore::class, true)) {
+            return;
+        }
+
+        if (! EmailMagicLinkServiceProvider::$runsMigrations && ! EmailMagicLinkServiceProvider::$tablesMigratedElsewhere) {
+            return;
+        }
+
+        $cutoff = Carbon::now()->subDay();
+
+        try {
+            $stale = MagicLinkToken::model()::query()
+                ->where(function (Builder $query) use ($cutoff): void {
+                    $query->where('expires_at', '<=', $cutoff)
+                        ->orWhere('consumed_at', '<=', $cutoff);
+                })
+                ->count();
+        } catch (QueryException) {
+            return;
+        }
+
+        if ($stale === 0) {
+            return;
+        }
+
+        $this->line('Purge       '.$stale.($stale === 1 ? ' token' : ' tokens').' expired or used more than a day ago '.($stale === 1 ? 'is' : 'are').' still');
+        $this->line('            stored, so no purge has run in that day. Check that');
+        $this->line('            email-magic-link:purge runs and succeeds.');
     }
 
     /**

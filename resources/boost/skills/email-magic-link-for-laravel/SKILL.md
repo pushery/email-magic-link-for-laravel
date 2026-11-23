@@ -172,7 +172,10 @@ without the second factor.
 application's own transactional email instead of the bundled notification:
 
 ```php
+use App\Models\User;
 use EmailMagicLink\Facades\EmailMagicLink;
+
+$user = User::query()->where('email', 'ada@example.com')->firstOrFail();
 
 $link = EmailMagicLink::issueLink($user);              // signed URL, nothing sent
 $link = EmailMagicLink::issueLink($user, maxUses: 3);  // bounded multi-use
@@ -236,6 +239,8 @@ Deliver a link over your own channel — mint it, send it yourself, skip the
 package's request form and its notification entirely:
 
 ```php
+$sharedSecret = 'blue-harbor-42'; // a passphrase the recipient learned from you elsewhere
+
 $link = EmailMagicLink::issueLink($user, maxUses: 3, passphrase: $sharedSecret);
 
 Mail::to($user)->send(new InvoiceReady($link->url, $link->expiresInMinutes));

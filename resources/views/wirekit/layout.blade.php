@@ -109,6 +109,14 @@
         {{-- The optional hint below the status in the sent state, on a line of its own. --}}
         .eml-status-hint { display: block; margin-top: 0.25rem; }
     </style>
+
+    {{-- Livewire's style block, nonced like the tags above. @wirekitScripts makes Livewire inject
+         its assets, and an injected style block takes its nonce from Vite::cspNonce() alone, which a
+         host that resolves its nonce through ScriptNonce leaves unset. Written here, where the
+         injection would place it, the block carries this page's nonce, and Livewire injects no
+         second one. Without a nonce Livewire falls back to Vite::cspNonce(), as it does when it
+         injects the block. --}}
+    @livewireStyles(['nonce' => $emlNonce])
 </head>
 <body>
     {{-- The consumer's two slots, above and below the card. Both are null by default and

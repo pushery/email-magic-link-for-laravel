@@ -4,6 +4,23 @@ All notable changes to this package are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.43.0] - 2026-11-23
+
+### 🔧 Changed
+
+- **`email-magic-link:doctor` names tokens a purge should have deleted a day ago.** It reported a purge that nothing schedules, and a purge that is scheduled and fails every night passed that check. Tokens that expired or were used more than a day ago now show that no purge has run in that day.
+
+### 🐛 Fixed
+
+- **Livewire's style block on the WireKit screens carries the nonce of `ui.script_nonce`.** `@wirekitScripts` makes Livewire inject its assets, and Livewire took the nonce of the injected style block from Vite alone, so a host that resolves its nonce through `ui.script_nonce` and not through Vite got a style block without one, which a strict `style-src` refuses and the browser console reports. The WireKit layout now writes the block itself, with the page's nonce, where Livewire would inject it, and Livewire injects no second one.
+
+### 📚 Documentation
+
+- **The package description fits a search result.** The description in `composer.json`, which Packagist shows as the description of the package page, ran past the roughly 160 characters a search result shows, so the result cut it off mid-sentence. It now says what the package does within that length.
+- **The examples of the Boost skill set every variable they read.** The examples for issuing a link or a code read `$user`, and the one for a channel of the application's own `$sharedSecret`, without setting it, so code copied from them stopped at its first call. Each now sets what it reads.
+- **The documentation says that the `octane` store of Laravel Octane is out of the pruner's reach.** The store keeps an expired entry in a table of a fixed number of rows, `octane.cache.rows`, until its key is written again or the server restarts, and the scheduler, where the pruner runs, sees an empty store. Once the table is full, writing a new key fails, so the documentation advises against making `octane` the default cache store of an application that runs this package.
+- **The documentation of the limiters says where a visitor can claim another source.** Below `laravel/framework` 13.43.0, an application that configures no trusted proxy and whose web server answers any host name takes a header the visitor sends as the mark of a Forge or Vapor proxy (GHSA-559m-v249-7qw2), so each request can come from another source and only the axis per email or per token still counts. The configuration page names the framework update, trusted proxies and a web server that answers only the application's host names as the ways to close it.
+
 ## [0.42.0] - 2026-11-20
 
 ### 🔧 Changed
@@ -20,7 +37,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **The code screen no longer says a code was sent.** Its introduction read "We emailed you a one-time code" while the box below it said a code goes out only if an account matches the address, which is the answer the package gives on purpose, so that the screen does not tell who has an account. The introduction asks for the code from the email now, in every language of the package.
 - **The code boxes of the WireKit code screen start where their label starts.** The row was centered in its field, so on a phone, where an eight-character code splits into two rows of four, both rows stood away from the label above them and the button below them. The boxes now start at the same edge.
 - **`email-magic-link:purge` runs once at a time also where nobody passed `--isolated`.** Laravel takes a command's isolation lock only where the option is set, so a schedule line without it, such as the one the command's own docblock shows, or a run started by hand, could start beside a run under way. The command sets the option itself now, and a second run ends at once with the line Laravel prints for it.
-- **The sign-in screens take WireKit only from 2.73.0 on.** The choice asked only whether WireKit was installed, while the WireKit screens pass props an older release does not have, so a host on such a release got a screen that failed to render. Below 2.73.0, the oldest release they are proven against, the plain screens render, and the `suggest` entry names that release.
+- **The sign-in screens take WireKit only from 2.73.0 on.** The choice asked only whether WireKit was installed, while the WireKit screens pass props an older release does not have, so a host on such a release got a screen that failed to render. Below 2.73.0, the first release with every prop they pass, the plain screens render, and the `suggest` entry names that release.
 - **`email-magic-link:purge` also deletes the package's expired keys from a database cache store.** A database store deletes the row of an expired key only when that key is read again, and nothing in Laravel prunes its table, so the note of every sign-in made from a session and the resend counters of every address that asked for a link and never signed in stayed in the table for good. The purge now deletes the expired rows of those keys from the default store and from the store in `resend.store`, a thousand to a statement, and reports them on a line of their own that appears only when one went. On any other store nothing changes.
 
 ### 📚 Documentation
@@ -1580,7 +1597,8 @@ public repository sees the difference.
   `TwoFactorChallengeRequired`).
 - Publishable configuration, migration, and views.
 
-[Unreleased]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.42.0...HEAD
+[Unreleased]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.43.0...HEAD
+[0.43.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.42.0...v0.43.0
 [0.42.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.41.1...v0.42.0
 [0.41.1]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.41.0...v0.41.1
 [0.41.0]: https://github.com/pushery/email-magic-link-for-laravel/compare/v0.40.0...v0.41.0

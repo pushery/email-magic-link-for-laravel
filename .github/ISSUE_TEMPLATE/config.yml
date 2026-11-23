@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
+  - name: Documentation
+    url: https://docs.pushery.com/email-magic-link-for-laravel/
+    about: How to install, configure and use the package. Many questions are answered there.
   - name: Report a security vulnerability
     url: https://github.com/pushery/email-magic-link-for-laravel/security/advisories/new
     about: Please report security issues privately, never as a public issue. See SECURITY.md.

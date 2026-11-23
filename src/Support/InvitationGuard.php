@@ -32,7 +32,7 @@ final readonly class InvitationGuard
         }
 
         // class_exists, then the contract check, each with its own message: a typo in the
-        // class name and a class that simply does not implement the interface are
+        // class name and a class that does not implement the interface are
         // different mistakes, and telling them apart is the difference between a useful
         // message and "something is wrong with your handler".
         if (! class_exists($handler)) {

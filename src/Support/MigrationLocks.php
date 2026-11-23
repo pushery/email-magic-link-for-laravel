@@ -25,7 +25,8 @@ use WeakMap;
  * other migration of the same run inherits them; a migration that sets `$withinTransaction` to
  * false runs outside one, where `SET LOCAL` changes nothing. MySQL has neither `SET LOCAL` nor a
  * statement bound for DDL, so the bound is a setting of the session there, and the value the
- * session had before is put back when the migration ends. A later migration of the same run, the
+ * session had before is put back when the migration ends. MariaDB, which Laravel names a driver of
+ * its own, keeps the same setting and takes the same bound. A later migration of the same run, the
  * application's own included, and the seeders of `migrate --seed` then wait as long as they did
  * without it. Under `migrate --pretend` nothing runs, so nothing is read and nothing is put back.
  * SQLite takes no such locks.
@@ -38,8 +39,8 @@ use WeakMap;
 final class MigrationLocks
 {
     /**
-     * The MySQL connections whose session waits for the end of a migration to get its lock wait
-     * back, each with the mark of the one listener that puts it back.
+     * The MySQL and MariaDB connections whose session waits for the end of a migration to get its lock
+     * wait back, each with the mark of the one listener that puts it back.
      *
      * @var WeakMap<Connection, stdClass>|null
      */
@@ -57,7 +58,7 @@ final class MigrationLocks
             // its own statement_timeout after this call.
             $connection->statement("SET LOCAL lock_timeout = '3s'");
             $connection->statement("SET LOCAL statement_timeout = '30s'");
-        } elseif ($driver === 'mysql') {
+        } elseif ($driver === 'mysql' || $driver === 'mariadb') {
             self::restoreWhenTheMigrationEnds($connection);
 
             $connection->statement('SET SESSION lock_wait_timeout = 3');

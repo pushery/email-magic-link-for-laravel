@@ -11,7 +11,7 @@ namespace EmailMagicLink\Support;
  * published `config/email-magic-link.php` once keeps receiving new top-level keys
  * from later releases, but a key added inside a block it already published never
  * arrives — the host's whole block wins. The result is silent: no error, no
- * warning, the feature simply runs on `null` instead of its default.
+ * warning, the feature runs on `null` instead of its default.
  *
  * Measured on a real upgrade (0.6 → 0.17): `routes.intended` (added 0.7.0) stayed
  * null instead of true, so the intended-redirect was quietly off, and `ui.styles`
